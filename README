@@ -1,0 +1,1 @@
+simple esp32 based controller that use https://www.dfrobot.com/product-2613.html to control two fans with their pwm signal

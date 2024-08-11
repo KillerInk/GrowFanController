@@ -1,0 +1,106 @@
+<html>
+
+<body>
+
+  <div class="slidecontainer">
+    <label for="speed">Fan1 Speed:</label>
+    <input type="range" min="0" max="100" value="50" class="slider" id="speed">
+  </div>
+  <div id="sliderAmount"></div>
+  <div class="slidecontainer2">
+    <label for="speed">Fan2 Speed:</label>
+    <input type="range" min="0" max="100" value="50" class="slider" id="speed1">
+  </div>
+  <div id="sliderAmount1"></div>
+</body>
+<style>
+  /* The slider itself */
+  .slider {
+    -webkit-appearance: none;
+    /* Override default CSS styles */
+    appearance: none;
+    width: 100%;
+    /* Full-width */
+    height: 25px;
+    /* Specified height */
+    background: #d3d3d3;
+    /* Grey background */
+    outline: none;
+    /* Remove outline */
+    opacity: 0.7;
+    /* Set transparency (for mouse-over effects on hover) */
+    -webkit-transition: .2s;
+    /* 0.2 seconds transition on hover */
+    transition: opacity .2s;
+  }
+
+  /* Mouse-over effects */
+  .slider:hover {
+    opacity: 1;
+    /* Fully shown on mouse-over */
+  }
+
+  /* The slider handle (use -webkit- (Chrome, Opera, Safari, Edge) and -moz- (Firefox) to override default look) */
+  .slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    /* Override default look */
+    appearance: none;
+    width: 25px;
+    /* Set a specific slider handle width */
+    height: 25px;
+    /* Slider handle height */
+    background: #04AA6D;
+    /* Green background */
+    cursor: pointer;
+    /* Cursor on hover */
+  }
+
+  .slider::-moz-range-thumb {
+    width: 25px;
+    /* Set a specific slider handle width */
+    height: 25px;
+    /* Slider handle height */
+    background: #04AA6D;
+    /* Green background */
+    cursor: pointer;
+    /* Cursor on hover */
+  }
+</style>
+
+<script>
+  var slider = document.getElementById("speed");
+  var output = document.getElementById("sliderAmount");
+  var slider1 = document.getElementById("speed1");
+  var output1 = document.getElementById("sliderAmount1");
+  output.innerHTML = slider.value;
+  output1.innerHTML = slider1.value;  // Display the default slider value
+
+  // Update the current slider value (each time you drag the slider handle)
+  slider.oninput = function () {
+    output.innerHTML = this.value;
+    let host = document.location.origin;
+    let value = encodeURIComponent(this.value);
+
+    const query = `${host}/cmd?var=speed&val=${value}&id=0`;
+
+    fetch(query)
+      .then(response => {
+        console.log(`request to ${query} finished, status: ${response.status}`);
+      });
+  }
+
+  slider1.oninput = function () {
+    output1.innerHTML = this.value;
+    let host = document.location.origin;
+    let value = encodeURIComponent(this.value);
+
+    const query = `${host}/cmd?var=speed&val=${value}&id=1`;
+
+    fetch(query)
+      .then(response => {
+        console.log(`request to ${query} finished, status: ${response.status}`);
+      });
+  }
+</script>
+
+</html>
