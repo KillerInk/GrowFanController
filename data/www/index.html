@@ -8,10 +8,24 @@
   </div>
   <div id="sliderAmount"></div>
   <div class="slidecontainer2">
-    <label for="speed">Fan2 Speed:</label>
+    <label for="speed1">Fan2 Speed:</label>
     <input type="range" min="0" max="100" value="50" class="slider" id="speed1">
   </div>
   <div id="sliderAmount1"></div>
+  <div id="fansettings_container">
+    <label for="fan0min">Fan1 Min Voltage in HZ:</label>
+    <input type="number" id="fan0min" name="fan0min">
+    <label for="fan0max">Fan1 Max Voltage in HZ:</label>
+    <input type="number" id="fan0max" name="fan0max">
+    <input type="submit" id="fan0sub" value="Submit">
+  </div>
+  <div id="fansettings_container1">
+    <label for="fan1min">Fan2 Min Voltage in HZ:</label>
+    <input type="number" id="fan1min" name="fan1min">
+    <label for="fan1max">Fan2 Max Voltage in HZ:</label>
+    <input type="number" id="fan1max" name="fan1max">
+    <input type="submit" id="fan1sub" value="Submit">
+  </div>
 </body>
 <style>
   /* The slider itself */
@@ -68,12 +82,36 @@
 </style>
 
 <script>
+
   var slider = document.getElementById("speed");
   var output = document.getElementById("sliderAmount");
   var slider1 = document.getElementById("speed1");
   var output1 = document.getElementById("sliderAmount1");
+  var button0 = document.getElementById("fan0sub");
+  var button1 = document.getElementById("fan1sub");
+  var fan0min = document.getElementById("fan0min");
+  var fan1min = document.getElementById("fan1min");
+  var fan0max = document.getElementById("fan0max");
+  var fan1max = document.getElementById("fan1max");
+
   output.innerHTML = slider.value;
-  output1.innerHTML = slider1.value;  // Display the default slider value
+  output1.innerHTML = slider1.value;
+
+  window.addEventListener('load', (event) => {
+    let host = document.location.origin;
+    const query = `${host}/settings`;
+    fetch(query)
+      .then((response) => response.json())
+      .then(json => {
+        fan0min.value = json["fan0min"];
+        fan0max.value = json["fan0max"];
+        fan1min.value = json["fan1min"];
+        fan1max.value = json["fan1max"];
+        console.log(`request to ${query} finished, status: ${response.status}`);
+      });
+});
+
+    // Display the default slider value
 
   // Update the current slider value (each time you drag the slider handle)
   slider.oninput = function () {
@@ -101,6 +139,30 @@
         console.log(`request to ${query} finished, status: ${response.status}`);
       });
   }
+
+  button0.onclick = function () {
+    let host = document.location.origin;
+    let min = document.getElementById("fan0min").value;
+    let max = document.getElementById("fan0max").value;
+    const query = `${host}/cmd?var=voltage&min=${min}&max=${max}&id=0`;
+    fetch(query)
+      .then(response => {
+        console.log(`request to ${query} finished, status: ${response.status}`);
+      });
+  }
+
+  button1.onclick = function () {
+    let host = document.location.origin;
+    let min = document.getElementById("fan1min").value;
+    let max = document.getElementById("fan1max").value;
+    const query = `${host}/cmd?var=voltage&min=${min}&max=${max}&id=1`;
+    fetch(query)
+      .then(response => {
+        console.log(`request to ${query} finished, status: ${response.status}`);
+      });
+  }
+
+
 </script>
 
 </html>
