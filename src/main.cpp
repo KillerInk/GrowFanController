@@ -8,17 +8,93 @@
 #include "mdns.h"
 #include "Preferences.h"
 #include "Arduino_JSON.h"
+#include "NimBLEDevice.h"
 
 DFRobot_GP8403 dac(&Wire, 0x5F);
 uint16_t voltage = 0;
 uint16_t voltage1 = 0;
 AsyncWebServer *server;
+AsyncWebSocket * ws;
 Preferences preferences;
 int minVoltage = 800;    // hz
 int maxVoltage = 1100;   // hz
 int minVoltage1 = 0;     // hz
 int maxVoltage1 = 10000; // hz
 const char *prefNamespace = "Voltage";
+float temp = 0.;
+float humidity = 0.;
+int battery = 0;
+long nextScanTime;
+const long scanInterval = 60*1000;
+
+NimBLEScan *pBLEScan;
+NimBLEUUID serviceUuid("180a"); // Govee 5179 service UUID
+
+struct goveebtdata
+{
+  char ident[6];
+  uint16_t temp;
+  uint16_t humidity;
+  uint8_t bat;
+}btdata;
+
+class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
+{
+
+  void onDiscovered(BLEAdvertisedDevice *advertisedDevice)
+  {
+    // log_i("Advertised Device: %s \n", advertisedDevice->toString().c_str());
+  }
+
+  /*
+  [ 68866][I][main.cpp:43] onResult(): Advertised Device: Name: Govee_H5179_9C4D,, manufacturer data: 0188ec000101760c9a1552, serviceUUID: 0x180a
+
+  [ 68882][I][main.cpp:63] onResult(): Govee_H5179_9C4D
+  [ 68887][I][main.cpp:64] onResult():  2.57 31.90 154
+  */
+  // Called when BLE scan sees BLE advertisement.
+  //                    head     hum   tmp  ka   bat
+  // manufacturer data: 0188ec00 0101  6c0c ae15 52, serviceUUID: 0x180a
+  //                    0188EC00 0101  220B 2C10 53
+  //                    0188EC00 0101  180B 2C10 52
+  //                    181201121114020
+  void onResult(BLEAdvertisedDevice *advertisedDevice)
+  {
+
+    // check for Govee 5074 service UUID
+    if (advertisedDevice->getServiceUUID() == serviceUuid)
+    {
+      // log_i("Advertised Device: %s \n", advertisedDevice->toString().c_str());
+      //  Desired Govee advert will have 11 byte mfg. data length & leading bytes0x01 0x88 0xec
+      if ((advertisedDevice->getManufacturerData().length() == 11) &&
+          ((byte)advertisedDevice->getManufacturerData().data()[1] == 0x88) &&
+          ((byte)advertisedDevice->getManufacturerData().data()[2] == 0xec))
+      {
+        char buf[advertisedDevice->getManufacturerData().length()];
+        for(int i = 0; i< advertisedDevice->getManufacturerData().length(); i++)
+        {
+          buf[i] = advertisedDevice->getManufacturerData()[i];
+        }
+        goveebtdata * data = (goveebtdata*)buf;
+        temp = ((float)data->temp) /100.;
+        humidity = ((float)data->humidity) /100.;
+        battery = data->bat;
+        log_i("%s", advertisedDevice->getName().c_str());
+        log_i("%i %i %i",data->temp, data->humidity,data->bat);
+        JSONVar socketmsg;
+        socketmsg["temperatur"] = temp;
+        socketmsg["humidity"] = humidity;
+        socketmsg["battery"] = battery;
+        ws->textAll(JSON.stringify(socketmsg));
+      }
+    }
+    else
+    {
+      pBLEScan->erase(advertisedDevice->getAddress());
+    }
+  }
+};
+MyAdvertisedDeviceCallbacks *btcallback;
 
 void applyspeed(int volt, int id, int val)
 {
@@ -29,7 +105,7 @@ void applyspeed(int volt, int id, int val)
       u_int16_t s = minVoltage + (float)(maxVoltage - minVoltage) * ((float)val / 100);
       volt = s;
     }
-    else if(id == 1)
+    else if (id == 1)
     {
       u_int16_t s = minVoltage1 + (float)(maxVoltage1 - minVoltage1) * ((float)val / 100);
       volt = s;
@@ -51,7 +127,7 @@ void onGetSettings(AsyncWebServerRequest *request)
   myObject["fan1voltage"] = voltage1;
   myObject["fan1min"] = minVoltage1;
   myObject["fan1max"] = maxVoltage1;
-  request->send(200,"text/json",JSON.stringify(myObject));
+  request->send(200, "text/json", JSON.stringify(myObject));
 }
 
 void onCmd(AsyncWebServerRequest *request)
@@ -105,12 +181,32 @@ void onCmd(AsyncWebServerRequest *request)
     request->send(404);
 }
 
+void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventType type, void * arg, uint8_t *data, size_t len){
+    
+    if(type == WS_EVT_CONNECT){
+        Serial.printf("ws[%s][%u] connect\n", server->url(), client->id());
+    }
+    else if(type == WS_EVT_DISCONNECT){
+        Serial.printf("ws[%s][%u] disconnect\n", server->url(), client->id());
+    }
+    else if(type == WS_EVT_ERROR){
+        Serial.printf("ws[%s][%u] error(%u): %s\n", server->url(), client->id(), *((uint16_t*)arg), (char*)data);
+    }
+    else if(type == WS_EVT_PONG){
+        Serial.printf("ws[%s][%u] pong[%u]: %s\n", server->url(), client->id(), len, (len)?(char*)data:"");
+    }
+    else if(type == WS_EVT_DATA){
+        AwsFrameInfo * info = (AwsFrameInfo*)arg;
+    }
+
+}    
+
 void setup()
 {
   // put your setup code here, to run once:
   if (Serial.available())
     Serial.begin(115200);
-
+  
   preferences.begin(prefNamespace, false);
   maxVoltage = preferences.getInt("maxv0", maxVoltage);
   minVoltage = preferences.getInt("minv0", minVoltage);
@@ -134,7 +230,11 @@ void setup()
   server->on("/cmd", HTTP_GET, onCmd);
   server->on("/settings", HTTP_GET, onGetSettings);
   server->serveStatic("/", SPIFFS, "/www/").setDefaultFile("index.html");
+  ws = new AsyncWebSocket("/ws");
+  ws->onEvent(onWsEvent);
+  server->addHandler(ws);
   server->begin();
+  
   log_i("Started Webserver on port %i", http_port);
 
   // Set DAC output range
@@ -147,6 +247,18 @@ void setup()
   mdns_hostname_set("Esp32 FanController");
   mdns_instance_name_set("Esp32 FanController");
   mdns_service_add("Esp32 FanController", "_http", "_tcp", 80, NULL, 0);
+
+  NimBLEDevice::setScanDuplicateCacheSize(10);
+  NimBLEDevice::init("");
+  pBLEScan = NimBLEDevice::getScan(); // create new scan
+  // Set the callback for when devices are discovered, include duplicates.
+  btcallback = new MyAdvertisedDeviceCallbacks();
+  log_i("btcallback  %i", btcallback);
+  pBLEScan->setScanCallbacks(btcallback, true);
+  pBLEScan->setActiveScan(true); // Set active scanning, this will get more data from the advertiser.
+  pBLEScan->setInterval(5000); // How often the scan occurs / switches channels; in milliseconds,
+  pBLEScan->setWindow(4000);    // How long to scan during the interval; in milliseconds.
+  pBLEScan->setMaxResults(0); // do not store the scan results, use callback only.
 }
 
 void loop()
@@ -160,4 +272,12 @@ void loop()
   vTaskDelay(5000);
   //dac.store();
    log_i("loop");*/
+
+  if (nextScanTime <= millis() && !pBLEScan->isScanning())
+  {
+    nextScanTime += scanInterval;
+    log_i("Restarting BLE scan");
+    pBLEScan->start(6000, false);
+  }
+  vTaskDelay(2000);
 }

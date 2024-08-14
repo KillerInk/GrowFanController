@@ -2,6 +2,11 @@
 
 <body>
 
+  <div class="datacontainer">
+    <div id="temperatur"></div>
+    <div id="humidity"></div>
+    <div id="battery"></div>
+  </div>
   <div class="slidecontainer">
     <label for="speed">Fan1 Speed:</label>
     <input type="range" min="0" max="100" value="50" class="slider" id="speed">
@@ -93,9 +98,32 @@
   var fan1min = document.getElementById("fan1min");
   var fan0max = document.getElementById("fan0max");
   var fan1max = document.getElementById("fan1max");
+  var temperatur = document.getElementById("temperatur");
+  var humidity = document.getElementById("humidity");
+  var battery = document.getElementById("battery");
 
   output.innerHTML = slider.value;
   output1.innerHTML = slider1.value;
+  var websocket;
+
+
+  function createWebsocket() {
+    websocket = new WebSocket('ws://' + document.location.host+":/ws");
+    
+    websocket.onmessage = function (data) {
+        var result = JSON.parse(data.data); // $.parseJSON(data);
+        var bat = result["battery"];
+        var temp = result["temperatur"];
+        var hum = result["humidity"];
+        battery.innerHTML = bat;
+        temperatur.innerHTML = temp;
+        humidity.innerHTML = hum;
+    };
+
+    websocket.onerror = function(error) {
+      createWebsocket();
+    };
+}
 
   window.addEventListener('load', (event) => {
     let host = document.location.origin;
@@ -109,6 +137,7 @@
         fan1max.value = json["fan1max"];
         console.log(`request to ${query} finished, status: ${response.status}`);
       });
+      createWebsocket();
 });
 
     // Display the default slider value
