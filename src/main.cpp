@@ -14,7 +14,7 @@ DFRobot_GP8403 dac(&Wire, 0x5F);
 uint16_t voltage = 0;
 uint16_t voltage1 = 0;
 AsyncWebServer *server;
-AsyncWebSocket * ws;
+AsyncWebSocket *ws;
 Preferences preferences;
 int minVoltage = 800;    // hz
 int maxVoltage = 1100;   // hz
@@ -25,7 +25,14 @@ float temp = 0.;
 float humidity = 0.;
 int battery = 0;
 long nextScanTime;
-const long scanInterval = 60*1000;
+const long scanInterval = 60 * 1000;
+int targetTemperature = 26;
+int targetHumidity = 60;
+bool autocontrol = false;
+// tracked fanspeed in autocontrol in %
+int autocontrolfanspeed = 50; // %
+// in blowing fans need to run slower to compensate the resistance from the filter and keep a bit vacuum inside the tent
+int filtercompensation = 5; //%
 
 NimBLEScan *pBLEScan;
 NimBLEUUID serviceUuid("180a"); // Govee 5179 service UUID
@@ -36,7 +43,35 @@ struct goveebtdata
   uint16_t temp;
   uint16_t humidity;
   uint8_t bat;
-}btdata;
+} btdata;
+
+u_int16_t getVoltageFromPercent(int maxvoltage, int minvoltage, int val)
+{
+  return minVoltage + (float)(maxVoltage - minVoltage) * ((float)val / 100);
+}
+
+void processAutoControl()
+{
+  if (temp > targetTemperature || humidity > targetHumidity)
+  {
+    if (autocontrolfanspeed + 2 <= 100)
+      autocontrolfanspeed += 2;
+    else
+      log_i("max speed reached");
+  }
+  else if (temp < targetTemperature || humidity < targetHumidity)
+  {
+    if (autocontrolfanspeed - 2 >= 10)
+      autocontrolfanspeed -= 2;
+    else
+      log_i("min speed reached");
+  }
+  voltage = getVoltageFromPercent(maxVoltage, minVoltage, autocontrolfanspeed);
+  voltage1 = getVoltageFromPercent(maxVoltage1, minVoltage1, autocontrolfanspeed - filtercompensation);
+  dac.setDACOutVoltage(voltage, 0);
+  dac.setDACOutVoltage(voltage1, 1);
+  log_i("autocontrol set speed to: %i", autocontrolfanspeed);
+}
 
 class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
 {
@@ -71,20 +106,21 @@ class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
           ((byte)advertisedDevice->getManufacturerData().data()[2] == 0xec))
       {
         char buf[advertisedDevice->getManufacturerData().length()];
-        for(int i = 0; i< advertisedDevice->getManufacturerData().length(); i++)
+        for (int i = 0; i < advertisedDevice->getManufacturerData().length(); i++)
         {
           buf[i] = advertisedDevice->getManufacturerData()[i];
         }
-        goveebtdata * data = (goveebtdata*)buf;
-        temp = ((float)data->temp) /100.;
-        humidity = ((float)data->humidity) /100.;
+        goveebtdata *data = (goveebtdata *)buf;
+        temp = ((float)data->temp) / 100.;
+        humidity = ((float)data->humidity) / 100.;
         battery = data->bat;
         log_i("%s", advertisedDevice->getName().c_str());
-        log_i("%i %i %i",data->temp, data->humidity,data->bat);
+        log_i("%i %i %i", data->temp, data->humidity, data->bat);
         JSONVar socketmsg;
         socketmsg["temperatur"] = temp;
         socketmsg["humidity"] = humidity;
         socketmsg["battery"] = battery;
+        socketmsg["autocontrolspeed"] = autocontrolfanspeed;
         ws->textAll(JSON.stringify(socketmsg));
       }
     }
@@ -102,12 +138,12 @@ void applyspeed(int volt, int id, int val)
   {
     if (id == 0)
     {
-      u_int16_t s = minVoltage + (float)(maxVoltage - minVoltage) * ((float)val / 100);
+      u_int16_t s = getVoltageFromPercent(maxVoltage, minVoltage, val);
       volt = s;
     }
     else if (id == 1)
     {
-      u_int16_t s = minVoltage1 + (float)(maxVoltage1 - minVoltage1) * ((float)val / 100);
+      u_int16_t s = getVoltageFromPercent(maxVoltage1, minVoltage1, val);
       volt = s;
     }
   }
@@ -127,6 +163,9 @@ void onGetSettings(AsyncWebServerRequest *request)
   myObject["fan1voltage"] = voltage1;
   myObject["fan1min"] = minVoltage1;
   myObject["fan1max"] = maxVoltage1;
+  myObject["autocontrol"] = autocontrol;
+  myObject["targetTemperature"] = targetTemperature;
+  myObject["targetHumidity"] = targetHumidity;
   request->send(200, "text/json", JSON.stringify(myObject));
 }
 
@@ -177,41 +216,71 @@ void onCmd(AsyncWebServerRequest *request)
     preferences.end();
     request->send(200);
   }
+  else if (variable == "autovals")
+  {
+    String temp = request->arg("temp");
+    String hum = request->arg("hum");
+    targetTemperature = temp.toInt();
+    targetHumidity = hum.toInt();
+    preferences.begin(prefNamespace, false);
+    preferences.putInt("tTemp", targetTemperature);
+    preferences.putInt("tHum", targetHumidity);
+    preferences.end();
+    request->send(200);
+  }
+  else if (variable == "autocontrol")
+  {
+    String autoc = request->arg("val");
+    log_i("autocontrol %s", autoc.c_str());
+    autocontrol = autoc.toInt();
+    preferences.begin(prefNamespace, false);
+    preferences.putInt("autocontrol", autocontrol);
+    preferences.end();
+    request->send(200);
+  }
   else
     request->send(404);
 }
 
-void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventType type, void * arg, uint8_t *data, size_t len){
-    
-    if(type == WS_EVT_CONNECT){
-        Serial.printf("ws[%s][%u] connect\n", server->url(), client->id());
-    }
-    else if(type == WS_EVT_DISCONNECT){
-        Serial.printf("ws[%s][%u] disconnect\n", server->url(), client->id());
-    }
-    else if(type == WS_EVT_ERROR){
-        Serial.printf("ws[%s][%u] error(%u): %s\n", server->url(), client->id(), *((uint16_t*)arg), (char*)data);
-    }
-    else if(type == WS_EVT_PONG){
-        Serial.printf("ws[%s][%u] pong[%u]: %s\n", server->url(), client->id(), len, (len)?(char*)data:"");
-    }
-    else if(type == WS_EVT_DATA){
-        AwsFrameInfo * info = (AwsFrameInfo*)arg;
-    }
+void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len)
+{
 
-}    
+  if (type == WS_EVT_CONNECT)
+  {
+    Serial.printf("ws[%s][%u] connect\n", server->url(), client->id());
+  }
+  else if (type == WS_EVT_DISCONNECT)
+  {
+    Serial.printf("ws[%s][%u] disconnect\n", server->url(), client->id());
+  }
+  else if (type == WS_EVT_ERROR)
+  {
+    Serial.printf("ws[%s][%u] error(%u): %s\n", server->url(), client->id(), *((uint16_t *)arg), (char *)data);
+  }
+  else if (type == WS_EVT_PONG)
+  {
+    Serial.printf("ws[%s][%u] pong[%u]: %s\n", server->url(), client->id(), len, (len) ? (char *)data : "");
+  }
+  else if (type == WS_EVT_DATA)
+  {
+    AwsFrameInfo *info = (AwsFrameInfo *)arg;
+  }
+}
 
 void setup()
 {
   // put your setup code here, to run once:
   if (Serial.available())
     Serial.begin(115200);
-  
+
   preferences.begin(prefNamespace, false);
   maxVoltage = preferences.getInt("maxv0", maxVoltage);
   minVoltage = preferences.getInt("minv0", minVoltage);
   maxVoltage1 = preferences.getInt("maxv1", maxVoltage1);
   minVoltage1 = preferences.getInt("minv1", minVoltage1);
+  targetHumidity = preferences.getInt("tHum", targetHumidity);
+  targetTemperature = preferences.getInt("tTemp", targetTemperature);
+  autocontrol = preferences.getInt("autocontrol", autocontrol);
   preferences.end();
 
   dac.begin(I2C_SDA, I2C_SCL);
@@ -234,7 +303,7 @@ void setup()
   ws->onEvent(onWsEvent);
   server->addHandler(ws);
   server->begin();
-  
+
   log_i("Started Webserver on port %i", http_port);
 
   // Set DAC output range
@@ -256,9 +325,9 @@ void setup()
   log_i("btcallback  %i", btcallback);
   pBLEScan->setScanCallbacks(btcallback, true);
   pBLEScan->setActiveScan(true); // Set active scanning, this will get more data from the advertiser.
-  pBLEScan->setInterval(5000); // How often the scan occurs / switches channels; in milliseconds,
-  pBLEScan->setWindow(4000);    // How long to scan during the interval; in milliseconds.
-  pBLEScan->setMaxResults(0); // do not store the scan results, use callback only.
+  pBLEScan->setInterval(1000);   // How often the scan occurs / switches channels; in milliseconds,
+  pBLEScan->setWindow(900);      // How long to scan during the interval; in milliseconds.
+  pBLEScan->setMaxResults(0);    // do not store the scan results, use callback only.
 }
 
 void loop()
@@ -277,7 +346,12 @@ void loop()
   {
     nextScanTime += scanInterval;
     log_i("Restarting BLE scan");
-    pBLEScan->start(6000, false);
+    pBLEScan->start(1000, false);
   }
-  vTaskDelay(2000);
+  if (autocontrol)
+  {
+    processAutoControl();
+  }
+
+  vTaskDelay(scanInterval);
 }

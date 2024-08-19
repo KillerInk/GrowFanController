@@ -17,19 +17,29 @@
     <input type="range" min="0" max="100" value="50" class="slider" id="speed1">
   </div>
   <div id="sliderAmount1"></div>
-  <div id="fansettings_container">
+  <div class="a" id="fansettings_container">
     <label for="fan0min">Fan1 Min Voltage in HZ:</label>
     <input type="number" id="fan0min" name="fan0min">
     <label for="fan0max">Fan1 Max Voltage in HZ:</label>
     <input type="number" id="fan0max" name="fan0max">
     <input type="submit" id="fan0sub" value="Submit">
   </div>
-  <div id="fansettings_container1">
+  <div class="a" id="fansettings_container1">
     <label for="fan1min">Fan2 Min Voltage in HZ:</label>
     <input type="number" id="fan1min" name="fan1min">
     <label for="fan1max">Fan2 Max Voltage in HZ:</label>
     <input type="number" id="fan1max" name="fan1max">
     <input type="submit" id="fan1sub" value="Submit">
+  </div>
+  <div></div>
+  <div class="a" id="auto">
+    <input type="checkbox" id="enableauto" name="enableauto">
+    <label for="enableauto">Automatic Control</label><br>
+    <label for="targettemp">Target Temperature '°'C</label>
+    <input type="number" id="targettemp" name="targettemp">
+    <label for="targettemp">Target Humidity %</label>
+    <input type="number" id="targethum" name="targethum">
+    <input type="submit" id="targetTempHumSub" value="Submit">
   </div>
 </body>
 <style>
@@ -84,6 +94,10 @@
     cursor: pointer;
     /* Cursor on hover */
   }
+  div.a {
+    margin: 5px;
+    outline: 1px solid black;
+  }
 </style>
 
 <script>
@@ -101,6 +115,10 @@
   var temperatur = document.getElementById("temperatur");
   var humidity = document.getElementById("humidity");
   var battery = document.getElementById("battery");
+  var buttonSubTempHum = document.getElementById("targetTempHumSub")
+  var targettemp = document.getElementById("targettemp");
+  var targethum = document.getElementById("targethum");
+  var enableauto = document.getElementById("enableauto");
 
   output.innerHTML = slider.value;
   output1.innerHTML = slider1.value;
@@ -115,9 +133,13 @@
         var bat = result["battery"];
         var temp = result["temperatur"];
         var hum = result["humidity"];
+        var autospeed = result["autocontrolspeed"];
         battery.innerHTML = bat;
         temperatur.innerHTML = temp;
         humidity.innerHTML = hum;
+        output.innerHTML = autospeed;
+        output1.innerHTML = autospeed;
+        
     };
 
     websocket.onerror = function(error) {
@@ -135,6 +157,9 @@
         fan0max.value = json["fan0max"];
         fan1min.value = json["fan1min"];
         fan1max.value = json["fan1max"];
+        targettemp.value = result["targetTemperature"];
+        targethum.value = result["targetHumidity"];
+        enableauto.checked = result["autocontrol"];
         console.log(`request to ${query} finished, status: ${response.status}`);
       });
       createWebsocket();
@@ -185,6 +210,33 @@
     let min = document.getElementById("fan1min").value;
     let max = document.getElementById("fan1max").value;
     const query = `${host}/cmd?var=voltage&min=${min}&max=${max}&id=1`;
+    fetch(query)
+      .then(response => {
+        console.log(`request to ${query} finished, status: ${response.status}`);
+      });
+  }
+
+  buttonSubTempHum.onclick = function()
+  {
+    let host = document.location.origin;
+    let temp = targettemp.value;
+    let hum = targethum.value;
+    const query = `${host}/cmd?var=autovals&temp=${temp}&hum=${hum}`;
+    fetch(query)
+      .then(response => {
+        console.log(`request to ${query} finished, status: ${response.status}`);
+      });
+  }
+
+  enableauto.onclick = function()
+  {
+    let host = document.location.origin;
+    let val = enableauto.checked;
+    if(val == false)
+      val = 0;
+    else
+      val = 1;
+    const query = `${host}/cmd?var=autocontrol&val=${val}`;
     fetch(query)
       .then(response => {
         console.log(`request to ${query} finished, status: ${response.status}`);
