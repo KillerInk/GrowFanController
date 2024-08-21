@@ -47,7 +47,7 @@ struct goveebtdata
 
 u_int16_t getVoltageFromPercent(int maxvoltage, int minvoltage, int val)
 {
-  return minVoltage + (float)(maxVoltage - minVoltage) * ((float)val / 100);
+  return minvoltage + (float)(maxvoltage - minvoltage) * ((float)val / 100);
 }
 
 void processAutoControl()
@@ -120,7 +120,8 @@ class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
         socketmsg["temperatur"] = temp;
         socketmsg["humidity"] = humidity;
         socketmsg["battery"] = battery;
-        socketmsg["autocontrolspeed"] = autocontrolfanspeed;
+        if(autocontrol)
+          socketmsg["autocontrolspeed"] = autocontrolfanspeed;
         ws->textAll(JSON.stringify(socketmsg));
       }
     }
