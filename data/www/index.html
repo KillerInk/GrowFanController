@@ -157,9 +157,9 @@
         fan0max.value = json["fan0max"];
         fan1min.value = json["fan1min"];
         fan1max.value = json["fan1max"];
-        targettemp.value = result["targetTemperature"];
-        targethum.value = result["targetHumidity"];
-        enableauto.checked = result["autocontrol"];
+        targettemp.value = json["targetTemperature"];
+        targethum.value = json["targetHumidity"];
+        enableauto.checked = json["autocontrol"];
         console.log(`request to ${query} finished, status: ${response.status}`);
       });
       createWebsocket();

@@ -120,7 +120,7 @@ class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
         socketmsg["temperatur"] = temp;
         socketmsg["humidity"] = humidity;
         socketmsg["battery"] = battery;
-        if(autocontrol)
+        if (autocontrol)
           socketmsg["autocontrolspeed"] = autocontrolfanspeed;
         ws->textAll(JSON.stringify(socketmsg));
       }
@@ -343,14 +343,14 @@ void loop()
   //dac.store();
    log_i("loop");*/
 
-  if (nextScanTime <= millis() && !pBLEScan->isScanning())
-  {
-    nextScanTime += scanInterval;
-    log_i("Restarting BLE scan");
-    pBLEScan->start(1000, false);
-  }
   if (autocontrol)
   {
+    if (nextScanTime <= millis() && !pBLEScan->isScanning())
+    {
+      nextScanTime += scanInterval;
+      log_i("Restarting BLE scan");
+      pBLEScan->start(1000, false);
+    }
     processAutoControl();
   }
 
