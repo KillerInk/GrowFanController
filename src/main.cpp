@@ -9,8 +9,14 @@
 #include "Preferences.h"
 #include "Arduino_JSON.h"
 #include "NimBLEDevice.h"
+#include "DFRobot_ENS160.h"
 
-DFRobot_GP8403 dac(&Wire, 0x5F);
+#include <AHT20.h>
+
+//[    47][I][main.cpp:310] setup(): found address 56
+//[    51][I][main.cpp:310] setup(): found address 83
+//[    53][I][main.cpp:310] setup(): found address 95
+DFRobot_GP8403 dac(&Wire, i2c_pwn_addr);
 uint16_t voltage = 0;
 uint16_t voltage1 = 0;
 AsyncWebServer *server;
@@ -36,6 +42,9 @@ int filtercompensation = 5; //%
 
 NimBLEScan *pBLEScan;
 NimBLEUUID serviceUuid("180a"); // Govee 5179 service UUID
+
+DFRobot_ENS160_I2C ens160(&Wire, /*I2CAddr*/ 0x53);
+AHT20 aht20;
 
 struct goveebtdata
 {
@@ -268,6 +277,17 @@ void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventTyp
   }
 }
 
+uint8_t checkI2C(uint8_t addr)
+{
+  Wire.beginTransmission(addr);
+  Wire.write(OUTPUT_RANGE);
+  byte error;
+  error = Wire.endTransmission();
+  if (error == 0)
+    return 1;
+  return 0;
+}
+
 void setup()
 {
   // put your setup code here, to run once:
@@ -283,8 +303,6 @@ void setup()
   targetTemperature = preferences.getInt("tTemp", targetTemperature);
   autocontrol = preferences.getInt("autocontrol", autocontrol);
   preferences.end();
-
-  dac.begin(I2C_SDA, I2C_SCL);
 
   WiFi.setHostname("Esp32 FanController");
   WiFi.mode(WIFI_STA);
@@ -329,7 +347,33 @@ void setup()
   pBLEScan->setInterval(1000);   // How often the scan occurs / switches channels; in milliseconds,
   pBLEScan->setWindow(900);      // How long to scan during the interval; in milliseconds.
   pBLEScan->setMaxResults(0);    // do not store the scan results, use callback only.
+
+  Wire.begin();
+  Wire.setClock(100000);
+
+  for (byte i = 1; i < 127; i++)
+  {
+    int avail = checkI2C(i);
+    if (avail == 1)
+      log_i("found address %i", i);
+  }
+  // Wire.end();
+  boolean rdy = 0;
+  rdy = aht20.begin();
+  log_i("aht avail:%i", rdy);
+  rdy = dac.begin();
+  log_i("dac avail:%i", rdy);
+  // log_i("firmware: %s",ens160.getFirmwareVersion());
+  ens160.setPWRMode(ENS160_STANDARD_MODE);
 }
+
+int AQI;
+int TVOC; // ppb
+int eCO2; // ppm
+int hp0;  // Ohm
+int hp1;  // Ohm
+int hp2;  // Ohm
+int hp3;  // Ohm
 
 void loop()
 {
@@ -353,6 +397,33 @@ void loop()
     }
     processAutoControl();
   }
+  if (true)
+  {
+    temp = aht20.getTemperature();
+    humidity = aht20.getHumidity();
+    log_i("temp:%f humidity:%f", temp, humidity);
+  }
+  if (true)
+  {
+    ens160.setTempAndHum(temp, humidity);
+    /*
+     *         1-Warm-Up phase, first 3 minutes after power-on.
+     *         2-Initial Start-Up phase, first full hour of operation after initial power-on. Only once in the sensor’s lifetime.
+     */
+    int status = ens160.getENS160Status();
+    // Return value range: 1-5 (Corresponding to five levels of Excellent, Good, Moderate, Poor and Unhealthy respectively)
+    AQI = (uint8_t)ens160.getAQI();
+    TVOC = ens160.getTVOC();
+    eCO2 = ens160.getECO2();
+    log_i("status:%i tvoc:%i eco2:%i aqi:%i", status, TVOC, eCO2, AQI);
+  }
+  JSONVar socketmsg;
+  socketmsg["temperatur"] = temp;
+  socketmsg["humidity"] = humidity;
+  socketmsg["eco2"] = eCO2;
+  socketmsg["aqi"] = AQI;
+  socketmsg["tvoc"] = TVOC;
+  ws->textAll(JSON.stringify(socketmsg));
 
-  vTaskDelay(scanInterval);
+  vTaskDelay(8000);
 }
