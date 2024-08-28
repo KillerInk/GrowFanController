@@ -34,6 +34,22 @@ void ens160Ath2x_dataListner(float temp, float humidity, int aqi, int tvoc, int 
   MyWebServer_sendSocketMsg(JSON.stringify(socketmsg));
 }
 
+String getSettings()
+{
+    JSONVar myObject;
+    myObject["fan0voltage"] = getVoltage();
+    myObject["fan0min"] = getMinVoltage();
+    myObject["fan0max"] = getMaxVoltage();
+    myObject["fan1voltage"] = getVoltage1();
+    myObject["fan1min"] = getMinVoltage1();
+    myObject["fan1max"] = getMaxVoltage1();
+    myObject["autocontrol"] = FanController_isAutoControl();
+    myObject["targetTemperature"] = getTargetTemperature();
+    myObject["targetHumidity"] = getTargetHumidity();
+    myObject["readgovee"] = GoveeBTh5179_isEnable();
+    return JSON.stringify(myObject);
+}
+
 void setup()
 {
   // put your setup code here, to run once:
@@ -53,7 +69,8 @@ void setup()
   MyWebServer_setVoltageChangedListner(FanController_setVoltage);
   MyWebServer_setTargetTempHumChangedListner(FanController_setTargetTempHum);
   MyWebServer_setAutoControlListner(FanController_setAutoControl);
-  MyWebServer_setFanControllerGetSettings(FanController_getSettings);
+  MyWebServer_setFanControllerGetSettings(getSettings);
+  MyWebServer_setReadGoveeListner(GoveeBTh5179_enable);
   MyWebServer_setup();
 
   Ens160Aht2x_setDataListner(ens160Ath2x_dataListner);
@@ -85,10 +102,9 @@ void loop()
   vTaskDelay(5000);
   //dac.store();
    log_i("loop");*/
-
+  GoveeBTh5179_loop();
   if (FanController_isAutoControl())
   {
-    GoveeBTh5179_loop();
     FanController_processAutoControl();
   }
   Ens160Aht2x_loop();

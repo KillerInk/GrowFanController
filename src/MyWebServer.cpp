@@ -11,6 +11,7 @@ void (*voltagechanged_listner)(int id, int min,int max);
 void(*targettemphum_listner)(int tmp,int hum);
 void(*autocontrol_listner)(bool enable);
 String(* getFanControllerSettings)();
+void(*readgovee_listner)(bool enable);
 
 void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len)
 {
@@ -86,6 +87,14 @@ void onCmd(AsyncWebServerRequest *request)
         autocontrol_listner(autoc.toInt());
     request->send(200);
   }
+  else if (variable == "readgovee")
+  {
+    String autoc = request->arg("val");
+    log_i("readgovee %s", autoc.c_str());
+    if(readgovee_listner != nullptr)
+        readgovee_listner(autoc.toInt());
+    request->send(200);
+  }
   else
     request->send(404);
 }
@@ -137,3 +146,9 @@ void MyWebServer_setFanControllerGetSettings(String func())
 {
     getFanControllerSettings = func;
 }
+
+void MyWebServer_setReadGoveeListner(void func(bool enable))
+{
+    readgovee_listner = func;
+}
+

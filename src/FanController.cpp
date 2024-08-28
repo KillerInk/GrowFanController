@@ -105,19 +105,44 @@ void FanController_setAutoControl(bool enable)
     preferences.end();
 }
 
-String FanController_getSettings()
+int getVoltage()
 {
-    JSONVar myObject;
-    myObject["fan0voltage"] = voltage;
-    myObject["fan0min"] = minVoltage;
-    myObject["fan0max"] = maxVoltage;
-    myObject["fan1voltage"] = voltage1;
-    myObject["fan1min"] = minVoltage1;
-    myObject["fan1max"] = maxVoltage1;
-    myObject["autocontrol"] = autocontrol;
-    myObject["targetTemperature"] = targetTemperature;
-    myObject["targetHumidity"] = targetHumidity;
-    return JSON.stringify(myObject);
+    return voltage;
+}
+
+int getVoltage1()
+{
+    return voltage1;
+}
+
+int getMaxVoltage()
+{
+    return maxVoltage;
+}
+
+int getMaxVoltage1()
+{
+    return maxVoltage1;
+}
+
+int getMinVoltage()
+{
+    return minVoltage;
+}
+
+int getMinVoltage1()
+{
+    return minVoltage1;
+}
+
+int getTargetHumidity()
+{
+    return targetHumidity;
+}
+
+int getTargetTemperature()
+{
+    return targetTemperature;
 }
 
 void FanController_applyspeed(int volt, int id, int val)

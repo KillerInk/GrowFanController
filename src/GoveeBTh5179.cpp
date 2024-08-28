@@ -9,6 +9,7 @@ float temp = 0.;
 float humidity = 0.;
 int battery = 0;
 void (*eventlistner)(float temp,float hum,int bat);
+bool enable = false;
 
 struct goveebtdata
 {
@@ -90,7 +91,7 @@ void GoveeBTh5179_setup()
 
 void GoveeBTh5179_loop()
 {
-    if (nextScanTime <= millis() && !pBLEScan->isScanning())
+    if (enable && nextScanTime <= millis() && !pBLEScan->isScanning())
     {
       nextScanTime += scanInterval;
       log_i("Restarting BLE scan");
@@ -116,4 +117,14 @@ int GoveeBTh5179_getBattery()
 void GoveeBTh5179_setEventListner(void func(float temp, float hum, int bat))
 {
     eventlistner = func;
+}
+
+void GoveeBTh5179_enable(bool en)
+{
+    enable = en;
+}
+
+bool GoveeBTh5179_isEnable()
+{
+    return enable;
 }
