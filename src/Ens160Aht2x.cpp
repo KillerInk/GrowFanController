@@ -1,0 +1,82 @@
+#include "Ens160Aht2x.h"
+#include <AHT20.h>
+#include "DFRobot_ENS160.h"
+
+DFRobot_ENS160_I2C ens160(&Wire, /*I2CAddr*/ 0x53);
+AHT20 aht20;
+float ens_temp;
+float ens_humidity;
+int AQI;
+int TVOC; // ppb
+int eCO2; // ppm
+int hp0;  // Ohm
+int hp1;  // Ohm
+int hp2;  // Ohm
+int hp3;  // Ohm
+void (*ens_eventlistner)(float temp, float humidity, int aqi, int tvoc, int eco2);
+
+uint8_t checkI2C(uint8_t addr)
+{
+    Wire.beginTransmission(addr);
+    byte error;
+    error = Wire.endTransmission();
+    if (error == 0)
+        return 1;
+    return 0;
+}
+
+void Ens160Aht2x_setup()
+{
+    //sda/scl pin 21/22
+    Wire.begin();
+    Wire.setClock(100000);
+
+    for (byte i = 1; i < 127; i++)
+    {
+        int avail = checkI2C(i);
+        if (avail == 1)
+            log_i("found address %i", i);
+    }
+    // Wire.end();
+    boolean rdy = 0;
+    rdy = aht20.begin();
+    log_i("aht avail:%i", rdy);
+    
+    // log_i("firmware: %s",ens160.getFirmwareVersion());
+    ens160.setPWRMode(ENS160_STANDARD_MODE);
+}
+
+void Ens160Aht2x_loop()
+{
+    ens_temp = aht20.getTemperature();
+    ens_humidity = aht20.getHumidity();
+    log_i("temp:%f humidity:%f", ens_temp, ens_humidity);
+    ens160.setTempAndHum(ens_temp, ens_humidity);
+    /*
+     *         1-Warm-Up phase, first 3 minutes after power-on.
+     *         2-Initial Start-Up phase, first full hour of operation after initial power-on. Only once in the sensor’s lifetime.
+     */
+    int status = ens160.getENS160Status();
+    // Return value range: 1-5 (Corresponding to five levels of Excellent, Good, Moderate, Poor and Unhealthy respectively)
+    AQI = (uint8_t)ens160.getAQI();
+    TVOC = ens160.getTVOC();
+    eCO2 = ens160.getECO2();
+    log_i("status:%i tvoc:%i eco2:%i aqi:%i", status, TVOC, eCO2, AQI);
+    if(ens_eventlistner != nullptr)
+        ens_eventlistner(ens_temp,ens_humidity,AQI,TVOC,eCO2);
+}
+
+void Ens160Aht2x_setDataListner(void func(float temp, float humidity, int aqi, int tvoc, int eco2))
+{
+    ens_eventlistner = func;
+}
+
+float Ens160Aht2x_getTemperature()
+{
+    return ens_temp;
+}
+
+float Ens160Aht2x_getHumidity()
+{
+    return ens_humidity;
+}
