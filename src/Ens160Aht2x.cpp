@@ -1,18 +1,19 @@
 #include "Ens160Aht2x.h"
 #include <AHT20.h>
 #include "DFRobot_ENS160.h"
+#include "Preferences.h"
 
+Preferences pref;
+const char *prefName= "Correction";
 DFRobot_ENS160_I2C ens160(&Wire, /*I2CAddr*/ 0x53);
 AHT20 aht20;
 float ens_temp;
 float ens_humidity;
+float temp_dif =0.;
+float hum_dif = 0.;
 int AQI;
 int TVOC; // ppb
 int eCO2; // ppm
-int hp0;  // Ohm
-int hp1;  // Ohm
-int hp2;  // Ohm
-int hp3;  // Ohm
 void (*ens_eventlistner)(float temp, float humidity, int aqi, int tvoc, int eco2);
 
 uint8_t checkI2C(uint8_t addr)
@@ -30,6 +31,10 @@ void Ens160Aht2x_setup()
     //sda/scl pin 21/22
     Wire.begin();
     Wire.setClock(100000);
+    pref.begin(prefName, false);
+    temp_dif = pref.getFloat("tempdif",temp_dif);
+    hum_dif = pref.getFloat("humdif",hum_dif);
+    pref.end();
 
     for (byte i = 1; i < 127; i++)
     {
@@ -51,7 +56,7 @@ void Ens160Aht2x_loop()
     ens_temp = aht20.getTemperature();
     ens_humidity = aht20.getHumidity();
     log_i("temp:%f humidity:%f", ens_temp, ens_humidity);
-    ens160.setTempAndHum(ens_temp, ens_humidity);
+    ens160.setTempAndHum(Ens160Aht2x_getTemperature(), Ens160Aht2x_getHumidity());
     /*
      *         1-Warm-Up phase, first 3 minutes after power-on.
      *         2-Initial Start-Up phase, first full hour of operation after initial power-on. Only once in the sensor’s lifetime.
@@ -63,7 +68,7 @@ void Ens160Aht2x_loop()
     eCO2 = ens160.getECO2();
     log_i("status:%i tvoc:%i eco2:%i aqi:%i", status, TVOC, eCO2, AQI);
     if(ens_eventlistner != nullptr)
-        ens_eventlistner(ens_temp,ens_humidity,AQI,TVOC,eCO2);
+        ens_eventlistner(Ens160Aht2x_getTemperature(), Ens160Aht2x_getHumidity(),AQI,TVOC,eCO2);
 }
 
 void Ens160Aht2x_setDataListner(void func(float temp, float humidity, int aqi, int tvoc, int eco2))
@@ -73,10 +78,30 @@ void Ens160Aht2x_setDataListner(void func(float temp, float humidity, int aqi, i
 
 float Ens160Aht2x_getTemperature()
 {
-    return ens_temp;
+    return ens_temp + temp_dif;
 }
 
 float Ens160Aht2x_getHumidity()
 {
-    return ens_humidity;
+    return ens_humidity+ hum_dif;
+}
+
+void Ens160Aht2x_setTempHumDif(float tempdif, float humdif)
+{
+    temp_dif = tempdif;
+    hum_dif = humdif;
+    pref.begin(prefName, false);
+    pref.putFloat("tempdif", temp_dif);
+    pref.putFloat("humdif", hum_dif);
+    pref.end();
+}
+
+float Ens160Aht2x_getTemperatureDif()
+{
+    return temp_dif;
+}
+
+float Ens160Aht2x_getHumidityDif()
+{
+    return hum_dif;
 }

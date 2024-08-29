@@ -87,13 +87,15 @@ void FanController_setVoltage(int id, int min, int max)
     preferences.end();
 }
 
-void FanController_setTargetTempHum(int temp, int hum)
+void FanController_setTargetTempHumSpeedDif(int temp, int hum,int speeddif)
 {
     targetTemperature = temp;
     targetHumidity = hum;
+    filtercompensation = speeddif;
     preferences.begin(prefNamespace, false);
     preferences.putInt("tTemp", targetTemperature);
     preferences.putInt("tHum", targetHumidity);
+    preferences.putInt("fc",filtercompensation);
     preferences.end();
 }
 
@@ -145,6 +147,11 @@ int getTargetTemperature()
     return targetTemperature;
 }
 
+int getSpeedDifference()
+{
+    return filtercompensation;
+}
+
 void FanController_applyspeed(int volt, int id, int val)
 {
     if (val > 0)
@@ -178,6 +185,7 @@ void FanController_setup()
     targetHumidity = preferences.getInt("tHum", targetHumidity);
     targetTemperature = preferences.getInt("tTemp", targetTemperature);
     autocontrol = preferences.getInt("autocontrol", autocontrol);
+    filtercompensation = preferences.getInt("fc", filtercompensation);
     preferences.end();
     log_i("dac avail:%i", dac.begin());
     // Set DAC output range

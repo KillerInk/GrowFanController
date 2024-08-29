@@ -1,10 +1,7 @@
 #include <Arduino.h>
-
 #include <FS.h>
 #include <WiFi.h>
-
 #include "config.h"
-
 #include "mdns.h"
 #include "FanController.h"
 #include "Arduino_JSON.h"
@@ -47,6 +44,9 @@ String getSettings()
     myObject["targetTemperature"] = getTargetTemperature();
     myObject["targetHumidity"] = getTargetHumidity();
     myObject["readgovee"] = GoveeBTh5179_isEnable();
+    myObject["speeddif"] = getSpeedDifference();
+    myObject["tempdif"] = Ens160Aht2x_getTemperatureDif();
+    myObject["humdif"] = Ens160Aht2x_getHumidityDif();
     return JSON.stringify(myObject);
 }
 
@@ -67,10 +67,11 @@ void setup()
 
   MyWebServer_setApplySpeedListner(FanController_applyspeed);
   MyWebServer_setVoltageChangedListner(FanController_setVoltage);
-  MyWebServer_setTargetTempHumChangedListner(FanController_setTargetTempHum);
+  MyWebServer_setTargetTempHumChangedListner(FanController_setTargetTempHumSpeedDif);
   MyWebServer_setAutoControlListner(FanController_setAutoControl);
   MyWebServer_setFanControllerGetSettings(getSettings);
   MyWebServer_setReadGoveeListner(GoveeBTh5179_enable);
+  MyWebServer_setTempHumDif(Ens160Aht2x_setTempHumDif);
   MyWebServer_setup();
 
   Ens160Aht2x_setDataListner(ens160Ath2x_dataListner);

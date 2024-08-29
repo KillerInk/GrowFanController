@@ -8,10 +8,11 @@ AsyncWebServer *server;
 AsyncWebSocket *ws;
 void (*applyspeed_listner)(int volt,int id,int val);
 void (*voltagechanged_listner)(int id, int min,int max);
-void(*targettemphum_listner)(int tmp,int hum);
+void(*targettemphum_listner)(int tmp,int hum,int speed);
 void(*autocontrol_listner)(bool enable);
 String(* getFanControllerSettings)();
 void(*readgovee_listner)(bool enable);
+void(*setTempHumDif)(float temp, float hum);
 
 void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len)
 {
@@ -75,8 +76,9 @@ void onCmd(AsyncWebServerRequest *request)
   {
     String temp = request->arg("temp");
     String hum = request->arg("hum");
+    String spe = request->arg("speeddif");
     if(targettemphum_listner != nullptr)
-        targettemphum_listner(temp.toInt(), hum.toInt());
+        targettemphum_listner(temp.toInt(), hum.toInt(), spe.toInt());
     request->send(200);
   }
   else if (variable == "autocontrol")
@@ -94,6 +96,13 @@ void onCmd(AsyncWebServerRequest *request)
     if(readgovee_listner != nullptr)
         readgovee_listner(autoc.toInt());
     request->send(200);
+  }
+  else if(variable == "temphumdif")
+  {
+    String tmp = request->arg("temp");
+    String hum = request->arg("hum");
+    if(setTempHumDif != nullptr)
+      setTempHumDif(tmp.toFloat(), hum.toFloat());
   }
   else
     request->send(404);
@@ -132,7 +141,7 @@ void MyWebServer_setVoltageChangedListner(void func(int id, int min, int max))
     voltagechanged_listner = func;
 }
 
-void MyWebServer_setTargetTempHumChangedListner(void func(int tmp, int hum))
+void MyWebServer_setTargetTempHumChangedListner(void func(int tmp, int hum,int speed))
 {
     targettemphum_listner = func;
 }
@@ -150,5 +159,10 @@ void MyWebServer_setFanControllerGetSettings(String func())
 void MyWebServer_setReadGoveeListner(void func(bool enable))
 {
     readgovee_listner = func;
+}
+
+void MyWebServer_setTempHumDif(void func(float temp, float hum))
+{
+    setTempHumDif = func;
 }
 

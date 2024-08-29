@@ -5,9 +5,6 @@
   <div class="datacontainer">
     <div id="temperatur"></div>
     <div id="humidity"></div>
-    <div id="temperatur_govee"></div>
-    <div id="humidity_govee"></div>
-    <div id="battery"></div>
     <div id="eco2"></div>
     <div id="tvoc"></div>
     <div id="aqi"></div>
@@ -42,13 +39,25 @@
     <label for="enableauto">Automatic Control</label><br>
     <label for="targettemp">Target Temperature &deg;C</label>
     <input type="number" id="targettemp" name="targettemp">
-    <label for="targettemp">Target Humidity %</label>
+    <label for="targethum">Target Humidity %</label>
     <input type="number" id="targethum" name="targethum">
+    <label for="speeddif">Fans Speed Difference %</label>
+    <input type="number" id="speeddif" name="speeddif">
     <input type="submit" id="targetTempHumSub" value="Submit">
   </div>
   <div class="a" id="readgovee">
     <input type="checkbox" id="enablereadgovee" name="enablereadgovee">
     <label for="enablereadgovee">Get Temperature and Humidity from Govee H5179</label><br>
+    <div id="temperatur_govee"></div>
+    <div id="humidity_govee"></div>
+    <div id="battery"></div>
+  </div>
+  <div class="a" id="calibaht2x">
+    <input type="number" id="tempdif" name="tempdif">
+    <label for="tempdif">Temperature correction for AHT2X Sensor &deg;C</label><br>
+    <input type="number" id="humdif" name="humdif">
+    <label for="tempdif">Humidity correction for AHT2X Sensor %</label><br>
+    <input type="submit" id="targetTempHumDiffSub" value="Submit">
   </div>
 </body>
 <style>
@@ -134,7 +143,13 @@
   var aqi = document.getElementById("aqi");
   var eco2 = document.getElementById("eco2");
   var tvoc = document.getElementById("tvoc");
+  var speeddif = document.getElementById("speeddif");
   var readgovee = document.getElementById("enablereadgovee");
+
+  var targetTempHumDiffSub = document.getElementById("targetTempHumDiffSub");
+  var tempdif = document.getElementById("tempdif");
+  var humdif = document.getElementById("humdif");
+  
 
 
   output.innerHTML = slider.value;
@@ -196,6 +211,9 @@
         targethum.value = json["targetHumidity"];
         enableauto.checked = json["autocontrol"];
         readgovee.checked = json["readgovee"];
+        speeddif.value = json["speeddif"];
+        tempdif.value = json["tempdif"]
+        humdif.value = json["humdif"]
       });
     createWebsocket();
   });
@@ -255,7 +273,19 @@
     let host = document.location.origin;
     let temp = targettemp.value;
     let hum = targethum.value;
-    const query = `${host}/cmd?var=autovals&temp=${temp}&hum=${hum}`;
+    let speed = speeddif.value;
+    const query = `${host}/cmd?var=autovals&temp=${temp}&hum=${hum}&speeddif=${speed}`;
+    fetch(query)
+      .then(response => {
+        console.log(`request to ${query} finished, status: ${response.status}`);
+      });
+  }
+
+  targetTempHumDiffSub.onclick = function () {
+    let host = document.location.origin;
+    let temp = tempdif.value;
+    let hum = humdif.value;
+    const query = `${host}/cmd?var=temphumdif&temp=${temp}&hum=${hum}`;
     fetch(query)
       .then(response => {
         console.log(`request to ${query} finished, status: ${response.status}`);
