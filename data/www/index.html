@@ -35,8 +35,11 @@
   </div>
   <div></div>
   <div class="a" id="auto">
+    <label for="enableauto">Automatic Control</label>
     <input type="checkbox" id="enableauto" name="enableauto">
-    <label for="enableauto">Automatic Control</label><br>
+    <br>
+    <label id="autofan0" name="autofan0">Fan1:0</label><label id="autofan1" name="autofan1">Fan2:0</label>
+    <br>
     <label for="targettemp">Target Temperature &deg;C</label>
     <input type="number" id="targettemp" name="targettemp">
     <label for="targethum">Target Humidity %</label>
@@ -146,6 +149,9 @@
   var speeddif = document.getElementById("speeddif");
   var readgovee = document.getElementById("enablereadgovee");
 
+  var autofan0 = document.getElementById("autofan0");
+  var autofan1 = document.getElementById("autofan1");
+
   var targetTempHumDiffSub = document.getElementById("targetTempHumDiffSub");
   var tempdif = document.getElementById("tempdif");
   var humdif = document.getElementById("humdif");
@@ -169,18 +175,20 @@
       var ec2 = result["eco2"];
       var tvc = result["tvoc"];
       var aq = result["aqi"];
+      var volt0 = result["voltage0"];
+      var volt1 = result["voltage1"];
       if (bat != undefined) {
-        battery.innerHTML = bat;
-        temperatur_g.innerHTML = temp + "&deg;C Govee";
-        humidity_g.innerHTML = hum + "% Govee";
+        battery.innerHTML = bat +"%";
+        temperatur_g.innerHTML = temp + "&deg;C";
+        humidity_g.innerHTML = hum + "%";
       }
       else {
         temperatur.innerHTML = temp + "&deg;C";
         humidity.innerHTML = hum + "%";
       }
       if (autospeed != undefined) {
-        output.innerHTML = autospeed;
-        output1.innerHTML = autospeed;
+        autofan0.innerHTML = "Fan1:" + autospeed + "% " + volt0+"mv ";
+        autofan1.innerHTML = "Fan2:" + (autospeed - speeddif.value) + "% " + volt1+"mv";
       }
       if (ec2 != undefined)
         eco2.innerHTML = "eCO2:" + ec2 + "ppm";

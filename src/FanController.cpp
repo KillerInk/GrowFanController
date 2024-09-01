@@ -38,20 +38,25 @@ void FanController_processAutoControl()
 {
     if (getTemp() > targetTemperature || getHumidity() > targetHumidity)
     {
-        if (autocontrolfanspeed + 2 <= 100)
-            autocontrolfanspeed += 2;
+        if (autocontrolfanspeed + 1 <= 100)
+            autocontrolfanspeed += 1;
         else
             log_i("max speed reached");
     }
     else if (getTemp() < targetTemperature || getHumidity() < targetHumidity)
     {
-        if (autocontrolfanspeed - 2 >= 10)
-            autocontrolfanspeed -= 2;
+        if (autocontrolfanspeed - 1 >= 0)
+            autocontrolfanspeed -= 1;
         else
             log_i("min speed reached");
     }
     voltage = getVoltageFromPercent(maxVoltage, minVoltage, autocontrolfanspeed);
-    voltage1 = getVoltageFromPercent(maxVoltage1, minVoltage1, autocontrolfanspeed - filtercompensation);
+    int fan2speed = autocontrolfanspeed - filtercompensation;
+    if (fan2speed < 0)
+        fan2speed = 0;
+    if (fan2speed > 100)
+        fan2speed = 100;
+    voltage1 = getVoltageFromPercent(maxVoltage1, minVoltage1, fan2speed);
     dac.setDACOutVoltage(voltage, 0);
     dac.setDACOutVoltage(voltage1, 1);
     log_i("autocontrol set speed to: %i", autocontrolfanspeed);
@@ -87,7 +92,7 @@ void FanController_setVoltage(int id, int min, int max)
     preferences.end();
 }
 
-void FanController_setTargetTempHumSpeedDif(int temp, int hum,int speeddif)
+void FanController_setTargetTempHumSpeedDif(int temp, int hum, int speeddif)
 {
     targetTemperature = temp;
     targetHumidity = hum;
@@ -95,7 +100,7 @@ void FanController_setTargetTempHumSpeedDif(int temp, int hum,int speeddif)
     preferences.begin(prefNamespace, false);
     preferences.putInt("tTemp", targetTemperature);
     preferences.putInt("tHum", targetHumidity);
-    preferences.putInt("fc",filtercompensation);
+    preferences.putInt("fc", filtercompensation);
     preferences.end();
 }
 

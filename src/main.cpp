@@ -15,8 +15,6 @@ void govee_dataListner(float temp, float hum, int bat)
   socketmsg["temperatur"] = temp;
   socketmsg["humidity"] = hum;
   socketmsg["battery"] = bat;
-  if (FanController_isAutoControl())
-    socketmsg["autocontrolspeed"] = FanController_getAutoSpeed();
   MyWebServer_sendSocketMsg(JSON.stringify(socketmsg));
 }
 
@@ -28,6 +26,12 @@ void ens160Ath2x_dataListner(float temp, float humidity, int aqi, int tvoc, int 
   socketmsg["eco2"] = eco2;
   socketmsg["aqi"] = aqi;
   socketmsg["tvoc"] = tvoc;
+  if (FanController_isAutoControl())
+  {
+    socketmsg["autocontrolspeed"] = FanController_getAutoSpeed();
+    socketmsg["voltage0"] = getVoltage();
+    socketmsg["voltage1"] = getVoltage1();
+  }
   MyWebServer_sendSocketMsg(JSON.stringify(socketmsg));
 }
 
@@ -110,5 +114,5 @@ void loop()
   }
   Ens160Aht2x_loop();
   
-  vTaskDelay(8000);
+  vTaskDelay(1000);
 }
