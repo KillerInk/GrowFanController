@@ -13,6 +13,7 @@ void(*autocontrol_listner)(bool enable);
 String(* getFanControllerSettings)();
 void(*readgovee_listner)(bool enable);
 void(*setTempHumDif)(float temp, float hum);
+void(*setMinMaxSpeed)(int min, int max);
 
 void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len)
 {
@@ -104,6 +105,15 @@ void onCmd(AsyncWebServerRequest *request)
     if(setTempHumDif != nullptr)
       setTempHumDif(tmp.toFloat(), hum.toFloat());
   }
+  else if(variable == "autospeed")
+  {
+    String min = request->arg("min");
+    String max = request->arg("max");
+    if(setMinMaxSpeed != nullptr)
+    {
+      setMinMaxSpeed(min.toInt(), max.toInt());
+    }
+  }
   else
     request->send(404);
 }
@@ -166,3 +176,7 @@ void MyWebServer_setTempHumDif(void func(float temp, float hum))
     setTempHumDif = func;
 }
 
+void MyWebServer_setMinMaxSpeed(void func(int min, int max))
+{
+  setMinMaxSpeed = func;
+}

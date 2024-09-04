@@ -47,6 +47,12 @@
     <label for="speeddif">Fans Speed Difference %</label>
     <input type="number" id="speeddif" name="speeddif">
     <input type="submit" id="targetTempHumSub" value="Submit">
+    <br>
+    <label for="minspeed">Min Speed</label>
+    <input type="number" id="minspeed" name="minspeed">
+    <label for="maxspeed">Max Speed</label>
+    <input type="number" id="maxspeed" name="maxspeed">
+    <input type="submit" id="minmaxspeedsub" value="Submit">
   </div>
   <div class="a" id="readgovee">
     <input type="checkbox" id="enablereadgovee" name="enablereadgovee">
@@ -156,7 +162,9 @@
   var tempdif = document.getElementById("tempdif");
   var humdif = document.getElementById("humdif");
   
-
+  var minspeed = document.getElementById("minspeed");
+  var maxspeed = document.getElementById("maxspeed");
+  var minmaxspeedsub = document.getElementById("minmaxspeedsub");
 
   output.innerHTML = slider.value;
   output1.innerHTML = slider1.value;
@@ -171,6 +179,8 @@
       var bat = result["battery"];
       var temp = result["temperatur"];
       var hum = result["humidity"];
+      var atemp = result["atemperatur"];
+      var ahum = result["ahumidity"];
       var autospeed = result["autocontrolspeed"];
       var ec2 = result["eco2"];
       var tvc = result["tvoc"];
@@ -183,8 +193,8 @@
         humidity_g.innerHTML = hum + "%";
       }
       else {
-        temperatur.innerHTML = temp + "&deg;C";
-        humidity.innerHTML = hum + "%";
+        temperatur.innerHTML = temp + "&deg;C A:" + atemp +"&deg;C";
+        humidity.innerHTML = hum + "% A:" + ahum+"%";
       }
       if (autospeed != undefined) {
         autofan0.innerHTML = "Fan1:" + autospeed + "% " + volt0+"mv ";
@@ -222,6 +232,8 @@
         speeddif.value = json["speeddif"];
         tempdif.value = json["tempdif"]
         humdif.value = json["humdif"]
+        minspeed.value = json["minspeed"];
+        maxspeed.value = json["maxspeed"];
       });
     createWebsocket();
   });
@@ -322,6 +334,17 @@
     else
       val = 1;
     const query = `${host}/cmd?var=readgovee&val=${val}`;
+    fetch(query)
+      .then(response => {
+        console.log(`request to ${query} finished, status: ${response.status}`);
+      });
+  }
+
+  minmaxspeedsub.onclick = function () {
+    let host = document.location.origin;
+    let min = minspeed.value;
+    let max = maxspeed.value;
+    const query = `${host}/cmd?var=autospeed&min=${min}&max=${max}`;
     fetch(query)
       .then(response => {
         console.log(`request to ${query} finished, status: ${response.status}`);

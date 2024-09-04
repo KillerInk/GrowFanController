@@ -23,34 +23,57 @@ int targetHumidity = 60;
 bool autocontrol = false;
 // tracked fanspeed in autocontrol in %
 int autocontrolfanspeed = 50; // %
+int minspeed = 0;
+int maxspeed = 100;
 // in blowing fans need to run slower to compensate the resistance from the filter and keep a bit vacuum inside the tent
 int filtercompensation = 5; //%
 
 float (*getTemp)();
 float (*getHumidity)();
+float (*getAvgTemp)();
+float (*getAvgHumidity)();
 
 u_int16_t getVoltageFromPercent(int maxvoltage, int minvoltage, int val)
 {
     return minvoltage + (float)(maxvoltage - minvoltage) * ((float)val / 100);
 }
 
+long nextTick;
+float lastTemp;
 void FanController_processAutoControl()
 {
-    if (getTemp() > targetTemperature || getHumidity() > targetHumidity)
+    float tmp = getTemp();
+    float hm = getHumidity();
+    float atmp = getAvgTemp();
+    float ahm = getAvgHumidity();
+    if (atmp > targetTemperature || ahm > targetHumidity)
     {
-        if (autocontrolfanspeed + 1 <= 100)
-            autocontrolfanspeed += 1;
-        else
-            log_i("max speed reached");
+        autocontrolfanspeed++;
     }
-    else if (getTemp() < targetTemperature || getHumidity() < targetHumidity)
+    else if (atmp < targetTemperature || ahm < targetHumidity)
     {
-        if (autocontrolfanspeed - 1 >= 0)
-            autocontrolfanspeed -= 1;
+        if(atmp < (targetTemperature - 1))
+            autocontrolfanspeed--;
         else
-            log_i("min speed reached");
+        {
+            if (nextTick < millis())
+            {
+                if (lastTemp > atmp)
+                    autocontrolfanspeed--;
+                else if (lastTemp < atmp)
+                    autocontrolfanspeed++;
+                lastTemp = atmp;
+                nextTick = millis() + 5 * 1000;
+            }
+        }
     }
+    if (autocontrolfanspeed > maxspeed)
+        autocontrolfanspeed = maxspeed;
+
+    if (autocontrolfanspeed < minspeed)
+        autocontrolfanspeed = minspeed;
     voltage = getVoltageFromPercent(maxVoltage, minVoltage, autocontrolfanspeed);
+
     int fan2speed = autocontrolfanspeed - filtercompensation;
     if (fan2speed < 0)
         fan2speed = 0;
@@ -89,6 +112,17 @@ void FanController_setVoltage(int id, int min, int max)
         preferences.putInt("minv1", minVoltage1);
         preferences.putInt("maxv1", maxVoltage1);
     }
+    preferences.end();
+}
+
+void FanController_setMinMaxFanSpeed(int min, int max)
+{
+    minspeed = min;
+    maxspeed = max;
+    preferences.begin(prefNamespace, false);
+    preferences.putInt("mins", minspeed);
+    preferences.putInt("maxs", maxspeed);
+    preferences.putInt("fc", filtercompensation);
     preferences.end();
 }
 
@@ -157,6 +191,16 @@ int getSpeedDifference()
     return filtercompensation;
 }
 
+int FanController_getMinSpeed()
+{
+    return minspeed;
+}
+
+int FanController_getMaxSpeed()
+{
+    return maxspeed;
+}
+
 void FanController_applyspeed(int volt, int id, int val)
 {
     if (val > 0)
@@ -191,6 +235,8 @@ void FanController_setup()
     targetTemperature = preferences.getInt("tTemp", targetTemperature);
     autocontrol = preferences.getInt("autocontrol", autocontrol);
     filtercompensation = preferences.getInt("fc", filtercompensation);
+    minspeed = preferences.getInt("mins", minspeed);
+    maxspeed = preferences.getInt("maxs", maxspeed);
     preferences.end();
     log_i("dac avail:%i", dac.begin());
     // Set DAC output range
@@ -201,4 +247,10 @@ void FanController_setHumidityAndTempFunctions(float func(), float func2())
 {
     getTemp = func2;
     getHumidity = func;
+}
+
+void FanController_setAvgHumidityAndTempFunctions(float func(), float func2())
+{
+    getAvgTemp = func2;
+    getAvgHumidity = func;
 }

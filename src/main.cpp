@@ -12,8 +12,11 @@
 void govee_dataListner(float temp, float hum, int bat)
 {
   JSONVar socketmsg;
-  socketmsg["temperatur"] = temp;
-  socketmsg["humidity"] = hum;
+  char buf[64];
+  snprintf(buf, sizeof buf, "%.2f", temp);
+  socketmsg["temperatur"] = buf;
+  snprintf(buf, sizeof buf, "%.2f", hum);
+  socketmsg["humidity"] = buf;
   socketmsg["battery"] = bat;
   MyWebServer_sendSocketMsg(JSON.stringify(socketmsg));
 }
@@ -21,8 +24,15 @@ void govee_dataListner(float temp, float hum, int bat)
 void ens160Ath2x_dataListner(float temp, float humidity, int aqi, int tvoc, int eco2)
 {
   JSONVar socketmsg;
-  socketmsg["temperatur"] = temp;
-  socketmsg["humidity"] = humidity;
+  char buf[64];
+  int ret = snprintf(buf, sizeof buf, "%.2f", temp);
+  socketmsg["temperatur"] = buf;
+  ret = snprintf(buf, sizeof buf, "%.2f", humidity);
+  socketmsg["humidity"] = buf;
+  ret = snprintf(buf, sizeof buf, "%.2f", (Ens160Aht2x_getAvarageTemperature()));
+  socketmsg["atemperatur"] = buf;
+  ret = snprintf(buf, sizeof buf, "%.2f", (Ens160Aht2x_getAvarageHumidity()));
+  socketmsg["ahumidity"] = buf;
   socketmsg["eco2"] = eco2;
   socketmsg["aqi"] = aqi;
   socketmsg["tvoc"] = tvoc;
@@ -51,6 +61,9 @@ String getSettings()
     myObject["speeddif"] = getSpeedDifference();
     myObject["tempdif"] = Ens160Aht2x_getTemperatureDif();
     myObject["humdif"] = Ens160Aht2x_getHumidityDif();
+    myObject["minspeed"] = FanController_getMinSpeed();
+    myObject["maxspeed"] = FanController_getMaxSpeed();
+
     return JSON.stringify(myObject);
 }
 
@@ -76,12 +89,14 @@ void setup()
   MyWebServer_setFanControllerGetSettings(getSettings);
   MyWebServer_setReadGoveeListner(GoveeBTh5179_enable);
   MyWebServer_setTempHumDif(Ens160Aht2x_setTempHumDif);
+  MyWebServer_setMinMaxSpeed(FanController_setMinMaxFanSpeed);
   MyWebServer_setup();
 
   Ens160Aht2x_setDataListner(ens160Ath2x_dataListner);
   Ens160Aht2x_setup();
 
   FanController_setHumidityAndTempFunctions(Ens160Aht2x_getHumidity,Ens160Aht2x_getTemperature);
+  FanController_setAvgHumidityAndTempFunctions(Ens160Aht2x_getAvarageHumidity,Ens160Aht2x_getAvarageTemperature);
   FanController_setup();
 
   mdns_init();
