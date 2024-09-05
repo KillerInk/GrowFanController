@@ -1,204 +1,119 @@
 #include "FanController.h"
 #include "DFRobot_GP8403.h"
 #include "config.h"
-#include "Preferences.h"
+#include "MyPreferences.h"
 #include "JSON.h"
 
 //[    47][I][main.cpp:310] setup(): found address 56
 //[    51][I][main.cpp:310] setup(): found address 83
 //[    53][I][main.cpp:310] setup(): found address 95
 DFRobot_GP8403 dac(&Wire, i2c_pwn_addr);
-uint16_t voltage = 0;
-uint16_t voltage1 = 0;
-
-Preferences preferences;
-int minVoltage = 800;    // hz
-int maxVoltage = 1100;   // hz
-int minVoltage1 = 0;     // hz
-int maxVoltage1 = 10000; // hz
-const char *prefNamespace = "Voltage";
-
-int targetTemperature = 26;
-int targetHumidity = 60;
-bool autocontrol = false;
-// tracked fanspeed in autocontrol in %
-int autocontrolfanspeed = 50; // %
-int minspeed = 0;
-int maxspeed = 100;
-// in blowing fans need to run slower to compensate the resistance from the filter and keep a bit vacuum inside the tent
-int filtercompensation = 5; //%
+// mars hydro fan 560-630
+// artic 120mm 560-1100;
+Voltage fan0Voltage;
+Voltage fan1Voltage;
+FanControllerValues fancontrollerValues;
 
 float (*getTemp)();
 float (*getHumidity)();
 float (*getAvgTemp)();
 float (*getAvgHumidity)();
 
-u_int16_t getVoltageFromPercent(int maxvoltage, int minvoltage, int val)
-{
-    return minvoltage + (float)(maxvoltage - minvoltage) * ((float)val / 100);
-}
-
 long nextTick;
 float lastTemp;
 void FanController_processAutoControl()
 {
-    float tmp = getTemp();
-    float hm = getHumidity();
     float atmp = getAvgTemp();
     float ahm = getAvgHumidity();
-    if (atmp > targetTemperature || ahm > targetHumidity)
+    if (atmp > fancontrollerValues.targetTemperature || ahm > fancontrollerValues.targetHumidity)
     {
-        autocontrolfanspeed++;
+        fancontrollerValues.autocontrolfanspeed++;
     }
-    else if (atmp < targetTemperature || ahm < targetHumidity)
+    else if (atmp < fancontrollerValues.targetTemperature || ahm < fancontrollerValues.targetHumidity)
     {
-        if(atmp < (targetTemperature - 1))
-            autocontrolfanspeed--;
+        if (atmp < (fancontrollerValues.targetTemperature - 1))
+            fancontrollerValues.autocontrolfanspeed--;
         else
         {
             if (nextTick < millis())
             {
                 if (lastTemp > atmp)
-                    autocontrolfanspeed--;
+                    fancontrollerValues.autocontrolfanspeed--;
                 else if (lastTemp < atmp)
-                    autocontrolfanspeed++;
+                    fancontrollerValues.autocontrolfanspeed++;
                 lastTemp = atmp;
                 nextTick = millis() + 5 * 1000;
             }
         }
     }
-    if (autocontrolfanspeed > maxspeed)
-        autocontrolfanspeed = maxspeed;
+    if (fancontrollerValues.autocontrolfanspeed > fancontrollerValues.maxspeed)
+        fancontrollerValues.autocontrolfanspeed = fancontrollerValues.maxspeed;
 
-    if (autocontrolfanspeed < minspeed)
-        autocontrolfanspeed = minspeed;
-    voltage = getVoltageFromPercent(maxVoltage, minVoltage, autocontrolfanspeed);
+    if (fancontrollerValues.autocontrolfanspeed < fancontrollerValues.minspeed)
+        fancontrollerValues.autocontrolfanspeed = fancontrollerValues.minspeed;
+    fan0Voltage.voltage = getVoltageFromPercent(fan0Voltage.max, fan0Voltage.min, fancontrollerValues.autocontrolfanspeed);
 
-    int fan2speed = autocontrolfanspeed - filtercompensation;
+    int fan2speed = fancontrollerValues.autocontrolfanspeed - fancontrollerValues.filtercompensation;
     if (fan2speed < 0)
         fan2speed = 0;
     if (fan2speed > 100)
         fan2speed = 100;
-    voltage1 = getVoltageFromPercent(maxVoltage1, minVoltage1, fan2speed);
-    dac.setDACOutVoltage(voltage, 0);
-    dac.setDACOutVoltage(voltage1, 1);
-    log_i("autocontrol set speed to: %i", autocontrolfanspeed);
-}
-
-bool FanController_isAutoControl()
-{
-    return autocontrol;
-}
-
-int FanController_getAutoSpeed()
-{
-    return autocontrolfanspeed;
+    fan1Voltage.voltage = getVoltageFromPercent(fan1Voltage.max, fan1Voltage.min, fan2speed);
+    dac.setDACOutVoltage(fan0Voltage.voltage, 0);
+    dac.setDACOutVoltage(fan1Voltage.voltage, 1);
+    log_i("autocontrol set speed to: %i", fancontrollerValues.autocontrolfanspeed);
 }
 
 void FanController_setVoltage(int id, int min, int max)
 {
-    preferences.begin(prefNamespace, false);
     if (id == 0)
     {
-        minVoltage = min;
-        maxVoltage = max;
-        preferences.putInt("minv0", minVoltage);
-        preferences.putInt("maxv0", maxVoltage);
+        fan0Voltage.min = min;
+        fan0Voltage.max = max;
+        MyPreferences_setBytes("fan0", &fan0Voltage, sizeof(Voltage));
     }
     else if (id == 1)
     {
-        minVoltage1 = min;
-        maxVoltage1 = max;
-        preferences.putInt("minv1", minVoltage1);
-        preferences.putInt("maxv1", maxVoltage1);
+        fan1Voltage.min = min;
+        fan1Voltage.max = max;
+        MyPreferences_setBytes("fan1", &fan1Voltage, sizeof(Voltage));
     }
-    preferences.end();
 }
 
 void FanController_setMinMaxFanSpeed(int min, int max)
 {
-    minspeed = min;
-    maxspeed = max;
-    preferences.begin(prefNamespace, false);
-    preferences.putInt("mins", minspeed);
-    preferences.putInt("maxs", maxspeed);
-    preferences.putInt("fc", filtercompensation);
-    preferences.end();
+    fancontrollerValues.minspeed = min;
+    fancontrollerValues.maxspeed = max;
+    MyPreferences_setBytes("conv", &fancontrollerValues, sizeof(FanControllerValues));
+}
+
+Voltage *FanController_getFan0()
+{
+    return &fan0Voltage;
+}
+
+Voltage *FanController_getFan1()
+{
+    return &fan1Voltage;
+}
+
+FanControllerValues *FanController_getValues()
+{
+    return &fancontrollerValues;
 }
 
 void FanController_setTargetTempHumSpeedDif(int temp, int hum, int speeddif)
 {
-    targetTemperature = temp;
-    targetHumidity = hum;
-    filtercompensation = speeddif;
-    preferences.begin(prefNamespace, false);
-    preferences.putInt("tTemp", targetTemperature);
-    preferences.putInt("tHum", targetHumidity);
-    preferences.putInt("fc", filtercompensation);
-    preferences.end();
+    fancontrollerValues.targetTemperature = temp;
+    fancontrollerValues.targetHumidity = hum;
+    fancontrollerValues.filtercompensation = speeddif;
+    MyPreferences_setBytes("conv", &fancontrollerValues, sizeof(FanControllerValues));
 }
 
 void FanController_setAutoControl(bool enable)
 {
-    autocontrol = enable;
-    preferences.begin(prefNamespace, false);
-    preferences.putInt("autocontrol", autocontrol);
-    preferences.end();
-}
-
-int getVoltage()
-{
-    return voltage;
-}
-
-int getVoltage1()
-{
-    return voltage1;
-}
-
-int getMaxVoltage()
-{
-    return maxVoltage;
-}
-
-int getMaxVoltage1()
-{
-    return maxVoltage1;
-}
-
-int getMinVoltage()
-{
-    return minVoltage;
-}
-
-int getMinVoltage1()
-{
-    return minVoltage1;
-}
-
-int getTargetHumidity()
-{
-    return targetHumidity;
-}
-
-int getTargetTemperature()
-{
-    return targetTemperature;
-}
-
-int getSpeedDifference()
-{
-    return filtercompensation;
-}
-
-int FanController_getMinSpeed()
-{
-    return minspeed;
-}
-
-int FanController_getMaxSpeed()
-{
-    return maxspeed;
+    fancontrollerValues.autocontrol = enable;
+    MyPreferences_setBytes("conv", &fancontrollerValues, sizeof(FanControllerValues));
 }
 
 void FanController_applyspeed(int volt, int id, int val)
@@ -207,15 +122,15 @@ void FanController_applyspeed(int volt, int id, int val)
     {
         if (id == 0)
         {
-            u_int16_t s = getVoltageFromPercent(maxVoltage, minVoltage, val);
+            u_int16_t s = getVoltageFromPercent(fan0Voltage.max, fan0Voltage.min, val);
             volt = s;
-            voltage = volt;
+            fan0Voltage.voltage = volt;
         }
         else if (id == 1)
         {
-            u_int16_t s = getVoltageFromPercent(maxVoltage1, minVoltage1, val);
+            u_int16_t s = getVoltageFromPercent(fan1Voltage.max, fan1Voltage.min, val);
             volt = s;
-            voltage1 = volt;
+            fan1Voltage.voltage = volt;
         }
     }
     else
@@ -226,18 +141,9 @@ void FanController_applyspeed(int volt, int id, int val)
 
 void FanController_setup()
 {
-    preferences.begin(prefNamespace, false);
-    maxVoltage = preferences.getInt("maxv0", maxVoltage);
-    minVoltage = preferences.getInt("minv0", minVoltage);
-    maxVoltage1 = preferences.getInt("maxv1", maxVoltage1);
-    minVoltage1 = preferences.getInt("minv1", minVoltage1);
-    targetHumidity = preferences.getInt("tHum", targetHumidity);
-    targetTemperature = preferences.getInt("tTemp", targetTemperature);
-    autocontrol = preferences.getInt("autocontrol", autocontrol);
-    filtercompensation = preferences.getInt("fc", filtercompensation);
-    minspeed = preferences.getInt("mins", minspeed);
-    maxspeed = preferences.getInt("maxs", maxspeed);
-    preferences.end();
+    Mypreferences_getBytes("fan0", &fan0Voltage, sizeof(Voltage));
+    Mypreferences_getBytes("fan1", &fan1Voltage, sizeof(Voltage));
+    Mypreferences_getBytes("conv", &fancontrollerValues, sizeof(FanControllerValues));
     log_i("dac avail:%i", dac.begin());
     // Set DAC output range
     dac.setDACOutRange(dac.eOutputRange10V);
