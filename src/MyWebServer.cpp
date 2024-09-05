@@ -130,6 +130,8 @@ void MyWebServer_setup()
     server->on("/cmd", HTTP_GET, onCmd);
     server->on("/settings", HTTP_GET, onGetSettings);
     server->serveStatic("/", SPIFFS, "/www/").setDefaultFile("index.html");
+    server->serveStatic("/script.js", SPIFFS, "/www/script.js");
+    server->serveStatic("/style.css", SPIFFS, "/www/style.css");
     ws = new AsyncWebSocket("/ws");
     ws->onEvent(onWsEvent);
     server->addHandler(ws);
