@@ -31,38 +31,7 @@ enum light_state
 
 light_state current_state = sunrise;
 
-bool timeEquals(tm tim, MyTime t)
-{
-    return tim.tm_hour == t.hour && tim.tm_min == t.min;
-}
 
-int getTimeDiff(int h1, int min1, int h2,int min2)
-{
-    int dif;
-    int h = h1 - h2;
-    int min = min1 - min2;
-    if(min > 60)
-    {
-        h++;
-        min -=60;
-    }
-    if(min < 0)
-    {
-        h--;
-        min +=60;
-    }
-    return h*60 + min;
-}
-
-int getTimeDiff(MyTime t1, MyTime t2)
-{
-    return getTimeDiff(t1.hour,t1.min, t2.hour,t2.min);
-}
-
-int getTimeDiff(tm t1, MyTime t2)
-{
-    return getTimeDiff(t1.tm_hour,t1.tm_min,t2.hour,t2.min);
-}
 
 void control_light()
 {

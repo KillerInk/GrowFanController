@@ -7,13 +7,13 @@ Preferences pref;
 const char *prefName = "Correction";
 DFRobot_ENS160_I2C ens160(&Wire, /*I2CAddr*/ 0x53);
 AHT20 aht20;
-float ens_temp;
-float ens_humidity;
+float ens_temp = 0;
+float ens_humidity = 0;
 float temp_dif = 0.;
 float hum_dif = 0.;
-int AQI;
-int TVOC; // ppb
-int eCO2; // ppm
+int AQI = 0;
+int TVOC = 0; // ppb
+int eCO2 = 0; // ppm
 void (*ens_eventlistner)(float temp, float humidity, int aqi, int tvoc, int eco2);
 
 float avarage_temp = 0.;

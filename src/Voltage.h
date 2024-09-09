@@ -5,9 +5,9 @@
 
 struct Voltage
 {
-    int min;
-    int max;
-    int voltage;
+    int min = 0;
+    int max = 1200;
+    int voltage = 0;
 };
 
 static u_int16_t getVoltageFromPercent(int maxvoltage, int minvoltage, int val)

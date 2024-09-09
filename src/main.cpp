@@ -21,7 +21,6 @@ void govee_dataListner(float temp, float hum, int bat)
     socketmsg["humidity"] = buf;
     socketmsg["battery"] = bat;
     MyWebServer_sendSocketMsg(JSON.stringify(socketmsg));
-    socketmsg.~JSONVar();
 }
 
 void ens160Ath2x_dataListner(float temp, float humidity, int aqi, int tvoc, int eco2)
@@ -45,8 +44,8 @@ void ens160Ath2x_dataListner(float temp, float humidity, int aqi, int tvoc, int 
         socketmsg["voltage0"] = FanController_getFan0()->voltage;
         socketmsg["voltage1"] = FanController_getFan1()->voltage;
     }
+    socketmsg["nightmode"] = FanController_getValues()->nightmodeActive;
     MyWebServer_sendSocketMsg(JSON.stringify(socketmsg));
-    socketmsg.~JSONVar();
 }
 
 String getSettings()
@@ -57,7 +56,7 @@ String getSettings()
     myObject["fan0max"] = FanController_getFan0()->max;
     myObject["fan1voltage"] = FanController_getFan1()->voltage;
     myObject["fan1min"] = FanController_getFan1()->min;
-    myObject["fan1max"] = FanController_getFan0()->max;
+    myObject["fan1max"] = FanController_getFan1()->max;
     myObject["autocontrol"] = FanController_getValues()->autocontrol;
     myObject["targetTemperature"] = FanController_getValues()->targetTemperature;
     myObject["targetHumidity"] = FanController_getValues()->targetHumidity;
@@ -67,9 +66,14 @@ String getSettings()
     myObject["humdif"] = Ens160Aht2x_getHumidityDif();
     myObject["minspeed"] = FanController_getValues()->minspeed;
     myObject["maxspeed"] = FanController_getValues()->maxspeed;
+    myObject["nightmodeactive"] = FanController_getValues()->nightmode;
+    myObject["nightmodeonhour"] = FanController_getValues()->nightmodeOn.hour;
+    myObject["nightmodeonmin"] = FanController_getValues()->nightmodeOn.min;
+    myObject["nightmodeoffmin"] = FanController_getValues()->nightModeOff.min;
+    myObject["nightmodeoffhour"] = FanController_getValues()->nightModeOff.hour;
+    myObject["nightmodemaxspeed"] = FanController_getValues()->nightmodeMaxSpeed;
 
     return JSON.stringify(myObject);
-    myObject.~JSONVar();
 }
 
 void setup()
@@ -96,6 +100,8 @@ void setup()
     MyWebServer_setReadGoveeListner(GoveeBTh5179_enable);
     MyWebServer_setTempHumDif(Ens160Aht2x_setTempHumDif);
     MyWebServer_setMinMaxSpeed(FanController_setMinMaxFanSpeed);
+    MyWebServer_setFanControllerNightModeActiveCallback(FanController_setNightMode);
+    MyWebServer_setFanControllerNightModeCallback(FanController_setNightModeValues);
     MyWebServer_setup();
 
     Ens160Aht2x_setDataListner(ens160Ath2x_dataListner);
@@ -132,6 +138,7 @@ void loop()
     {
         FanController_processAutoControl();
     }
+    FanController_loop();
     Ens160Aht2x_loop();
     //LightController_loop();
 
