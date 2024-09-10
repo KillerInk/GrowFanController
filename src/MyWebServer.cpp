@@ -6,16 +6,8 @@
 
 AsyncWebServer *server;
 AsyncWebSocket *ws;
-void (*applyspeed_listner)(int volt, int id, int val);
-void (*voltagechanged_listner)(int id, int min, int max);
-void (*targettemphum_listner)(int tmp, int hum, int speed);
-void (*autocontrol_listner)(bool enable);
-String (*getFanControllerSettings)();
-void (*readgovee_listner)(bool enable);
-void (*setTempHumDif)(float temp, float hum);
-void (*setMinMaxSpeed)(int min, int max);
-void (*fancoltroller_nightmodecallback)(int onhour, int onmin, int offhour, int offmin, int maxspeed);
-void (*fancoltroller_nightmodeactivcecallback)(bool active);
+
+MyWebServerMethodCallbacks methcallbacks;
 
 void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len)
 {
@@ -57,9 +49,9 @@ void onCmd(AsyncWebServerRequest *request)
         {
             log_i("set %s to %s", variable.c_str(), value.c_str());
             if (id == 0)
-                applyspeed_listner(0, id, val);
+                methcallbacks.applyspeed_listner(0, id, val);
             else if (id == 1)
-                applyspeed_listner(0, id, val);
+                methcallbacks.applyspeed_listner(0, id, val);
             request->send(200);
         }
         else
@@ -71,8 +63,8 @@ void onCmd(AsyncWebServerRequest *request)
         String min = request->arg("min");
         String max = request->arg("max");
         int id = ids.toInt();
-        if (voltagechanged_listner != nullptr)
-            voltagechanged_listner(id, min.toInt(), max.toInt());
+        if (methcallbacks.voltagechanged_listner != nullptr)
+            methcallbacks.voltagechanged_listner(id, min.toInt(), max.toInt());
         request->send(200);
     }
     else if (variable == "autovals")
@@ -80,41 +72,41 @@ void onCmd(AsyncWebServerRequest *request)
         String temp = request->arg("temp");
         String hum = request->arg("hum");
         String spe = request->arg("speeddif");
-        if (targettemphum_listner != nullptr)
-            targettemphum_listner(temp.toInt(), hum.toInt(), spe.toInt());
+        if (methcallbacks.targettemphum_listner != nullptr)
+            methcallbacks.targettemphum_listner(temp.toInt(), hum.toInt(), spe.toInt());
         request->send(200);
     }
     else if (variable == "autocontrol")
     {
         String autoc = request->arg("val");
         log_i("autocontrol %s", autoc.c_str());
-        if (autocontrol_listner != nullptr)
-            autocontrol_listner(autoc.toInt());
+        if (methcallbacks.autocontrol_listner != nullptr)
+            methcallbacks.autocontrol_listner(autoc.toInt());
         request->send(200);
     }
     else if (variable == "readgovee")
     {
         String autoc = request->arg("val");
         log_i("readgovee %s", autoc.c_str());
-        if (readgovee_listner != nullptr)
-            readgovee_listner(autoc.toInt());
+        if (methcallbacks.readgovee_listner != nullptr)
+            methcallbacks.readgovee_listner(autoc.toInt());
         request->send(200);
     }
     else if (variable == "temphumdif")
     {
         String tmp = request->arg("temp");
         String hum = request->arg("hum");
-        if (setTempHumDif != nullptr)
-            setTempHumDif(tmp.toFloat(), hum.toFloat());
+        if (methcallbacks.setTempHumDif != nullptr)
+            methcallbacks.setTempHumDif(tmp.toFloat(), hum.toFloat());
         request->send(200);
     }
     else if (variable == "autospeed")
     {
         String min = request->arg("min");
         String max = request->arg("max");
-        if (setMinMaxSpeed != nullptr)
+        if (methcallbacks.setMinMaxSpeed != nullptr)
         {
-            setMinMaxSpeed(min.toInt(), max.toInt());
+            methcallbacks.setMinMaxSpeed(min.toInt(), max.toInt());
         }
         request->send(200);
     }
@@ -125,15 +117,54 @@ void onCmd(AsyncWebServerRequest *request)
         String offh = request->arg("offh");
         String offm = request->arg("offm");
         String mspeed = request->arg("mspeed");
-        if (fancoltroller_nightmodecallback != nullptr)
-            fancoltroller_nightmodecallback(onh.toInt(), onm.toInt(), offh.toInt(), offm.toInt(), mspeed.toInt());
+        if (methcallbacks.fancoltroller_nightmodecallback != nullptr)
+            methcallbacks.fancoltroller_nightmodecallback(onh.toInt(), onm.toInt(), offh.toInt(), offm.toInt(), mspeed.toInt());
         request->send(200);
     }
     else if(variable == "fannightmodeactive")
     {
         String on = request->arg("nighton");
-        if(fancoltroller_nightmodeactivcecallback != nullptr)
-            fancoltroller_nightmodeactivcecallback(on.toInt());
+        if(methcallbacks.fancoltroller_nightmodeactivcecallback != nullptr)
+            methcallbacks.fancoltroller_nightmodeactivcecallback(on.toInt());
+        request->send(200);
+    }
+    else if(variable == "lightvoltage")
+    {
+        String min = request->arg("min");
+        String max = request->arg("max");
+        if(methcallbacks.lightController_setVoltageLimits != nullptr)
+            methcallbacks.lightController_setVoltageLimits(min.toInt(), max.toInt());
+        request->send(200);
+    }
+    else if(variable == "lightval")
+    {
+        String val = request->arg("val");
+        if(methcallbacks.lightController_setLight != nullptr)
+            methcallbacks.lightController_setLight(val.toInt());
+        request->send(200);
+    }
+    else if(variable == "lightsettime")
+    {
+        String onh = request->arg("onh");
+        String onmin = request->arg("onmin");
+        String offh = request->arg("offh");
+        String offmin = request->arg("offmin");
+        String riseh = request->arg("riseh");
+        String risemin = request->arg("risemin");
+        String seth = request->arg("seth");
+        String setmin = request->arg("setmin");
+        String riseenable = request->arg("riseenable");
+        String setenable = request->arg("setenable");
+        if(methcallbacks.lightController_setTimes != nullptr)
+            methcallbacks.lightController_setTimes(onh.toInt(),onmin.toInt(),offh.toInt(),offmin.toInt(),riseh.toInt(),risemin.toInt(),seth.toInt(), setmin.toInt(), riseenable.toInt(), setenable.toInt());
+        request->send(200);
+    }
+    else if(variable == "lightautomode")
+    {
+        String enable = request->arg("enable");
+        if(methcallbacks.lightController_setAuto != nullptr)
+            methcallbacks.lightController_setAuto(enable.toInt());
+        request->send(200);
     }
     else
         request->send(404);
@@ -141,7 +172,12 @@ void onCmd(AsyncWebServerRequest *request)
 
 void onGetSettings(AsyncWebServerRequest *request)
 {
-    request->send(200, "text/json", getFanControllerSettings());
+    request->send(200, "text/json", methcallbacks.getFanControllerSettings());
+}
+
+MyWebServerMethodCallbacks * MyWebServer_getCallbacksStruct()
+{
+    return &methcallbacks;
 }
 
 void MyWebServer_setup()
@@ -162,54 +198,4 @@ void MyWebServer_setup()
 void MyWebServer_sendSocketMsg(String msg)
 {
     ws->textAll(msg);
-}
-
-void MyWebServer_setApplySpeedListner(void func(int volt, int id, int val))
-{
-    applyspeed_listner = func;
-}
-
-void MyWebServer_setVoltageChangedListner(void func(int id, int min, int max))
-{
-    voltagechanged_listner = func;
-}
-
-void MyWebServer_setTargetTempHumChangedListner(void func(int tmp, int hum, int speed))
-{
-    targettemphum_listner = func;
-}
-
-void MyWebServer_setAutoControlListner(void func(bool enable))
-{
-    autocontrol_listner = func;
-}
-
-void MyWebServer_setFanControllerGetSettings(String func())
-{
-    getFanControllerSettings = func;
-}
-
-void MyWebServer_setReadGoveeListner(void func(bool enable))
-{
-    readgovee_listner = func;
-}
-
-void MyWebServer_setTempHumDif(void func(float temp, float hum))
-{
-    setTempHumDif = func;
-}
-
-void MyWebServer_setMinMaxSpeed(void func(int min, int max))
-{
-    setMinMaxSpeed = func;
-}
-
-void MyWebServer_setFanControllerNightModeCallback(void func(int onhour, int onmin, int offhour, int offmin, int maxspeed))
-{
-    fancoltroller_nightmodecallback = func;
-}
-
-void MyWebServer_setFanControllerNightModeActiveCallback(void func(bool active))
-{
-    fancoltroller_nightmodeactivcecallback = func;
 }

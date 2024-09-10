@@ -7,75 +7,81 @@
 </head>
 
 <body>
-  <div class="datacontainer">
-    <div id="temperatur"></div>
-    <div id="humidity"></div>
-    <div id="eco2"></div>
-    <div id="tvoc"></div>
-    <div id="aqi"></div>
-  </div>
+
   <div class="slidecontainer">
     <label for="speed">Fan1 Speed:</label>
+    <br>
     <input type="range" min="0" max="100" value="50" class="slider" id="speed">
   </div>
   <div id="sliderAmount"></div>
   <div class="slidecontainer2">
     <label for="speed1">Fan2 Speed:</label>
+    <br>
     <input type="range" min="0" max="100" value="50" class="slider" id="speed1">
   </div>
   <div id="sliderAmount1"></div>
   <div class="a" id="fansettings_container">
-    <label for="fan0min">Fan1 Min Voltage in HZ:</label>
+    <label for="fan0min">Fan1 Min Voltage mv:</label>
     <input type="number" id="fan0min" name="fan0min">
-    <label for="fan0max">Fan1 Max Voltage in HZ:</label>
+    <label for="fan0max">Fan1 Max Voltage mv:</label>
     <input type="number" id="fan0max" name="fan0max">
     <input type="submit" id="fan0sub" value="Submit">
   </div>
   <div class="a" id="fansettings_container1">
-    <label for="fan1min">Fan2 Min Voltage in HZ:</label>
+    <label for="fan1min">Fan2 Min Voltage mv:</label>
     <input type="number" id="fan1min" name="fan1min">
-    <label for="fan1max">Fan2 Max Voltage in HZ:</label>
+    <label for="fan1max">Fan2 Max Voltage mv:</label>
     <input type="number" id="fan1max" name="fan1max">
     <input type="submit" id="fan1sub" value="Submit">
   </div>
   <div></div>
   <div class="a" id="auto">
-    <label for="enableauto">Automatic Control</label>
+    <label for="enableauto">Fan Automatic Control</label>
     <input type="checkbox" id="enableauto" name="enableauto">
     <br>
-    <label id="autofan0" name="autofan0">Fan1:0</label><label id="autofan1" name="autofan1">Fan2:0</label>
-    <br>
-    <label for="targettemp">Target Temperature &deg;C</label>
-    <input type="number" id="targettemp" name="targettemp">
-    <label for="targethum">Target Humidity %</label>
-    <input type="number" id="targethum" name="targethum">
-    <label for="speeddif">Fans Speed Difference %</label>
-    <input type="number" id="speeddif" name="speeddif">
-    <input type="submit" id="targetTempHumSub" value="Submit">
-    <br>
-    <label for="minspeed">Min Speed</label>
-    <input type="number" id="minspeed" name="minspeed">
-    <label for="maxspeed">Max Speed</label>
-    <input type="number" id="maxspeed" name="maxspeed">
-    <input type="submit" id="minmaxspeedsub" value="Submit">
-    <br>
-    <br>
-    <label for="enablenightmode">Nightmode</label><div id="nightmodeactive"></div>
-    <input type="checkbox" id="enablenightmode" name="enablenightmode">
-    <br>
-    
-    <label for="onhour">Nightmode On</label>
-    <input type="number" id="onhour" name="onhour">
-    <input type="number" id="onmin" name="onmin">
-    <br>
-    <label for="offhour">Nightmode Off</label>
-    <input type="number" id="offhour" name="offhour">
-    <input type="number" id="offmin" name="offmin">
-    <br>
-    <label>Max Speed at night</label>
-    <input type="number" id="nightmodemaxspeed" name="nightmodemaxspeed">
-    <br>
-    <input type="submit" id="nightmodesub" value="Submit">
+    <div class="a">
+      <label id="autofan0" name="autofan0">Fan1:0</label><label id="autofan1" name="autofan1">Fan2:0</label>
+      <br>
+      <label for="targettemp">Target Temperature &deg;C</label>
+      <input type="number" id="targettemp" name="targettemp">
+      <br>
+      <label for="targethum">Target Humidity %</label>
+      <input type="number" id="targethum" name="targethum">
+      <br>
+      <label for="speeddif">Fans Speed Difference %</label>
+      <input type="number" id="speeddif" name="speeddif">
+      <br>
+      <input type="submit" id="targetTempHumSub" value="Submit">
+      <br>
+      <label for="minspeed">Min Speed</label>
+      <input type="number" id="minspeed" name="minspeed">
+      <br>
+      <label for="maxspeed">Max Speed</label>
+      <input type="number" id="maxspeed" name="maxspeed">
+      <br>
+      <input type="submit" id="minmaxspeedsub" value="Submit">
+      <br>
+    </div>
+    <div class="a">
+      <div id="nightmodeactive"></div>
+      <label for="enablenightmode">Nightmode</label>
+      <input type="checkbox" id="enablenightmode" name="enablenightmode">
+      <br>
+
+      <label for="onhour">Nightmode On</label>
+      <input type="number" id="onhour" name="onhour">hour
+      <input type="number" id="onmin" name="onmin">min
+      <br>
+      <label for="offhour">Nightmode Off</label>
+      <input type="number" id="offhour" name="offhour">hour
+      <input type="number" id="offmin" name="offmin">min
+      <br>
+      <label>Max Speed at night</label>
+      <input type="number" id="nightmodemaxspeed" name="nightmodemaxspeed">
+      <br>
+      <input type="submit" id="nightmodesub" value="Submit">
+      <br>
+    </div>
   </div>
   <div class="a" id="readgovee">
     <input type="checkbox" id="enablereadgovee" name="enablereadgovee">
@@ -85,11 +91,65 @@
     <div id="battery"></div>
   </div>
   <div class="a" id="calibaht2x">
-    <input type="number" id="tempdif" name="tempdif">
-    <label for="tempdif">Temperature correction for AHT2X Sensor &deg;C</label><br>
-    <input type="number" id="humdif" name="humdif">
-    <label for="tempdif">Humidity correction for AHT2X Sensor %</label><br>
-    <input type="submit" id="targetTempHumDiffSub" value="Submit">
+    <div class="a">
+      <div id="temperatur">20C</div>
+      <div id="humidity">50%</div>
+      <div id="eco2"></div>
+      <div id="tvoc"></div>
+      <div id="aqi"></div>
+      <div id="time"></div>
+    </div>
+    <div class="a">
+      <input type="number" id="tempdif" name="tempdif">
+      <label for="tempdif">Temperature correction for AHT2X Sensor &deg;C</label><br>
+      <input type="number" id="humdif" name="humdif">
+      <label for="tempdif">Humidity correction for AHT2X Sensor %</label><br>
+      <input type="submit" id="targetTempHumDiffSub" value="Submit">
+    </div>
+  </div>
+  <div class="a">
+    <label for="lightstrength">Light Strength:</label>
+    <br>
+    <input type="range" min="0" max="100" value="80" class="slider" id="lightstrength">
+    <br>
+    <div class="a">
+      <label for="lightminv">Light min Voltage mv</label>
+      <input type="number" id="lightminv" name="lightminv">
+      <br>
+      <label for="lightmaxv">Light max Voltage mv</label>
+      <input type="number" id="lightmaxv" name="lightmaxv">
+      <br>
+      <input type="submit" id="lightcontrolvoltagesub" value="Submit">
+    </div>
+    <br>
+    <label for="enablelightcontrol">Light AutoControl</label>
+    <input type="checkbox" id="enablelightcontrol" name="enablelightcontrol">
+    <br>
+    <div class="a">
+      <label for="turnlightonhour">Turn light on</label>
+      <input type="number" id="turnlightonhour" name="turnlightonhour">hour
+      <input type="number" id="turnlightonmin" name="turnlightonmin">min
+      <br>
+      <label for="turnlightoffhour">Turn light off</label>
+      <input type="number" id="turnlightoffhour" name="turnlightoffhour">hour
+      <input type="number" id="turnlightoffmin" name="turnlightoffmin">min
+      <br>
+      <label for="enablesunrise">Enable Sunrise</label>
+      <input type="checkbox" id="enablesunrise" name="enablesunrise">
+      <br>
+      <label for="sunrisehour">Sunrise End</label>
+      <input type="number" id="sunrisehour" name="sunrisehour">hour
+      <input type="number" id="sunrisemin" name="sunrisemin">min
+      <br>
+      <label for="enablesunset">Enable Sunset</label>
+      <input type="checkbox" id="enablesunset" name="enablesunset">
+      <br>
+      <label for="sunsethour">Sunset Start</label>
+      <input type="number" id="sunsethour" name="sunsethour">hour
+      <input type="number" id="sunsetmin" name="sunsetmin">min
+      <br>
+      <input type="submit" id="lightcontrolsub" value="Submit">
+    </div>
   </div>
   <script src="script.js"></script>
 </body>

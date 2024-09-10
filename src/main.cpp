@@ -45,6 +45,10 @@ void ens160Ath2x_dataListner(float temp, float humidity, int aqi, int tvoc, int 
         socketmsg["voltage1"] = FanController_getFan1()->voltage;
     }
     socketmsg["nightmode"] = FanController_getValues()->nightmodeActive;
+    tm time;
+    getLocalTime(&time);
+    ret = snprintf(buf, sizeof buf, "%i:%i:%i", time.tm_hour,time.tm_min,time.tm_sec);
+    socketmsg["time"] = buf;
     MyWebServer_sendSocketMsg(JSON.stringify(socketmsg));
 }
 
@@ -66,12 +70,25 @@ String getSettings()
     myObject["humdif"] = Ens160Aht2x_getHumidityDif();
     myObject["minspeed"] = FanController_getValues()->minspeed;
     myObject["maxspeed"] = FanController_getValues()->maxspeed;
+    
     myObject["nightmodeactive"] = FanController_getValues()->nightmode;
     myObject["nightmodeonhour"] = FanController_getValues()->nightmodeOn.hour;
     myObject["nightmodeonmin"] = FanController_getValues()->nightmodeOn.min;
     myObject["nightmodeoffmin"] = FanController_getValues()->nightModeOff.min;
     myObject["nightmodeoffhour"] = FanController_getValues()->nightModeOff.hour;
     myObject["nightmodemaxspeed"] = FanController_getValues()->nightmodeMaxSpeed;
+
+    myObject["lightonh"] = LightController_getValues()->turnOnTime.hour;
+    myObject["lightonmin"] = LightController_getValues()->turnOnTime.min;
+    myObject["lightoffh"] = LightController_getValues()->turnOffTime.hour;
+    myObject["lightoffmin"] = LightController_getValues()->turnOffTime.min;
+    myObject["lightriseh"] = LightController_getValues()->sunriseEnd.hour;
+    myObject["lightrisemin"] = LightController_getValues()->sunriseEnd.min;
+    myObject["lightseth"] = LightController_getValues()->sunsetStart.hour;
+    myObject["lightsetmin"] = LightController_getValues()->sunsetStart.min;
+    myObject["lightriseenable"] = LightController_getValues()->enableSunrise;
+    myObject["lightsetenable"] = LightController_getValues()->enableSunset;
+    myObject["lightautomode"] = LightController_getValues()->automode;
 
     return JSON.stringify(myObject);
 }
@@ -92,16 +109,20 @@ void setup()
     }
     configTime(2*60*60, 0, "pool.ntp.org");
 
-    MyWebServer_setApplySpeedListner(FanController_applyspeed);
-    MyWebServer_setVoltageChangedListner(FanController_setVoltage);
-    MyWebServer_setTargetTempHumChangedListner(FanController_setTargetTempHumSpeedDif);
-    MyWebServer_setAutoControlListner(FanController_setAutoControl);
-    MyWebServer_setFanControllerGetSettings(getSettings);
-    MyWebServer_setReadGoveeListner(GoveeBTh5179_enable);
-    MyWebServer_setTempHumDif(Ens160Aht2x_setTempHumDif);
-    MyWebServer_setMinMaxSpeed(FanController_setMinMaxFanSpeed);
-    MyWebServer_setFanControllerNightModeActiveCallback(FanController_setNightMode);
-    MyWebServer_setFanControllerNightModeCallback(FanController_setNightModeValues);
+    MyWebServer_getCallbacksStruct()->applyspeed_listner = FanController_applyspeed;
+    MyWebServer_getCallbacksStruct()->voltagechanged_listner = FanController_setVoltage;
+    MyWebServer_getCallbacksStruct()->targettemphum_listner = FanController_setTargetTempHumSpeedDif;
+    MyWebServer_getCallbacksStruct()->autocontrol_listner = FanController_setAutoControl;
+    MyWebServer_getCallbacksStruct()->getFanControllerSettings = getSettings;
+    MyWebServer_getCallbacksStruct()->readgovee_listner = GoveeBTh5179_enable;
+    MyWebServer_getCallbacksStruct()->setTempHumDif = Ens160Aht2x_setTempHumDif;
+    MyWebServer_getCallbacksStruct()->setMinMaxSpeed = FanController_setMinMaxFanSpeed;
+    MyWebServer_getCallbacksStruct()->fancoltroller_nightmodeactivcecallback = FanController_setNightMode;
+    MyWebServer_getCallbacksStruct()->fancoltroller_nightmodecallback = FanController_setNightModeValues;
+    MyWebServer_getCallbacksStruct()->lightController_setLight = LightController_setLight;
+    MyWebServer_getCallbacksStruct()->lightController_setTimes = LightController_setTimes;
+    MyWebServer_getCallbacksStruct()->lightController_setVoltageLimits = LightController_setVoltageLimits;
+    MyWebServer_getCallbacksStruct()->lightController_setAuto = LightController_setAutoMode;
     MyWebServer_setup();
 
     Ens160Aht2x_setDataListner(ens160Ath2x_dataListner);
@@ -111,7 +132,7 @@ void setup()
     FanController_setAvgHumidityAndTempFunctions(Ens160Aht2x_getAvarageHumidity, Ens160Aht2x_getAvarageTemperature);
     FanController_setup();
 
-    //LightController_setup();
+    LightController_setup();
 
     mdns_init();
     mdns_hostname_set("Esp32 FanController");
@@ -140,7 +161,7 @@ void loop()
     }
     FanController_loop();
     Ens160Aht2x_loop();
-    //LightController_loop();
+    LightController_loop();
 
     vTaskDelay(1000);
 }

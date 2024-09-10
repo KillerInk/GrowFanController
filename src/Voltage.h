@@ -10,7 +10,7 @@ struct Voltage
     int voltage = 0;
 };
 
-static u_int16_t getVoltageFromPercent(int maxvoltage, int minvoltage, int val)
+static int getVoltageFromPercent(int maxvoltage, int minvoltage, float val)
 {
-    return minvoltage + (float)(maxvoltage - minvoltage) * ((float)val / 100);
+    return (float)minvoltage + (float)(maxvoltage - minvoltage) * ((float)val / 100);
 }

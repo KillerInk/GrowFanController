@@ -55,7 +55,9 @@ function createWebsocket() {
     var aq = result["aqi"];
     var volt0 = result["voltage0"];
     var volt1 = result["voltage1"];
-    var nightmodeactive = result["nightmode"];
+    var nightmodeactive = result["nighmode"];
+    var time = result["time"];
+    document.getElementById("time").innerHTML = time;
     if (bat != undefined) {
       battery.innerHTML = bat + "%";
       temperatur_g.innerHTML = temp + "&deg;C";
@@ -76,7 +78,8 @@ function createWebsocket() {
     if (aq != undefined) {
       aqi.innerHTML = "Aqi: " + aq;
     }
-    document.getElementById("nightmodeactive").innerHTML = nightmodeactive;
+    if (nightmodeactive != undefined)
+      document.getElementById("nightmodeactive").innerHTML = nightmodeactive;
 
   };
 
@@ -110,6 +113,23 @@ window.addEventListener('load', (event) => {
       document.getElementById("offhour").value = json["nightmodeoffhour"];
       document.getElementById("nightmodemaxspeed").value = json["nightmodemaxspeed"];
       document.getElementById("enablenightmode").checked = json["nightmodeactive"];
+
+      document.getElementById("turnlightonhour").value = json["lightonh"];
+      document.getElementById("turnlightonmin").value = json["lightonmin"];
+
+      document.getElementById("turnlightoffhour").value = json["lightoffh"];
+      document.getElementById("turnlightoffmin").value = json["lightoffmin"];
+
+      document.getElementById("sunrisehour").value = json["lightriseh"];
+      document.getElementById("sunrisemin").value = json["lightrisemin"];
+
+      document.getElementById("sunsethour").value = json["lightseth"];
+      document.getElementById("sunsetmin").value = json["lightsetmin"];
+
+      document.getElementById("enablesunrise").checked = json["lightriseenable"];
+      document.getElementById("enablesunset").checked = json["lightsetenable"];
+      document.getElementById("enablelightcontrol").checked = json["lightautomode"];
+
     });
   createWebsocket();
 });
@@ -258,3 +278,74 @@ enablenightmode.onclick = function () {
       console.log(`request to ${query} finished, status: ${response.status}`);
     });
 }
+
+var buttonsubmitlightvoltage = document.getElementById("lightcontrolvoltagesub");
+
+buttonsubmitlightvoltage.onclick = function () {
+  let host = document.location.origin;
+  let min = document.getElementById("lightminv").value;
+  let max = document.getElementById("lightmaxv").value;
+  const query = `${host}/cmd?var=lightvoltage&min=${min}&max=${max}`;
+  fetch(query)
+    .then(response => {
+      console.log(`request to ${query} finished, status: ${response.status}`);
+    });
+}
+
+var lightslider = document.getElementById("lightstrength");
+
+lightslider.oninput = function () {
+  let host = document.location.origin;
+  let value = encodeURIComponent(this.value);
+  const query = `${host}/cmd?var=lightval&val=${value}`;
+  fetch(query)
+    .then(response => {
+      console.log(`request to ${query} finished, status: ${response.status}`);
+    });
+}
+
+var submitLightTimes = document.getElementById("lightcontrolsub");
+
+submitLightTimes.onclick = function () {
+  let host = document.location.origin;
+  let onh = document.getElementById("turnlightonhour").value;
+  let onmin = document.getElementById("turnlightonmin").value;
+  let offh = document.getElementById("turnlightoffhour").value;
+  let offmin = document.getElementById("turnlightoffmin").value;
+  let riseh = document.getElementById("sunrisehour").value;
+  let risemin = document.getElementById("sunrisemin").value;
+  let seth = document.getElementById("sunsethour").value;
+  let setmin = document.getElementById("sunsetmin").value;
+  let enablerise = document.getElementById("enablesunrise").checked;
+  if (enablerise == false)
+    enablerise = 0;
+  else
+    enablerise = 1;
+  let enableset = document.getElementById("enablesunset").checked;
+  if (enableset == false)
+    enableset = 0;
+  else
+    enableset = 1;
+  const query = `${host}/cmd?var=lightsettime&onh=${onh}&onmin=${onmin}&offh=${offh}&offmin=${offmin}&riseh=${riseh}&risemin=${risemin}&seth=${seth}&setmin=${setmin}&riseenable=${enablerise}&setenable=${enableset}`;
+  fetch(query)
+    .then(response => {
+      console.log(`request to ${query} finished, status: ${response.status}`);
+    });
+}
+
+var enableautolight = document.getElementById("enablelightcontrol");
+
+enableautolight.onclick = function () {
+  let host = document.location.origin;
+  let val = enableautolight.checked;
+  if (val == false)
+    val = 0;
+  else
+    val = 1;
+  const query = `${host}/cmd?var=lightautomode&enable=${val}`;
+  fetch(query)
+    .then(response => {
+      console.log(`request to ${query} finished, status: ${response.status}`);
+    });
+}
+

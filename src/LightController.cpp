@@ -1,125 +1,144 @@
 #include "LightController.h"
 #include "MyPreferences.h"
-#include "Voltage.h"
+
 #include "DFRobot_GP8403.h"
 #include "config.h"
 #include "time.h"
-#include "MyTime.h"
 
-Voltage voltage;
 DFRobot_GP8403 ldac(&Wire, i2c_light_addr);
 
-MyTime turnOnTime;
-MyTime turnOffTime;
-MyTime sunriseEnd;
-MyTime sunsetStart;
-int minLightP;
-int maxLightP;
-int currentLightP;
-
-bool enableSunrise = true;
-bool enableSunset = false;
-
-
-enum light_state
-{
-    off,
-    on,
-    sunrise,
-    sunset,
-};
-
-light_state current_state = sunrise;
-
-
+LightControllerValues lvalues;
 
 void control_light()
 {
     tm time;
     getLocalTime(&time);
-    log_i("%i %i %i",time.tm_hour,time.tm_min,time.tm_sec);
-    if(timeEquals(time, turnOnTime) && current_state == off)
+    log_i("%i %i %i", time.tm_hour, time.tm_min, time.tm_sec);
+    if (timeEquals(time, lvalues.turnOnTime) && lvalues.current_state == off)
     {
-        if(enableSunrise)
-            current_state = sunrise;
+        log_i("turn on");
+        if (lvalues.enableSunrise && timeEqualsOrSmaler(time, lvalues.sunriseEnd))
+        {
+            lvalues.current_state = sunrise;
+            log_i("switch to sunrise");
+        }
         else
-            current_state = on;
-    
+        {
+            lvalues.current_state = on;
+            lvalues.voltage.voltage = getVoltageFromPercent(lvalues.voltage.max, lvalues.voltage.min, lvalues.maxLightP);
+        }
     }
-    else if(timeEquals(time,turnOffTime) && current_state != off)
+    else if (timeEqualsOrGreater(time, lvalues.turnOffTime) && lvalues.current_state != off)
     {
-        current_state = off;
+        lvalues.current_state = off;
+        log_i("turn off");
+        lvalues.voltage.voltage = 0;
     }
-    else if(current_state == sunrise && enableSunrise)
-    { 
-        int timedif = getTimeDiff(time, sunriseEnd)*-1;
-        int timediftotal = getTimeDiff(turnOnTime, sunriseEnd)*-1;
-        int p = timediftotal * (timedif/100);
-        int volt = getVoltageFromPercent(voltage.max,voltage.min, p);
-        log_i("sunrise timedif: %i timediftotal: %i p:%i volt:%i", timedif, timediftotal, p, volt);
+    else if (lvalues.current_state == sunrise && lvalues.enableSunrise)
+    {
+        int timedif = ((getTimeDiff(time, lvalues.sunriseEnd) * 60) + time.tm_sec) * -1;
+        int timediftotal = (getTimeDiff(lvalues.turnOnTime, lvalues.sunriseEnd) * 60) * -1;
+        float p = 100 - (((float)timedif / (float)timediftotal) * 100);
+        lvalues.voltage.voltage = getVoltageFromPercent(lvalues.voltage.max, lvalues.voltage.min, p);
+        log_i("sunrise timedif: %i timediftotal: %i p:%f volt:%i maxv:%i minv%i", timedif, timediftotal, p, lvalues.voltage.voltage, lvalues.voltage.max, lvalues.voltage.min);
 
-        if(timeEquals(time,sunriseEnd))
+        if (timeEquals(time, lvalues.sunriseEnd))
         {
-            current_state = on;
+            lvalues.current_state = on;
+            log_i("switch to on");
         }
     }
-    else if(current_state == on)
+    else if (lvalues.current_state == on)
     {
-        if(enableSunset && timeEquals(time, sunsetStart))
+
+        if (lvalues.enableSunset && timeEqualsOrGreater(time, lvalues.sunsetStart))
         {
-            current_state == sunset;
+            lvalues.current_state = sunset;
+            log_i("switch to sunset");
         }
-        //else do nothing
+        else if (lvalues.enableSunrise && timeEqualsOrSmaler(time, lvalues.sunriseEnd))
+        {
+            lvalues.current_state = sunrise;
+            log_i("switch to sunrise");
+        }
+        else
+            lvalues.voltage.voltage = getVoltageFromPercent(lvalues.voltage.max, lvalues.voltage.min, lvalues.maxLightP);
+        // else do nothing
     }
-    else if(current_state == sunset && enableSunset)
+    else if (lvalues.current_state == sunset && lvalues.enableSunset)
     {
-        int timedif = getTimeDiff(time, sunsetStart);
-        int timediftotal = getTimeDiff(turnOffTime, sunsetStart);
-        int p = timediftotal * (timedif/100);
-        int volt = getVoltageFromPercent(voltage.max,voltage.min, p);
-        log_i("sunset timedif: %i timediftotal: %i p:%i volt:%i", timedif, timediftotal, p, volt);
+        int timedif = ((getTimeDiff(time, lvalues.sunsetStart) * 60) + time.tm_sec);
+        int timediftotal = getTimeDiff(lvalues.turnOffTime, lvalues.sunsetStart) * 60;
+        float p = 100 - (((float)timedif / (float)timediftotal) * 100);
+        lvalues.voltage.voltage = getVoltageFromPercent(lvalues.voltage.max, lvalues.voltage.min, p);
+        log_i("sunset timedif: %i timediftotal: %i p:%f volt:%i maxv:%i minv%i", timedif, timediftotal, p, lvalues.voltage.voltage, lvalues.voltage.max, lvalues.voltage.min);
     }
+    else
+    {
+        log_i("No change currenstate %i", lvalues.current_state);
+        if (lvalues.current_state == off && timeEqualsOrGreater(time, lvalues.turnOnTime) && timeEqualsOrSmaler(time, lvalues.turnOffTime))
+        {
+            lvalues.current_state = on;
+            log_i("switch to on");
+        }
+        else
+            lvalues.current_state = off;
+    }
+    ldac.setDACOutVoltage(lvalues.voltage.voltage, 0);
 }
 
 void LightController_setup()
 {
-    Mypreferences_getBytes("light",&voltage,sizeof(Voltage));
-    Mypreferences_getBytes("turnon",&turnOnTime,sizeof(MyTime));
-    Mypreferences_getBytes("turnoff",&turnOffTime,sizeof(MyTime));
-    Mypreferences_getBytes("sunrise",&sunriseEnd,sizeof(MyTime));
-    Mypreferences_getBytes("sunset",&sunsetStart,sizeof(MyTime));
+    Mypreferences_getBytes("light", &lvalues, sizeof(LightControllerValues));
+    lvalues.current_state = off;
 }
 
 void LightController_loop()
 {
-    control_light();
+    if (lvalues.automode)
+        control_light();
 }
 
 void LightController_setVoltageLimits(int min, int max)
 {
-    voltage.min = min;
-    voltage.max = max;
-    MyPreferences_setBytes("light", &voltage,sizeof(Voltage));
+    lvalues.voltage.min = min;
+    lvalues.voltage.max = max;
+    log_i("set voltage limits max %i min %i", max, min);
+    MyPreferences_setBytes("light", &lvalues, sizeof(LightControllerValues));
 }
 
 void LightController_setLight(int mv)
 {
-    voltage.voltage = getVoltageFromPercent(voltage.max, voltage.min, mv);
-    ldac.setDACOutVoltage(voltage.voltage,0);
+    lvalues.voltage.voltage = getVoltageFromPercent(lvalues.voltage.max, lvalues.voltage.min, mv);
+    log_i("set voltage '%' %i volt %i", mv, lvalues.voltage.voltage);
+    ldac.setDACOutVoltage(lvalues.voltage.voltage, 0);
 }
 
-void LightController_setTimes(int onhour, int onmin,int offhour,int offmin,int risehour, int risemin, int sethour, int setmin)
+void LightController_setAutoMode(bool active)
 {
-    turnOnTime.hour = onhour;
-    turnOnTime.min = onmin;
-    turnOffTime.hour = offhour;
-    turnOffTime.min = offmin;
-    sunriseEnd.hour = risehour;
-    sunriseEnd.min = risemin;
-    sunsetStart.hour = sethour;
-    sunsetStart.min = setmin;
-    MyPreferences_setBytes("turnon", &turnOnTime,sizeof(MyTime));
-    MyPreferences_setBytes("turnoff", &turnOffTime,sizeof(MyTime));
-    MyPreferences_setBytes("sunset", &sunsetStart,sizeof(MyTime));
-    MyPreferences_setBytes("sunrise", &sunriseEnd,sizeof(MyTime));
+    lvalues.automode = active;
+    if (!active)
+        lvalues.current_state = off;
+    log_i("set automode %i", active);
+    MyPreferences_setBytes("light", &lvalues, sizeof(LightControllerValues));
+}
+
+LightControllerValues *LightController_getValues()
+{
+    return &lvalues;
+}
+
+void LightController_setTimes(int onhour, int onmin, int offhour, int offmin, int risehour, int risemin, int sethour, int setmin, bool riseenable, bool setenable)
+{
+    lvalues.turnOnTime.hour = onhour;
+    lvalues.turnOnTime.min = onmin;
+    lvalues.turnOffTime.hour = offhour;
+    lvalues.turnOffTime.min = offmin;
+    lvalues.sunriseEnd.hour = risehour;
+    lvalues.sunriseEnd.min = risemin;
+    lvalues.sunsetStart.hour = sethour;
+    lvalues.sunsetStart.min = setmin;
+    lvalues.enableSunrise = riseenable;
+    lvalues.enableSunset = setenable;
+    MyPreferences_setBytes("light", &lvalues, sizeof(LightControllerValues));
 }

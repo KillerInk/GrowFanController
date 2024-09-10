@@ -1,4 +1,5 @@
 #pragma once
+#include "time.h"
 
 struct MyTime{
     int hour,min;
@@ -7,6 +8,16 @@ struct MyTime{
 static bool timeEquals(tm tim, MyTime t)
 {
     return tim.tm_hour == t.hour && tim.tm_min == t.min;
+}
+
+static bool timeEqualsOrGreater(tm tim, MyTime t)
+{
+    return tim.tm_hour > t.hour || (tim.tm_hour == t.hour && tim.tm_min >= t.min);
+}
+
+static bool timeEqualsOrSmaler(tm tim, MyTime t)
+{
+    return tim.tm_hour < t.hour || (tim.tm_hour == t.hour && tim.tm_min <= t.min);
 }
 
 static int getTimeDiff(int h1, int min1, int h2,int min2)
