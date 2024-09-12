@@ -57,6 +57,9 @@ function createWebsocket() {
     var volt1 = result["voltage1"];
     var nightmodeactive = result["nighmode"];
     var time = result["time"];
+    var lightp = result["lightvalP"];
+    var lightmv = result["lightvalmv"];
+    var lightstate = result["lightstate"];
     document.getElementById("time").innerHTML = time;
     if (bat != undefined) {
       battery.innerHTML = bat + "%";
@@ -80,6 +83,22 @@ function createWebsocket() {
     }
     if (nightmodeactive != undefined)
       document.getElementById("nightmodeactive").innerHTML = nightmodeactive;
+    if (lightp != undefined)
+      document.getElementById("lightpercent").innerHTML = "Light % " + lightp;
+    if (lightmv != undefined)
+      document.getElementById("lightmv").innerHTML = "Light mv " + lightmv;
+    if (lightstate != undefined) {
+      var n;
+      if(lightstate == 0)
+        n = "off";
+      else if(lightstate == 1)
+        n = "on";
+      else if(lightstate == 2)
+        n = "sunrise";
+      else if(lightstate == 3)
+        n = "sunset";
+      document.getElementById("lightstate").innerHTML = "Light state " + n;
+    }
 
   };
 
@@ -129,6 +148,9 @@ window.addEventListener('load', (event) => {
       document.getElementById("enablesunrise").checked = json["lightriseenable"];
       document.getElementById("enablesunset").checked = json["lightsetenable"];
       document.getElementById("enablelightcontrol").checked = json["lightautomode"];
+
+      document.getElementById("lightminv").value = json["lightminvolt"];
+      document.getElementById("lightmaxv").value = json["lightmaxvolt"];
 
     });
   createWebsocket();

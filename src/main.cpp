@@ -49,6 +49,9 @@ void ens160Ath2x_dataListner(float temp, float humidity, int aqi, int tvoc, int 
     getLocalTime(&time);
     ret = snprintf(buf, sizeof buf, "%i:%i:%i", time.tm_hour,time.tm_min,time.tm_sec);
     socketmsg["time"] = buf;
+    socketmsg["lightvalP"] = LightController_getValues()->currentLightP;
+    socketmsg["lightvalmv"] = LightController_getValues()->voltage.voltage;
+    socketmsg["lightstate"] = LightController_getValues()->current_state;
     MyWebServer_sendSocketMsg(JSON.stringify(socketmsg));
 }
 
@@ -89,6 +92,8 @@ String getSettings()
     myObject["lightriseenable"] = LightController_getValues()->enableSunrise;
     myObject["lightsetenable"] = LightController_getValues()->enableSunset;
     myObject["lightautomode"] = LightController_getValues()->automode;
+    myObject["lightminvolt"] = LightController_getValues()->voltage.min;
+    myObject["lightmaxvolt"] = LightController_getValues()->voltage.max;
 
     return JSON.stringify(myObject);
 }

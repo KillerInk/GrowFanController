@@ -64,8 +64,8 @@ void Ens160Aht2x_loop()
     if (avarage_humidity == 0.)
         avarage_humidity = ens_humidity;
 
-    avarage_temp = 0.95 * avarage_temp + 0.05 * ens_temp;
-    avarage_humidity = 0.95 * avarage_humidity + 0.05 * ens_humidity;
+    avarage_temp = 0.96 * avarage_temp + 0.04 * ens_temp;
+    avarage_humidity = 0.96 * avarage_humidity + 0.04 * ens_humidity;
     log_i("temp:%f a: %f humidity:%f a:%f ", ens_temp, avarage_temp, ens_humidity, avarage_humidity);
     ens160.setTempAndHum(Ens160Aht2x_getTemperature(), Ens160Aht2x_getHumidity());
     /*
