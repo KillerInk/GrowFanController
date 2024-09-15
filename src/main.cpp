@@ -10,6 +10,7 @@
 #include "MyWebServer.h"
 #include "time.h"
 #include "LightController.h"
+#include "FileController.h"
 
 void govee_dataListner(float temp, float hum, int bat)
 {
@@ -47,11 +48,12 @@ void ens160Ath2x_dataListner(float temp, float humidity, int aqi, int tvoc, int 
     socketmsg["nightmode"] = FanController_getValues()->nightmodeActive;
     tm time;
     getLocalTime(&time);
-    ret = snprintf(buf, sizeof buf, "%i:%i:%i", time.tm_hour,time.tm_min,time.tm_sec);
+    ret = snprintf(buf, sizeof buf, "%02i:%02i:%02i", time.tm_hour, time.tm_min, time.tm_sec);
     socketmsg["time"] = buf;
     socketmsg["lightvalP"] = LightController_getValues()->currentLightP;
     socketmsg["lightvalmv"] = LightController_getValues()->voltage.voltage;
     socketmsg["lightstate"] = LightController_getValues()->current_state;
+    socketmsg["vpdair"] = Ens160Aht2x_getVpdAir();
     MyWebServer_sendSocketMsg(JSON.stringify(socketmsg));
 }
 
@@ -73,7 +75,7 @@ String getSettings()
     myObject["humdif"] = Ens160Aht2x_getHumidityDif();
     myObject["minspeed"] = FanController_getValues()->minspeed;
     myObject["maxspeed"] = FanController_getValues()->maxspeed;
-    
+
     myObject["nightmodeactive"] = FanController_getValues()->nightmode;
     myObject["nightmodeonhour"] = FanController_getValues()->nightmodeOn.hour;
     myObject["nightmodeonmin"] = FanController_getValues()->nightmodeOn.min;
@@ -104,6 +106,8 @@ void setup()
     if (Serial.available())
         Serial.begin(115200);
 
+    FileController_setup();
+
     WiFi.setHostname("Esp32 FanController");
     WiFi.mode(WIFI_STA);
     WiFi.begin(SSID, PW);
@@ -112,7 +116,7 @@ void setup()
     {
         vTaskDelay(500);
     }
-    configTime(2*60*60, 0, "pool.ntp.org");
+    configTime(2 * 60 * 60, 0, "pool.ntp.org");
 
     MyWebServer_getCallbacksStruct()->applyspeed_listner = FanController_applyspeed;
     MyWebServer_getCallbacksStruct()->voltagechanged_listner = FanController_setVoltage;
@@ -148,6 +152,7 @@ void setup()
     GoveeBTh5179_setup();
 }
 
+
 void loop()
 {
     /*if(voltage == 0)
@@ -167,6 +172,7 @@ void loop()
     FanController_loop();
     Ens160Aht2x_loop();
     LightController_loop();
+    FileController_write(Ens160Aht2x_getAvarageTemperature(), Ens160Aht2x_getAvarageHumidity(), FanController_getValues()->autocontrolfanspeed, Ens160Aht2x_getCo2(), LightController_getValues()->voltage.voltage, Ens160Aht2x_getVpdAir());
 
     vTaskDelay(1000);
 }

@@ -13,7 +13,8 @@ void control_light()
 {
     tm time;
     getLocalTime(&time);
-    log_i("%i %i %i", time.tm_hour, time.tm_min, time.tm_sec);
+    //log_i("time %s",asctime(&time));
+    //log_i("time %i %i %i",time.tm_year+1900, time.tm_mon+1, time.tm_mday);
     //when light is off and its time to turn it on
     if (timeEquals(time, lvalues.turnOnTime) && lvalues.current_state == off)
     {
@@ -71,7 +72,10 @@ void control_light()
             log_i("switch to sunrise");
         }
         else
+        {
             lvalues.voltage.voltage = getVoltageFromPercent(lvalues.voltage.max, lvalues.voltage.min, lvalues.maxLightP);
+            lvalues.currentLightP =lvalues.maxLightP;
+        }
         // else do nothing
     }
     //do sunset stuff
@@ -116,6 +120,13 @@ void LightController_setVoltageLimits(int min, int max)
 {
     lvalues.voltage.min = min;
     lvalues.voltage.max = max;
+    log_i("set voltage limits max %i min %i", max, min);
+    MyPreferences_setBytes("light", &lvalues, sizeof(LightControllerValues));
+}
+void LightController_setPercentLimits(int min, int max)
+{
+    lvalues.minLightP = min;
+    lvalues.maxLightP = max;
     log_i("set voltage limits max %i min %i", max, min);
     MyPreferences_setBytes("light", &lvalues, sizeof(LightControllerValues));
 }

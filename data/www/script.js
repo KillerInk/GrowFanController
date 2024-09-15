@@ -1,3 +1,4 @@
+
 var slider = document.getElementById("speed");
 var output = document.getElementById("sliderAmount");
 var slider1 = document.getElementById("speed1");
@@ -34,10 +35,7 @@ var minspeed = document.getElementById("minspeed");
 var maxspeed = document.getElementById("maxspeed");
 var minmaxspeedsub = document.getElementById("minmaxspeedsub");
 
-output.innerHTML = slider.value;
-output1.innerHTML = slider1.value;
 var websocket;
-
 
 function createWebsocket() {
   websocket = new WebSocket('ws://' + document.location.host + ":/ws");
@@ -60,6 +58,7 @@ function createWebsocket() {
     var lightp = result["lightvalP"];
     var lightmv = result["lightvalmv"];
     var lightstate = result["lightstate"];
+    var vpda = result["vpdair"];
     document.getElementById("time").innerHTML = time;
     if (bat != undefined) {
       battery.innerHTML = bat + "%";
@@ -74,8 +73,9 @@ function createWebsocket() {
       autofan0.innerHTML = "Fan1:" + autospeed + "% " + volt0 + "mv ";
       autofan1.innerHTML = "Fan2:" + (autospeed - speeddif.value) + "% " + volt1 + "mv";
     }
-    if (ec2 != undefined)
+    if (ec2 != undefined) {
       eco2.innerHTML = "eCO2:" + ec2 + "ppm";
+    }
     if (tvc != undefined)
       tvoc.innerHTML = "TVOC:" + tvc + "ppb";
     if (aq != undefined) {
@@ -85,27 +85,38 @@ function createWebsocket() {
       document.getElementById("nightmodeactive").innerHTML = nightmodeactive;
     if (lightp != undefined)
       document.getElementById("lightpercent").innerHTML = "Light % " + lightp;
-    if (lightmv != undefined)
+    if (lightmv != undefined) {
       document.getElementById("lightmv").innerHTML = "Light mv " + lightmv;
+    }
     if (lightstate != undefined) {
       var n;
-      if(lightstate == 0)
+      if (lightstate == 0)
         n = "off";
-      else if(lightstate == 1)
+      else if (lightstate == 1)
         n = "on";
-      else if(lightstate == 2)
+      else if (lightstate == 2)
         n = "sunrise";
-      else if(lightstate == 3)
+      else if (lightstate == 3)
         n = "sunset";
       document.getElementById("lightstate").innerHTML = "Light state " + n;
     }
-
+    addChartItems(time, atemp, ahum, autospeed, lightmv, ec2, vpda,true);
+    if (timeVals.length - mychart.config.options.scales.x.max < 10) {
+      let dif = mychart.config.options.scales.x.max - mychart.config.options.scales.x.min;
+      mychart.config.options.scales.x.max = timeVals.length;
+      mychart.config.options.scales.x.min = timeVals.length - dif;
+      
+      //mychart.config.options.scales.x.min = timeVals.length - 500;
+    }
+    mychart.update();
   };
 
   websocket.onerror = function (error) {
     createWebsocket();
   };
 }
+
+
 
 window.addEventListener('load', (event) => {
   let host = document.location.origin;
@@ -153,6 +164,7 @@ window.addEventListener('load', (event) => {
       document.getElementById("lightmaxv").value = json["lightmaxvolt"];
 
     });
+  getChartDataForToday();
   createWebsocket();
 });
 
@@ -370,4 +382,6 @@ enableautolight.onclick = function () {
       console.log(`request to ${query} finished, status: ${response.status}`);
     });
 }
+
+
 

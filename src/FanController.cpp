@@ -32,15 +32,11 @@ void FanController_processAutoControl()
             fancontrollerValues.autocontrolfanspeed--;
         else
         {
-            if (nextTick < millis())
-            {
-                if (lastTemp > atmp)
-                    fancontrollerValues.autocontrolfanspeed--;
-                else if (lastTemp < atmp)
-                    fancontrollerValues.autocontrolfanspeed++;
-                lastTemp = atmp;
-                nextTick = millis() + 5 * 1000;
-            }
+            if (lastTemp > atmp)
+                fancontrollerValues.autocontrolfanspeed--;
+            else if (lastTemp < atmp)
+                fancontrollerValues.autocontrolfanspeed++;
+            lastTemp = atmp;
         }
     }
     if (fancontrollerValues.autocontrolfanspeed > fancontrollerValues.maxspeed)
@@ -115,11 +111,11 @@ void FanController_loop()
 void FanController_setNightMode(bool active)
 {
     fancontrollerValues.nightmode = active;
-    if(active)
+    if (active)
     {
         tm time;
         getLocalTime(&time);
-        fancontrollerValues.nightmodeActive = timeInRange(&fancontrollerValues.nightmodeOn,&fancontrollerValues.nightModeOff, time);
+        fancontrollerValues.nightmodeActive = timeInRange(&fancontrollerValues.nightmodeOn, &fancontrollerValues.nightModeOff, time);
     }
     MyPreferences_setBytes("conv", &fancontrollerValues, sizeof(FanControllerValues));
 }

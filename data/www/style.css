@@ -67,7 +67,7 @@ div.a {
 }
 
 .flex-container>div {
-  background-color: rgba(78, 78, 78, 0.8);
+  background-color: rgba(110, 110, 110, 0.8);
   border: 1px solid rgba(0, 0, 0, 0.8);
   padding: 5px;
   font-size: 15px;
@@ -79,5 +79,6 @@ div.a {
 
 .mybody
 {
-  background-color: rgb(105, 105, 105);
+  background-color: rgb(70, 70, 70);
 }
+

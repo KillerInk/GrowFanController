@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="./style.css">
 </head>
 
 <body class="mybody">
@@ -167,7 +167,29 @@
             </div>
         </div>
     </div>
-    <script src="script.js"></script>
-</body>
+    <div>
+        <button id="1min">1min</button>
+        <button id="5min">5min</button>
+        <button id="15min">15min</button>
+        <button id="30min">30min</button>
+        <button id="1h">1h</button>
+        <button id="4h">4h</button>
+        <input type="checkbox" id="zoomdata" name="zoomdata"/>
+        <label for="zoomdata"> Zoom Data</label><br>
+    </div>
+    <div>
+        <canvas id="myChart" style="width:100%;max-width:2000px;"></canvas>
+    </div>
+    <script>
 
+    </script>
+
+</body>
+<footer>
+    <script src="./hammer.min.js"></script>
+    <script src="./chart.js"></script>
+    <script src="./chartjs-plugin-zoom.min.js"></script>
+    <script src="./mychart.js"></script>
+    <script src="./script.js"></script>
+</footer>
 </html>

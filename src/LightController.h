@@ -31,6 +31,7 @@ struct LightControllerValues
 void LightController_setup();
 void LightController_loop();
 void LightController_setVoltageLimits(int min, int max);
+void LightController_setPercentLimits(int min, int max);
 void LightController_setTimes(int onhour, int onmin, int offhour, int offmin, int risehour, int risemin, int sethour, int setmin,bool riseenable, bool setenable);
 void LightController_setLight(int mv);
 void LightController_setAutoMode(bool active);

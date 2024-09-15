@@ -10,3 +10,6 @@ float Ens160Aht2x_getTemperatureDif();
 float Ens160Aht2x_getHumidityDif();
 float Ens160Aht2x_getAvarageTemperature();
 float Ens160Aht2x_getAvarageHumidity();
+float Ens160Aht2x_getVpdAir();
+float Ens160Aht2x_getVpdLeaf();
+int Ens160Aht2x_getCo2();

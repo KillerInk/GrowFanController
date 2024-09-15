@@ -14,6 +14,10 @@ float hum_dif = 0.;
 int AQI = 0;
 int TVOC = 0; // ppb
 int eCO2 = 0; // ppm
+float svp = 0;
+float avp = 0;
+float vpd_leaf = 0;
+float vpd_air = 0;
 void (*ens_eventlistner)(float temp, float humidity, int aqi, int tvoc, int eco2);
 
 float avarage_temp = 0.;
@@ -76,8 +80,15 @@ void Ens160Aht2x_loop()
     // Return value range: 1-5 (Corresponding to five levels of Excellent, Good, Moderate, Poor and Unhealthy respectively)
     AQI = (uint8_t)ens160.getAQI();
     TVOC = ens160.getTVOC();
-    eCO2 = ens160.getECO2();
-    log_i("status:%i tvoc:%i eco2:%i aqi:%i", status, TVOC, eCO2, AQI);
+    int co2 = ens160.getECO2();
+    if(eCO2 == 0)
+        eCO2 = co2;
+    eCO2 = 0.96 * eCO2 + 0.04 * co2;
+    svp = 0.6108 * exp((17.67 * avarage_temp) / (avarage_temp + 243.5));
+    avp = avarage_humidity / 100 * svp;
+    vpd_leaf = svp -avp;
+    vpd_air = (1-avarage_humidity/100) * svp;
+    log_i("status:%i tvoc:%i eco2:%i aqi:%i svp %f avp %f vpd leaf %f vpd air %f", status, TVOC, eCO2, AQI, svp,avp, vpd_leaf, vpd_air);
     if (ens_eventlistner != nullptr)
         ens_eventlistner(Ens160Aht2x_getTemperature(), Ens160Aht2x_getHumidity(), AQI, TVOC, eCO2);
 }
@@ -125,4 +136,19 @@ float Ens160Aht2x_getAvarageTemperature()
 float Ens160Aht2x_getAvarageHumidity()
 {
     return avarage_humidity + hum_dif;
+}
+
+float Ens160Aht2x_getVpdAir()
+{
+    return vpd_air;
+}
+
+float Ens160Aht2x_getVpdLeaf()
+{
+    return vpd_leaf;
+}
+
+int Ens160Aht2x_getCo2()
+{
+    return eCO2;
 }
