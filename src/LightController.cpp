@@ -45,7 +45,7 @@ void control_light()
     {
         int timedif = ((getTimeDiff(time, lvalues.sunriseEnd) * 60) + time.tm_sec) * -1;
         int timediftotal = (getTimeDiff(lvalues.turnOnTime, lvalues.sunriseEnd) * 60) * -1;
-        float p = 100 - (((float)timedif / (float)timediftotal) * 100);
+        double p = 100 - (((double)timedif / (double)timediftotal) * 100);
         if(p > lvalues.maxLightP)
             p = lvalues.maxLightP;
         lvalues.currentLightP = p;
@@ -83,7 +83,7 @@ void control_light()
     {
         int timedif = ((getTimeDiff(time, lvalues.sunsetStart) * 60) + time.tm_sec);
         int timediftotal = getTimeDiff(lvalues.turnOffTime, lvalues.sunsetStart) * 60;
-        float p = 100 - (((float)timedif / (float)timediftotal) * 100);
+        double p = 100 - (((double)timedif / (double)timediftotal) * 100);
         lvalues.currentLightP = p;
         lvalues.voltage.voltage = getVoltageFromPercent(lvalues.voltage.max, lvalues.voltage.min, p);
         log_i("sunset timedif: %i timediftotal: %i p:%f volt:%i maxv:%i minv%i", timedif, timediftotal, p, lvalues.voltage.voltage, lvalues.voltage.max, lvalues.voltage.min);

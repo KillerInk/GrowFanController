@@ -7,21 +7,21 @@ Preferences pref;
 const char *prefName = "Correction";
 DFRobot_ENS160_I2C ens160(&Wire, /*I2CAddr*/ 0x53);
 AHT20 aht20;
-float ens_temp = 0;
-float ens_humidity = 0;
-float temp_dif = 0.;
-float hum_dif = 0.;
+double ens_temp = 0;
+double ens_humidity = 0;
+double temp_dif = 0.;
+double hum_dif = 0.;
 int AQI = 0;
 int TVOC = 0; // ppb
 int eCO2 = 0; // ppm
-float svp = 0;
-float avp = 0;
-float vpd_leaf = 0;
-float vpd_air = 0;
-void (*ens_eventlistner)(float temp, float humidity, int aqi, int tvoc, int eco2);
+double svp = 0;
+double avp = 0;
+double vpd_leaf = 0;
+double vpd_air = 0;
+void (*ens_eventlistner)(double temp, double humidity, int aqi, int tvoc, int eco2);
 
-float avarage_temp = 0.;
-float avarage_humidity = 0.;
+double avarage_temp = 0.;
+double avarage_humidity = 0.;
 
 uint8_t checkI2C(uint8_t addr)
 {
@@ -39,8 +39,8 @@ void Ens160Aht2x_setup()
     Wire.begin();
     Wire.setClock(100000);
     pref.begin(prefName, false);
-    temp_dif = pref.getFloat("tempdif", temp_dif);
-    hum_dif = pref.getFloat("humdif", hum_dif);
+    temp_dif = pref.getDouble("tempdif", temp_dif);
+    hum_dif = pref.getDouble("humdif", hum_dif);
     pref.end();
 
     for (byte i = 1; i < 127; i++)
@@ -70,6 +70,10 @@ void Ens160Aht2x_loop()
 
     avarage_temp = 0.96 * avarage_temp + 0.04 * ens_temp;
     avarage_humidity = 0.96 * avarage_humidity + 0.04 * ens_humidity;
+    int t = avarage_temp * 100;
+    avarage_temp = (double)t /100;
+    t = avarage_humidity *100;
+    avarage_humidity = (double)t / 100;
     log_i("temp:%f a: %f humidity:%f a:%f ", ens_temp, avarage_temp, ens_humidity, avarage_humidity);
     ens160.setTempAndHum(Ens160Aht2x_getTemperature(), Ens160Aht2x_getHumidity());
     /*
@@ -93,57 +97,57 @@ void Ens160Aht2x_loop()
         ens_eventlistner(Ens160Aht2x_getTemperature(), Ens160Aht2x_getHumidity(), AQI, TVOC, eCO2);
 }
 
-void Ens160Aht2x_setDataListner(void func(float temp, float humidity, int aqi, int tvoc, int eco2))
+void Ens160Aht2x_setDataListner(void func(double temp, double humidity, int aqi, int tvoc, int eco2))
 {
     ens_eventlistner = func;
 }
 
-float Ens160Aht2x_getTemperature()
+double Ens160Aht2x_getTemperature()
 {
     return ens_temp + temp_dif;
 }
 
-float Ens160Aht2x_getHumidity()
+double Ens160Aht2x_getHumidity()
 {
     return ens_humidity + hum_dif;
 }
 
-void Ens160Aht2x_setTempHumDif(float tempdif, float humdif)
+void Ens160Aht2x_setTempHumDif(double tempdif, double humdif)
 {
     temp_dif = tempdif;
     hum_dif = humdif;
     pref.begin(prefName, false);
-    pref.putFloat("tempdif", temp_dif);
-    pref.putFloat("humdif", hum_dif);
+    pref.putDouble("tempdif", temp_dif);
+    pref.putDouble("humdif", hum_dif);
     pref.end();
 }
 
-float Ens160Aht2x_getTemperatureDif()
+double Ens160Aht2x_getTemperatureDif()
 {
     return temp_dif;
 }
 
-float Ens160Aht2x_getHumidityDif()
+double Ens160Aht2x_getHumidityDif()
 {
     return hum_dif;
 }
 
-float Ens160Aht2x_getAvarageTemperature()
+double Ens160Aht2x_getAvarageTemperature()
 {
     return avarage_temp + temp_dif;
 }
 
-float Ens160Aht2x_getAvarageHumidity()
+double Ens160Aht2x_getAvarageHumidity()
 {
     return avarage_humidity + hum_dif;
 }
 
-float Ens160Aht2x_getVpdAir()
+double Ens160Aht2x_getVpdAir()
 {
     return vpd_air;
 }
 
-float Ens160Aht2x_getVpdLeaf()
+double Ens160Aht2x_getVpdLeaf()
 {
     return vpd_leaf;
 }

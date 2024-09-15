@@ -100,14 +100,10 @@ function createWebsocket() {
         n = "sunset";
       document.getElementById("lightstate").innerHTML = "Light state " + n;
     }
-    addChartItems(time, atemp, ahum, autospeed, lightmv, ec2, vpda,true);
-    if (timeVals.length - mychart.config.options.scales.x.max < 10) {
-      let dif = mychart.config.options.scales.x.max - mychart.config.options.scales.x.min;
-      mychart.config.options.scales.x.max = timeVals.length;
-      mychart.config.options.scales.x.min = timeVals.length - dif;
-      
-      //mychart.config.options.scales.x.min = timeVals.length - 500;
-    }
+    addChartItems(time, atemp, ahum, autospeed, lightmv, ec2, vpda, true);
+    updateChartPosition();
+    if (mychart.config.options.scales.x.min < 10 && timeVals.length > 100)
+      getNextChartData();
     mychart.update();
   };
 

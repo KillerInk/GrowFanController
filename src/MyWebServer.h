@@ -9,7 +9,7 @@ struct MyWebServerMethodCallbacks
     void (*autocontrol_listner)(bool enable);
     String (*getFanControllerSettings)();
     void (*readgovee_listner)(bool enable);
-    void (*setTempHumDif)(float temp, float hum);
+    void (*setTempHumDif)(double temp, double hum);
     void (*setMinMaxSpeed)(int min, int max);
     void (*fancoltroller_nightmodecallback)(int onhour, int onmin, int offhour, int offmin, int maxspeed);
     void (*fancoltroller_nightmodeactivcecallback)(bool active);

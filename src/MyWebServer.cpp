@@ -98,7 +98,7 @@ void onCmd(AsyncWebServerRequest *request)
         String tmp = request->arg("temp");
         String hum = request->arg("hum");
         if (methcallbacks.setTempHumDif != nullptr)
-            methcallbacks.setTempHumDif(tmp.toFloat(), hum.toFloat());
+            methcallbacks.setTempHumDif(tmp.toDouble(), hum.toDouble());
         request->send(200);
     }
     else if (variable == "autospeed")

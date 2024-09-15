@@ -16,38 +16,57 @@ var visiblevpdairVals = [];
 
 var position = 0;
 var maxvisibleitems = 50;
+var now;
 
-function getChartDataForDay(date) {
-    return new Promise((resolve) => {
-        setTimeout(() => {
-            let host = document.location.origin;
-            let year = date.getUTCFullYear();
-            let month = date.getMonth() + 1;
-            if (month < 10)
-                month = 0 + "" + month;
-            let day = date.getDate();
-            const da = `${year}${month}${day}.csv`;
-            const query = `${host}/${da}`;
-            fetch(query)
-                .then((response) => response.text())
-                .then(data => {
-                    const lines = data.split("\r\n");
-                    for (let i = lines.length - 1; i >= 0; i--) {
-                        const vals = lines[i].split(", ");
-                        addChartItems(vals[0], vals[1], vals[2], vals[3], vals[5], vals[4], vals[6], false);
-                    }
-                    mychart.config.options.scales.x.max = timeVals.length;
-                    mychart.update();
-                    resolve('resolved');
-                });
-        }, 10000);
+function getChartDataForDay(date, newdata) {
+    return new Promise((resolve, reject) => {
+        let host = document.location.origin;
+        let year = date.getUTCFullYear();
+        let month = date.getMonth() + 1;
+        if (month < 10)
+            month = 0 + "" + month;
+        let day = date.getDate();
+        let hour = date.getHours();
+        const da = `${year}/${month}/${day}/${hour}.csv`;
+        const query = `${host}/${da}`;
+        fetch(query)
+            .then((response) => response.text(), reject)
+            .then(data => {
+                const lines = data.split("\r\n");
+                for (let i = lines.length - 1; i >= 0; i--) {
+                    const vals = lines[i].split(", ");
+                    addChartItems(vals[0], vals[1], vals[2], vals[3], vals[5], vals[4], vals[6], newdata);
+                }
+                mychart.config.options.scales.x.max = timeVals.length;
+                mychart.update();
+                resolve('resolved');
+            }, reject);
     });
+}
 
+function updateChartPosition() {
+    if (timeVals.length - mychart.config.options.scales.x.max < 10) {
+        let dif = mychart.config.options.scales.x.max - mychart.config.options.scales.x.min;
+        mychart.config.options.scales.x.max = timeVals.length;
+        mychart.config.options.scales.x.min = timeVals.length - dif;
+    }
 }
 
 async function getChartDataForToday() {
-    var now = new Date();
-    const res = await getChartDataForDay(now);
+    now = new Date();
+    getChartDataForDay(now, false).then(now => {
+        now.setHours(now.getHours() - 1);
+        getChartDataForDay(now, false).then(()=>{
+            setTimeRangeToShow(5*60);//5min
+            updateChartPosition();
+        });
+    });
+}
+
+async function getNextChartData() {
+    now.setHours(now.getHours() - 1);
+    mychart.config.options.scales.x.min = 20;
+    getChartDataForDay(now, false);
 }
 
 function addChartItems(time, temp, hum, fanspeed, light, co2, vdp, push) {

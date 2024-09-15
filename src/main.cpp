@@ -12,7 +12,7 @@
 #include "LightController.h"
 #include "FileController.h"
 
-void govee_dataListner(float temp, float hum, int bat)
+void govee_dataListner(double temp, double hum, int bat)
 {
     JSONVar socketmsg;
     char buf[64];
@@ -24,7 +24,7 @@ void govee_dataListner(float temp, float hum, int bat)
     MyWebServer_sendSocketMsg(JSON.stringify(socketmsg));
 }
 
-void ens160Ath2x_dataListner(float temp, float humidity, int aqi, int tvoc, int eco2)
+void ens160Ath2x_dataListner(double temp, double humidity, int aqi, int tvoc, int eco2)
 {
     JSONVar socketmsg;
     char buf[64];

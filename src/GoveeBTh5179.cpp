@@ -5,10 +5,10 @@ NimBLEScan *pBLEScan;
 NimBLEUUID serviceUuid("180a"); // Govee 5179 service UUID
 long nextScanTime;
 const long scanInterval = 60 * 1000;
-float temp = 0.;
-float humidity = 0.;
+double temp = 0.;
+double humidity = 0.;
 int battery = 0;
-void (*eventlistner)(float temp,float hum,int bat);
+void (*eventlistner)(double temp,double hum,int bat);
 bool enable = false;
 
 struct goveebtdata
@@ -57,8 +57,8 @@ class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
           buf[i] = advertisedDevice->getManufacturerData()[i];
         }
         goveebtdata *data = (goveebtdata *)buf;
-        temp = ((float)data->temp) / 100.;
-        humidity = ((float)data->humidity) / 100.;
+        temp = ((double)data->temp) / 100.;
+        humidity = ((double)data->humidity) / 100.;
         battery = data->bat;
         log_i("%s", advertisedDevice->getName().c_str());
         log_i("%i %i %i", data->temp, data->humidity, data->bat);
@@ -99,12 +99,12 @@ void GoveeBTh5179_loop()
     }
 }
 
-float GoveeBTh5179_getTemperature()
+double GoveeBTh5179_getTemperature()
 {
     return temp;
 }
 
-float GoveeBTh5179_getHumidity()
+double GoveeBTh5179_getHumidity()
 {
     return humidity;
 }
@@ -114,7 +114,7 @@ int GoveeBTh5179_getBattery()
     return battery;
 }
 
-void GoveeBTh5179_setEventListner(void func(float temp, float hum, int bat))
+void GoveeBTh5179_setEventListner(void func(double temp, double hum, int bat))
 {
     eventlistner = func;
 }

@@ -11,17 +11,17 @@ DFRobot_GP8403 dac(&Wire, i2c_pwn_addr);
 
 FanControllerValues fancontrollerValues;
 
-float (*getTemp)();
-float (*getHumidity)();
-float (*getAvgTemp)();
-float (*getAvgHumidity)();
+double (*getTemp)();
+double (*getHumidity)();
+double (*getAvgTemp)();
+double (*getAvgHumidity)();
 
 long nextTick;
-float lastTemp;
+double lastTemp;
 void FanController_processAutoControl()
 {
-    float atmp = getAvgTemp();
-    float ahm = getAvgHumidity();
+    double atmp = getAvgTemp();
+    double ahm = getAvgHumidity();
     if (atmp > fancontrollerValues.targetTemperature || ahm > fancontrollerValues.targetHumidity)
     {
         fancontrollerValues.autocontrolfanspeed++;
@@ -180,13 +180,13 @@ void FanController_setup()
     dac.setDACOutRange(dac.eOutputRange10V);
 }
 
-void FanController_setHumidityAndTempFunctions(float func(), float func2())
+void FanController_setHumidityAndTempFunctions(double func(), double func2())
 {
     getTemp = func2;
     getHumidity = func;
 }
 
-void FanController_setAvgHumidityAndTempFunctions(float func(), float func2())
+void FanController_setAvgHumidityAndTempFunctions(double func(), double func2())
 {
     getAvgTemp = func2;
     getAvgHumidity = func;
