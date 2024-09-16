@@ -97,14 +97,7 @@ void FanController_loop()
     {
         tm time;
         getLocalTime(&time);
-        if (timeEquals(time, fancontrollerValues.nightmodeOn) && !fancontrollerValues.nightmodeActive)
-        {
-            fancontrollerValues.nightmodeActive = true;
-        }
-        else if (timeEquals(time, fancontrollerValues.nightModeOff) && fancontrollerValues.nightmodeActive)
-        {
-            fancontrollerValues.nightmodeActive = false;
-        }
+        fancontrollerValues.nightmodeActive = timeInRange(&fancontrollerValues.nightmodeOn, &fancontrollerValues.nightModeOff, time);
     }
 }
 
