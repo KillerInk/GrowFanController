@@ -108,7 +108,7 @@ void setup()
 
     FileController_setup();
 
-    WiFi.setHostname("Esp32 FanController");
+    WiFi.setHostname("Esp32FanController");
     WiFi.mode(WIFI_STA);
     WiFi.begin(SSID, PW);
 
@@ -116,6 +116,11 @@ void setup()
     {
         vTaskDelay(500);
     }
+
+    mdns_init();
+    mdns_hostname_set("Esp32FanController");
+    mdns_instance_name_set("Esp32FanController");
+    mdns_service_add("Esp32FanController", "_http", "_tcp", 80, NULL, 0);
     configTime(2 * 60 * 60, 0, "pool.ntp.org");
 
     MyWebServer_getCallbacksStruct()->applyspeed_listner = FanController_applyspeed;
@@ -143,15 +148,9 @@ void setup()
 
     LightController_setup();
 
-    mdns_init();
-    mdns_hostname_set("Esp32 FanController");
-    mdns_instance_name_set("Esp32 FanController");
-    mdns_service_add("Esp32 FanController", "_http", "_tcp", 80, NULL, 0);
-
     GoveeBTh5179_setEventListner(govee_dataListner);
     GoveeBTh5179_setup();
 }
-
 
 void loop()
 {

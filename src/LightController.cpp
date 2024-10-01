@@ -25,7 +25,7 @@ void control_light()
             lvalues.current_state = sunrise;
             log_i("switch to sunrise");
         }
-        else // turn lamp on
+        else if(timeEqualsOrGreater(time, lvalues.turnOnTime) && timeEqualsOrSmaler(time,lvalues.turnOffTime) && lvalues.current_state == off) // turn lamp on
         {
             lvalues.current_state = on;
             lvalues.currentLightP = lvalues.maxLightP;
@@ -71,7 +71,7 @@ void control_light()
             lvalues.current_state = sunrise;
             log_i("switch to sunrise");
         }
-        else
+        else if(timeEqualsOrGreater(time, lvalues.turnOnTime) && timeEqualsOrSmaler(time,lvalues.turnOffTime) && lvalues.current_state == off)
         {
             lvalues.voltage.voltage = getVoltageFromPercent(lvalues.voltage.max, lvalues.voltage.min, lvalues.maxLightP);
             lvalues.currentLightP =lvalues.maxLightP;
@@ -84,6 +84,8 @@ void control_light()
         int timedif = ((getTimeDiff(time, lvalues.sunsetStart) * 60) + time.tm_sec);
         int timediftotal = getTimeDiff(lvalues.turnOffTime, lvalues.sunsetStart) * 60;
         double p = 100 - (((double)timedif / (double)timediftotal) * 100);
+        if(p > lvalues.maxLightP)
+            p = lvalues.maxLightP;
         lvalues.currentLightP = p;
         lvalues.voltage.voltage = getVoltageFromPercent(lvalues.voltage.max, lvalues.voltage.min, p);
         log_i("sunset timedif: %i timediftotal: %i p:%f volt:%i maxv:%i minv%i", timedif, timediftotal, p, lvalues.voltage.voltage, lvalues.voltage.max, lvalues.voltage.min);

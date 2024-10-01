@@ -19,7 +19,7 @@ var maxvisibleitems = 50;
 var now;
 
 function getChartDataForDay(date, newdata) {
-    return new Promise((resolve, reject) => {
+    return new Promise(function (resolve, reject) {
         let host = document.location.origin;
         let year = date.getUTCFullYear();
         let month = date.getMonth() + 1;
@@ -27,20 +27,33 @@ function getChartDataForDay(date, newdata) {
             month = 0 + "" + month;
         let day = date.getDate();
         let hour = date.getHours();
+        if (hour < 10)
+            hour = 0 + "" + hour;
         const da = `${year}/${month}/${day}/${hour}.csv`;
         const query = `${host}/${da}`;
-        fetch(query)
-            .then((response) => response.text(), reject)
+        Papa.parse(query, {
+            download: true,
+            complete: function(results) {
+                for (let i = results.data.length - 1; i >= 0; i--) {
+                    addChartItems(results.data[i][0], results.data[i][1], results.data[i][2], results.data[i][3], results.data[i][5], results.data[i][4], results.data[i][6], newdata);
+                }
+                mychart.update();
+                resolve();
+            }
+        });
+        /*fetch(query)
+            .then((response) => response.text(), reject => reject)
             .then(data => {
                 const lines = data.split("\r\n");
                 for (let i = lines.length - 1; i >= 0; i--) {
                     const vals = lines[i].split(", ");
                     addChartItems(vals[0], vals[1], vals[2], vals[3], vals[5], vals[4], vals[6], newdata);
                 }
-                mychart.config.options.scales.x.max = timeVals.length;
+                mychart.config.options.scales.x.max +=  lines.length;
+                mychart.config.options.scales.x.min +=  lines.length;
                 mychart.update();
                 resolve('resolved');
-            }, reject);
+            }, reject => reject);*/
     });
 }
 
@@ -52,21 +65,37 @@ function updateChartPosition() {
     }
 }
 
+function updateChartPosition1(pos) {
+    let dif = mychart.config.options.scales.x.max - mychart.config.options.scales.x.min;
+    mychart.config.options.scales.x.max = pos;
+    mychart.config.options.scales.x.min = pos - dif;
+}
+
+
+var lastPosition = 0;
+
 async function getChartDataForToday() {
     now = new Date();
-    getChartDataForDay(now, false).then(now => {
-        now.setHours(now.getHours() - 1);
-        getChartDataForDay(now, false).then(()=>{
-            setTimeRangeToShow(5*60);//5min
-            updateChartPosition();
+    lastPosition = mychart.config.options.scales.x.max;
+    console.log(`getChartDataForToday ${lastPosition}`);
+    getChartDataForDay(now, false).then(() => {
+        now.setUTCHours(now.getUTCHours() - 1);
+        getChartDataForDay(now, false).then(() => {
+            setTimeRangeToShow(5 * 60);//5min
+            console.log(`getChartDataForToday 2h get ${lastPosition}`);
+            updateChartPosition1(lastPosition);
+        }, () => {
+            console.log(`failed to get data  for ${now}`);
+            now.setUTCHours(now.getUTCHours() + 1);
         });
     });
 }
 
 async function getNextChartData() {
-    now.setHours(now.getHours() - 1);
-    mychart.config.options.scales.x.min = 20;
-    getChartDataForDay(now, false);
+    now.setHours(now.getUTCHours() - 1);
+    getChartDataForDay(now, false).then(() => { }, () => now.setUTCHours(now.getUTCHours() + 1));
+    mychart.config.options.scales.x.min = 50;
+    mychart.config.options.scales.x.max = mychart.config.options.scales.x.max + 50;
 }
 
 function addChartItems(time, temp, hum, fanspeed, light, co2, vdp, push) {
@@ -163,8 +192,6 @@ var mychart = new Chart("myChart", {
             x: {
                 // The axis for this scale is determined from the first letter of the id as `'x'`
                 // It is recommended to specify `position` and / or `axis` explicitly.
-                //min: 100,
-                //max:500,
             },
             y1: {
                 type: 'linear',
