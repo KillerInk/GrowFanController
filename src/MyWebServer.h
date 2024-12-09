@@ -17,6 +17,7 @@ struct MyWebServerMethodCallbacks
     void (*lightController_setTimes)(int onhour, int onmin, int offhour, int offmin, int risehour, int risemin, int sethour, int setmin,bool riseenable, bool setenable);
     void (*lightController_setLight)(int mv);
     void (*lightController_setAuto)(bool automode);
+    void(*lightController_setPercentLimits)(int min, int max);
 };
 
 MyWebServerMethodCallbacks * MyWebServer_getCallbacksStruct();

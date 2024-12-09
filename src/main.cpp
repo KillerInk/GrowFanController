@@ -42,9 +42,9 @@ void ens160Ath2x_dataListner(double temp, double humidity, int aqi, int tvoc, in
     if (FanController_getValues()->autocontrol)
     {
         socketmsg["autocontrolspeed"] = FanController_getValues()->autocontrolfanspeed;
-        socketmsg["voltage0"] = FanController_getFan0()->voltage;
-        socketmsg["voltage1"] = FanController_getFan1()->voltage;
     }
+    socketmsg["voltage0"] = FanController_getFan0()->voltage;
+    socketmsg["voltage1"] = FanController_getFan1()->voltage;
     socketmsg["nightmode"] = FanController_getValues()->nightmodeActive;
     tm time;
     getLocalTime(&time);
@@ -53,7 +53,8 @@ void ens160Ath2x_dataListner(double temp, double humidity, int aqi, int tvoc, in
     socketmsg["lightvalP"] = LightController_getValues()->currentLightP;
     socketmsg["lightvalmv"] = LightController_getValues()->voltage.voltage;
     socketmsg["lightstate"] = LightController_getValues()->current_state;
-    socketmsg["vpdair"] = Ens160Aht2x_getVpdAir();
+    ret = snprintf(buf, sizeof buf, "%.2f", Ens160Aht2x_getVpdAir());
+    socketmsg["vpdair"] = buf;
     MyWebServer_sendSocketMsg(JSON.stringify(socketmsg));
 }
 
@@ -137,6 +138,7 @@ void setup()
     MyWebServer_getCallbacksStruct()->lightController_setTimes = LightController_setTimes;
     MyWebServer_getCallbacksStruct()->lightController_setVoltageLimits = LightController_setVoltageLimits;
     MyWebServer_getCallbacksStruct()->lightController_setAuto = LightController_setAutoMode;
+    MyWebServer_getCallbacksStruct()->lightController_setPercentLimits = LightController_setPercentLimits;
     MyWebServer_setup();
 
     Ens160Aht2x_setDataListner(ens160Ath2x_dataListner);

@@ -144,6 +144,14 @@ void onCmd(AsyncWebServerRequest *request)
             methcallbacks.lightController_setLight(val.toInt());
         request->send(200);
     }
+    else if(variable == "lightlimitsp")
+    {
+        String val = request->arg("min");
+        String max = request->arg("max");
+        if(methcallbacks.lightController_setPercentLimits != nullptr)
+            methcallbacks.lightController_setPercentLimits(val.toInt(),max.toInt());
+        request->send(200);
+    }
     else if(variable == "lightsettime")
     {
         String onh = request->arg("onh");

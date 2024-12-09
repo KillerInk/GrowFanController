@@ -322,6 +322,19 @@ buttonsubmitlightvoltage.onclick = function () {
     });
 }
 
+var buttonsubmitlightvoltagep = document.getElementById("lightcontrolvoltagepsub");
+
+buttonsubmitlightvoltagep.onclick = function () {
+  let host = document.location.origin;
+  let min = document.getElementById("lightminp").value;
+  let max = document.getElementById("lightmaxp").value;
+  const query = `${host}/cmd?var=lightlimitsp&min=${min}&max=${max}`;
+  fetch(query)
+    .then(response => {
+      console.log(`request to ${query} finished, status: ${response.status}`);
+    });
+}
+
 var lightslider = document.getElementById("lightstrength");
 
 lightslider.oninput = function () {
