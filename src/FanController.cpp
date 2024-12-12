@@ -142,8 +142,9 @@ void FanController_setAutoControl(bool enable)
     MyPreferences_setBytes("conv", &fancontrollerValues, sizeof(FanControllerValues));
 }
 
-void FanController_applyspeed(int volt, int id, int val)
+void FanController_applyspeed(int id, int val)
 {
+    int volt = 0;
     if (val > 0)
     {
         if (id == 0)

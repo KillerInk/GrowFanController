@@ -6,11 +6,16 @@
 #include "FanController.h"
 #include "Arduino_JSON.h"
 #include "GoveeBTh5179.h"
+#ifdef SENSOR_ENS160AHT21
 #include "Ens160Aht2x.h"
+#endif
 #include "MyWebServer.h"
 #include "time.h"
 #include "LightController.h"
 #include "FileController.h"
+#ifdef SENSOR_BME280
+#include "Bme280.h"
+#endif
 
 void govee_dataListner(double temp, double hum, int bat)
 {
@@ -24,21 +29,40 @@ void govee_dataListner(double temp, double hum, int bat)
     MyWebServer_sendSocketMsg(JSON.stringify(socketmsg));
 }
 
-void ens160Ath2x_dataListner(double temp, double humidity, int aqi, int tvoc, int eco2)
+void sendSocketMsg()
 {
     JSONVar socketmsg;
     char buf[64];
-    int ret = snprintf(buf, sizeof buf, "%.2f", temp);
-    socketmsg["temperatur"] = buf;
-    ret = snprintf(buf, sizeof buf, "%.2f", humidity);
-    socketmsg["humidity"] = buf;
+    int ret;
+#ifdef SENSOR_BME280
+    ret = snprintf(buf, sizeof buf, "%.2f", Bme280_getTemperature());
+    socketmsg["bme280"]["temperatur"] = buf;
+    ret = snprintf(buf, sizeof buf, "%.2f", Bme280_getHumidity());
+    socketmsg["bme280"]["humidity"] = buf;
+    ret = snprintf(buf, sizeof buf, "%.2f", Bme280_getAvarageTemperature());
+    socketmsg["bme280"]["atemperatur"] = buf;
+    ret = snprintf(buf, sizeof buf, "%.2f", Bme280_getAvarageHumidity());
+    socketmsg["bme280"]["ahumidity"] = buf;
+    ret = snprintf(buf, sizeof buf, "%.2f", Bme280_getData()->pressure);
+    socketmsg["bme280"]["pressure"] = buf;
+    ret = snprintf(buf, sizeof buf, "%.2f", Bme280_getData()->avg_pressure);
+    socketmsg["bme280"]["apressure"] = buf;
+#endif
+
+#ifdef SENSOR_ENS160AHT21
+    ret = snprintf(buf, sizeof buf, "%.2f", Ens160Aht2x_getTemperature());
+    socketmsg["ens160aht21"]["temperatur"] = buf;
+    ret = snprintf(buf, sizeof buf, "%.2f", Ens160Aht2x_getHumidity());
+    socketmsg["ens160aht21"]["humidity"] = buf;
     ret = snprintf(buf, sizeof buf, "%.2f", (Ens160Aht2x_getAvarageTemperature()));
-    socketmsg["atemperatur"] = buf;
+    socketmsg["ens160aht21"]["atemperatur"] = buf;
     ret = snprintf(buf, sizeof buf, "%.2f", (Ens160Aht2x_getAvarageHumidity()));
-    socketmsg["ahumidity"] = buf;
-    socketmsg["eco2"] = eco2;
-    socketmsg["aqi"] = aqi;
-    socketmsg["tvoc"] = tvoc;
+    socketmsg["ens160aht21"]["ahumidity"] = buf;
+    socketmsg["ens160aht21"]["eco2"] = Ens160Aht2x_getCo2();
+    socketmsg["ens160aht21"]["aqi"] = Ens160Aht2x_getAqi();
+    socketmsg["ens160aht21"]["tvoc"] = Ens160Aht2x_getTvoc();
+#endif
+
     if (FanController_getValues()->autocontrol)
     {
         socketmsg["autocontrolspeed"] = FanController_getValues()->autocontrolfanspeed;
@@ -53,7 +77,8 @@ void ens160Ath2x_dataListner(double temp, double humidity, int aqi, int tvoc, in
     socketmsg["lightvalP"] = LightController_getValues()->currentLightP;
     socketmsg["lightvalmv"] = LightController_getValues()->voltage.voltage;
     socketmsg["lightstate"] = LightController_getValues()->current_state;
-    ret = snprintf(buf, sizeof buf, "%.2f", Ens160Aht2x_getVpdAir());
+    ret = snprintf(buf, sizeof buf, "%.2f", Bme280_getVpdLeaf());
+
     socketmsg["vpdair"] = buf;
     MyWebServer_sendSocketMsg(JSON.stringify(socketmsg));
 }
@@ -72,8 +97,16 @@ String getSettings()
     myObject["targetHumidity"] = FanController_getValues()->targetHumidity;
     myObject["readgovee"] = GoveeBTh5179_isEnable();
     myObject["speeddif"] = FanController_getValues()->filtercompensation;
+#ifdef SENSOR_ENS160AHT21
     myObject["tempdif"] = Ens160Aht2x_getTemperatureDif();
     myObject["humdif"] = Ens160Aht2x_getHumidityDif();
+#endif
+#ifdef SENSOR_BME280
+#ifndef SENSOR_ENS160AHT21
+    myObject["tempdif"] = Bme280_getTemperatureDif();
+    myObject["humdif"] = Bme280_getHumidityDif();
+#endif
+#endif
     myObject["minspeed"] = FanController_getValues()->minspeed;
     myObject["maxspeed"] = FanController_getValues()->maxspeed;
 
@@ -97,6 +130,8 @@ String getSettings()
     myObject["lightautomode"] = LightController_getValues()->automode;
     myObject["lightminvolt"] = LightController_getValues()->voltage.min;
     myObject["lightmaxvolt"] = LightController_getValues()->voltage.max;
+    myObject["lightlimitspmin"] = LightController_getValues()->minLightP;
+    myObject["lightlimitspmax"] = LightController_getValues()->maxLightP;
 
     return JSON.stringify(myObject);
 }
@@ -130,7 +165,14 @@ void setup()
     MyWebServer_getCallbacksStruct()->autocontrol_listner = FanController_setAutoControl;
     MyWebServer_getCallbacksStruct()->getFanControllerSettings = getSettings;
     MyWebServer_getCallbacksStruct()->readgovee_listner = GoveeBTh5179_enable;
+#ifdef SENSOR_ENS160AHT21
     MyWebServer_getCallbacksStruct()->setTempHumDif = Ens160Aht2x_setTempHumDif;
+#endif
+#ifdef SENSOR_BME280
+#ifndef SENSOR_ENS160AHT21
+    MyWebServer_getCallbacksStruct()->setTempHumDif = Bme280_setTempHumDif;
+#endif
+#endif
     MyWebServer_getCallbacksStruct()->setMinMaxSpeed = FanController_setMinMaxFanSpeed;
     MyWebServer_getCallbacksStruct()->fancoltroller_nightmodeactivcecallback = FanController_setNightMode;
     MyWebServer_getCallbacksStruct()->fancoltroller_nightmodecallback = FanController_setNightModeValues;
@@ -141,11 +183,20 @@ void setup()
     MyWebServer_getCallbacksStruct()->lightController_setPercentLimits = LightController_setPercentLimits;
     MyWebServer_setup();
 
-    Ens160Aht2x_setDataListner(ens160Ath2x_dataListner);
+#ifdef SENSOR_ENS160AHT21
     Ens160Aht2x_setup();
-
+#ifndef SENSOR_BME280
     FanController_setHumidityAndTempFunctions(Ens160Aht2x_getHumidity, Ens160Aht2x_getTemperature);
     FanController_setAvgHumidityAndTempFunctions(Ens160Aht2x_getAvarageHumidity, Ens160Aht2x_getAvarageTemperature);
+#endif
+#endif
+
+#ifdef SENSOR_BME280
+    Bme280_setup();
+
+    FanController_setHumidityAndTempFunctions(Bme280_getHumidity, Bme280_getTemperature);
+    FanController_setAvgHumidityAndTempFunctions(Bme280_getAvarageHumidity, Bme280_getAvarageTemperature);
+#endif
     FanController_setup();
 
     LightController_setup();
@@ -171,9 +222,15 @@ void loop()
         FanController_processAutoControl();
     }
     FanController_loop();
-    Ens160Aht2x_loop();
-    LightController_loop();
-    FileController_write(Ens160Aht2x_getAvarageTemperature(), Ens160Aht2x_getAvarageHumidity(), FanController_getValues()->autocontrolfanspeed, Ens160Aht2x_getCo2(), LightController_getValues()->voltage.voltage, Ens160Aht2x_getVpdAir());
 
+    LightController_loop();
+#ifdef SENSOR_BME280
+    Bme280_loop();
+#endif
+#ifdef SENSOR_ENS160AHT21
+    Ens160Aht2x_loop();
+    FileController_write(Ens160Aht2x_getAvarageTemperature(), Ens160Aht2x_getAvarageHumidity(), FanController_getValues()->autocontrolfanspeed, Ens160Aht2x_getCo2(), LightController_getValues()->voltage.voltage, Ens160Aht2x_getVpdAir());
+#endif
+    sendSocketMsg();
     vTaskDelay(1000);
 }

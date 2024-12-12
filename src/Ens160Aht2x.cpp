@@ -1,10 +1,9 @@
 #include "Ens160Aht2x.h"
 #include <AHT20.h>
 #include "DFRobot_ENS160.h"
-#include "Preferences.h"
+#include "MyPreferences.h"
+#include "MyMath.h"
 
-Preferences pref;
-const char *prefName = "Correction";
 DFRobot_ENS160_I2C ens160(&Wire, /*I2CAddr*/ 0x53);
 AHT20 aht20;
 double ens_temp = 0;
@@ -38,11 +37,8 @@ void Ens160Aht2x_setup()
     // sda/scl pin 21/22
     Wire.begin();
     Wire.setClock(100000);
-    pref.begin(prefName, false);
-    temp_dif = pref.getDouble("tempdif", temp_dif);
-    hum_dif = pref.getDouble("humdif", hum_dif);
-    pref.end();
-
+    temp_dif = MyPreferences_getDouble("Correction","tempdif", temp_dif);
+    hum_dif = MyPreferences_getDouble("Correction","humdif", hum_dif);
     for (byte i = 1; i < 127; i++)
     {
         int avail = checkI2C(i);
@@ -63,18 +59,10 @@ void Ens160Aht2x_loop()
 
     ens_temp = aht20.getTemperature();
     ens_humidity = aht20.getHumidity();
-    if (avarage_temp == 0.)
-        avarage_temp = ens_temp;
-    if (avarage_humidity == 0.)
-        avarage_humidity = ens_humidity;
+    avarage_temp = MyMath_avg(avarage_temp, ens_temp);
+    avarage_humidity = MyMath_avg(avarage_humidity, ens_humidity);
 
-    avarage_temp = 0.96 * avarage_temp + 0.04 * ens_temp;
-    avarage_humidity = 0.96 * avarage_humidity + 0.04 * ens_humidity;
-    int t = avarage_temp * 100;
-    avarage_temp = (double)t /100;
-    t = avarage_humidity *100;
-    avarage_humidity = (double)t / 100;
-    log_i("temp:%f a: %f humidity:%f a:%f ", ens_temp, avarage_temp, ens_humidity, avarage_humidity);
+    log_i("temp:%.2f a: %f humidity:%.2f a:%.2f ", ens_temp, avarage_temp, ens_humidity, avarage_humidity);
     ens160.setTempAndHum(Ens160Aht2x_getTemperature(), Ens160Aht2x_getHumidity());
     /*
      *         1-Warm-Up phase, first 3 minutes after power-on.
@@ -85,13 +73,9 @@ void Ens160Aht2x_loop()
     AQI = (uint8_t)ens160.getAQI();
     TVOC = ens160.getTVOC();
     int co2 = ens160.getECO2();
-    if(eCO2 == 0)
-        eCO2 = co2;
-    eCO2 = 0.96 * eCO2 + 0.04 * co2;
-    svp = 0.6108 * exp((17.67 * avarage_temp) / (avarage_temp + 243.5));
-    avp = avarage_humidity / 100 * svp;
-    vpd_leaf = svp -avp;
-    vpd_air = (1-avarage_humidity/100) * svp;
+    eCO2 = MyMath_avg(eCO2, co2);
+    vpd_leaf = MyMath_vpd_leaf(avarage_temp,avarage_humidity);
+    vpd_air = MyMath_vpd_air(avarage_temp,avarage_humidity);
     log_i("status:%i tvoc:%i eco2:%i aqi:%i svp %f avp %f vpd leaf %f vpd air %f", status, TVOC, eCO2, AQI, svp,avp, vpd_leaf, vpd_air);
     if (ens_eventlistner != nullptr)
         ens_eventlistner(Ens160Aht2x_getTemperature(), Ens160Aht2x_getHumidity(), AQI, TVOC, eCO2);
@@ -116,10 +100,8 @@ void Ens160Aht2x_setTempHumDif(double tempdif, double humdif)
 {
     temp_dif = tempdif;
     hum_dif = humdif;
-    pref.begin(prefName, false);
-    pref.putDouble("tempdif", temp_dif);
-    pref.putDouble("humdif", hum_dif);
-    pref.end();
+    MyPreferences_setDouble("Correction", "tempdif", temp_dif);
+    MyPreferences_setDouble("Correction", "humdif", hum_dif);
 }
 
 double Ens160Aht2x_getTemperatureDif()
@@ -150,6 +132,16 @@ double Ens160Aht2x_getVpdAir()
 double Ens160Aht2x_getVpdLeaf()
 {
     return vpd_leaf;
+}
+
+double Ens160Aht2x_getAqi()
+{
+    return AQI;
+}
+
+double Ens160Aht2x_getTvoc()
+{
+    return TVOC;
 }
 
 int Ens160Aht2x_getCo2()

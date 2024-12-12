@@ -1,5 +1,8 @@
 #pragma once
 
+#define SENSOR_ENS160AHT21
+#define SENSOR_BME280
+
 #define I2C_SDA 21
 #define I2C_SCL 22
 #define i2c_pwn_addr 95 //95

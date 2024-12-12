@@ -12,4 +12,6 @@ double Ens160Aht2x_getAvarageTemperature();
 double Ens160Aht2x_getAvarageHumidity();
 double Ens160Aht2x_getVpdAir();
 double Ens160Aht2x_getVpdLeaf();
+double Ens160Aht2x_getAqi();
+double Ens160Aht2x_getTvoc();
 int Ens160Aht2x_getCo2();

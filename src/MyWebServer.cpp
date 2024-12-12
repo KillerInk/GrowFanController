@@ -50,9 +50,9 @@ void onCmd(AsyncWebServerRequest *request)
         {
             log_i("set %s to %s", variable.c_str(), value.c_str());
             if (id == 0)
-                methcallbacks.applyspeed_listner(0, id, val);
+                methcallbacks.applyspeed_listner(id, val);
             else if (id == 1)
-                methcallbacks.applyspeed_listner(0, id, val);
+                methcallbacks.applyspeed_listner(id, val);
             request->send(200);
         }
         else

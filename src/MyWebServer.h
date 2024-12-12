@@ -3,7 +3,7 @@
 
 struct MyWebServerMethodCallbacks
 {
-    void (*applyspeed_listner)(int volt, int id, int val);
+    void (*applyspeed_listner)(int id, int val);
     void (*voltagechanged_listner)(int id, int min, int max);
     void (*targettemphum_listner)(int tmp, int hum, int speed);
     void (*autocontrol_listner)(bool enable);

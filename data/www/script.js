@@ -43,14 +43,11 @@ function createWebsocket() {
   websocket.onmessage = function (data) {
     var result = JSON.parse(data.data); // $.parseJSON(data);
     var bat = result["battery"];
-    var temp = result["temperatur"];
-    var hum = result["humidity"];
-    var atemp = result["atemperatur"];
-    var ahum = result["ahumidity"];
+    var ens160aht21 = result["ens160aht21"];
+    var bme280 = result["bme280"];
+
     var autospeed = result["autocontrolspeed"];
-    var ec2 = result["eco2"];
-    var tvc = result["tvoc"];
-    var aq = result["aqi"];
+
     var volt0 = result["voltage0"];
     var volt1 = result["voltage1"];
     var nightmodeactive = result["nighmode"];
@@ -61,26 +58,53 @@ function createWebsocket() {
     var vpda = result["vpdair"];
     document.getElementById("time").innerHTML = time;
     if (bat != undefined) {
+      var temp = ens160aht21["temperatur"];
+      var hum = ens160aht21["humidity"];
       battery.innerHTML = bat + "%";
       temperatur_g.innerHTML = temp + "&deg;C";
       humidity_g.innerHTML = hum + "%";
     }
     else {
-      temperatur.innerHTML = temp + "&deg;C A:" + atemp + "&deg;C";
-      humidity.innerHTML = hum + "% A:" + ahum + "%";
+      if (ens160aht21 != undefined) {
+        var temp = ens160aht21["temperatur"];
+        var hum = ens160aht21["humidity"];
+        var atemp = ens160aht21["atemperatur"];
+        var ahum = ens160aht21["ahumidity"];
+        var ec2 = ens160aht21["eco2"];
+        var tvc = ens160aht21["tvoc"];
+        var aq = ens160aht21["aqi"];
+        temperatur.innerHTML = temp + "&deg;C A:" + atemp + "&deg;C";
+        humidity.innerHTML = hum + "% A:" + ahum + "%";
+        if (ec2 != undefined) {
+          eco2.innerHTML = "eCO2:" + ec2 + "ppm";
+        }
+        if (tvc != undefined)
+          tvoc.innerHTML = "TVOC:" + tvc + "ppb";
+        if (aq != undefined) {
+          aqi.innerHTML = "Aqi: " + aq;
+        }
+      }
+      if (bme280 != undefined) {
+        var temp = bme280["temperatur"];
+        var hum = bme280["humidity"];
+        var atemp = bme280["atemperatur"];
+        var ahum = bme280["ahumidity"];
+        var pres = bme280["pressure"];
+        var apress = bme280["apressure"];
+        document.getElementById("temperatur_bme280").innerHTML = temp + "&deg;C A:" + atemp + "&deg;C";
+        document.getElementById("humidity_bme280").innerHTML = hum + "% A:" + ahum + "%";
+        document.getElementById("pressure_bme280").innerHTML = pres + "hPa A:" + apress + "hPa";
+      }
     }
     if (autospeed != undefined) {
       autofan0.innerHTML = "Fan1:" + autospeed + "% " + volt0 + "mv ";
       autofan1.innerHTML = "Fan2:" + (autospeed - speeddif.value) + "% " + volt1 + "mv";
     }
-    if (ec2 != undefined) {
-      eco2.innerHTML = "eCO2:" + ec2 + "ppm";
+    else {
+      autofan0.innerHTML = "Fan1:" + volt0 + "mv ";
+      autofan1.innerHTML = "Fan2:" + volt1 + "mv";
     }
-    if (tvc != undefined)
-      tvoc.innerHTML = "TVOC:" + tvc + "ppb";
-    if (aq != undefined) {
-      aqi.innerHTML = "Aqi: " + aq;
-    }
+
     if (nightmodeactive != undefined)
       document.getElementById("nightmodeactive").innerHTML = nightmodeactive;
     if (lightp != undefined)
@@ -158,6 +182,9 @@ window.addEventListener('load', (event) => {
 
       document.getElementById("lightminv").value = json["lightminvolt"];
       document.getElementById("lightmaxv").value = json["lightmaxvolt"];
+
+      document.getElementById("lightminp").value = json["lightlimitspmin"];
+      document.getElementById("lightmaxp").value = json["lightlimitspmax"];
 
     });
   getChartDataForToday();
@@ -340,6 +367,7 @@ var lightslider = document.getElementById("lightstrength");
 lightslider.oninput = function () {
   let host = document.location.origin;
   let value = encodeURIComponent(this.value);
+  document.getElementById("sliderAmount2").value = this.value;
   const query = `${host}/cmd?var=lightval&val=${value}`;
   fetch(query)
     .then(response => {
