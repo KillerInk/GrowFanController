@@ -141,7 +141,6 @@ void setup()
     // put your setup code here, to run once:
     if (Serial.available())
         Serial.begin(115200);
-
     FileController_setup();
 
     WiFi.setHostname("Esp32FanController");
@@ -207,20 +206,7 @@ void setup()
 
 void loop()
 {
-    /*if(voltage == 0)
-      voltage = 5000;
-    else if(voltage == 5000)
-      voltage = 0;
-    dac.setDACOutVoltage(voltage, 0);
-    //dac.store();
-    vTaskDelay(5000);
-    //dac.store();
-     log_i("loop");*/
     GoveeBTh5179_loop();
-    if (FanController_getValues()->autocontrol)
-    {
-        FanController_processAutoControl();
-    }
     FanController_loop();
 
     LightController_loop();

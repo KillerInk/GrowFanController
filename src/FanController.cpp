@@ -18,10 +18,12 @@ double (*getAvgHumidity)();
 
 long nextTick;
 double lastTemp;
+const int waitTime = 15000;
 void FanController_processAutoControl()
 {
     double atmp = getAvgTemp();
     double ahm = getAvgHumidity();
+    int old_speed = fancontrollerValues.autocontrolfanspeed;
     if (atmp > fancontrollerValues.targetTemperature || ahm > fancontrollerValues.targetHumidity)
     {
         fancontrollerValues.autocontrolfanspeed++;
@@ -32,13 +34,20 @@ void FanController_processAutoControl()
             fancontrollerValues.autocontrolfanspeed--;
         else
         {
-            if (lastTemp > atmp)
-                fancontrollerValues.autocontrolfanspeed--;
-            else if (lastTemp < atmp)
-                fancontrollerValues.autocontrolfanspeed++;
-            lastTemp = atmp;
+            if (millis() > nextTick)
+            {
+                if (lastTemp > atmp)
+                    fancontrollerValues.autocontrolfanspeed--;
+                else if (lastTemp < atmp)
+                    fancontrollerValues.autocontrolfanspeed++;
+                lastTemp = atmp;
+                nextTick = millis() +waitTime;
+            }
         }
     }
+    if(fancontrollerValues.autocontrolfanspeed == old_speed)
+        return;
+
     if (fancontrollerValues.autocontrolfanspeed > fancontrollerValues.maxspeed)
         fancontrollerValues.autocontrolfanspeed = fancontrollerValues.maxspeed;
     if (fancontrollerValues.nightmodeActive && fancontrollerValues.autocontrolfanspeed > fancontrollerValues.nightmodeMaxSpeed)
@@ -56,7 +65,7 @@ void FanController_processAutoControl()
     fancontrollerValues.fan1Voltage.voltage = getVoltageFromPercent(fancontrollerValues.fan1Voltage.max, fancontrollerValues.fan1Voltage.min, fan2speed);
     dac.setDACOutVoltage(fancontrollerValues.fan0Voltage.voltage, 0);
     dac.setDACOutVoltage(fancontrollerValues.fan1Voltage.voltage, 1);
-    log_i("autocontrol set speed to: %i fan0 mv:%f fan1 mv:%f", fancontrollerValues.autocontrolfanspeed, fancontrollerValues.fan0Voltage.voltage, fancontrollerValues.fan1Voltage.voltage);
+    log_i("autocontrol set speed to: %i fan0 mv:%i fan1 mv:%i", fancontrollerValues.autocontrolfanspeed, fancontrollerValues.fan0Voltage.voltage, fancontrollerValues.fan1Voltage.voltage);
 }
 
 void FanController_setVoltage(int id, int min, int max)
@@ -98,6 +107,10 @@ void FanController_loop()
         tm time;
         getLocalTime(&time);
         fancontrollerValues.nightmodeActive = timeInRange(&fancontrollerValues.nightmodeOn, &fancontrollerValues.nightModeOff, time);
+    }
+    if (fancontrollerValues.autocontrol)
+    {
+        FanController_processAutoControl();
     }
 }
 
