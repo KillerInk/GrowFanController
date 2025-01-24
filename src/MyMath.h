@@ -4,7 +4,10 @@ static double MyMath_avg(double avg, double val)
 {
     if (avg == 0)
         avg = val;
-    return 0.96 * avg + 0.04 * val;
+    double a = 0.96 * avg + 0.04 * val;
+    if(isnan(a))
+        return val;
+    return a;
 }
 
 static double MyMath_vpd_leaf(double avarage_temp, double avarage_humidity)
