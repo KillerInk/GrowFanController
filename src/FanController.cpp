@@ -18,6 +18,7 @@ double (*getAvgHumidity)();
 
 long nextTick;
 double lastTemp;
+double lastHumdidity;
 const int waitTime = 15000;
 void FanController_processAutoControl()
 {
@@ -28,24 +29,21 @@ void FanController_processAutoControl()
     {
         fancontrollerValues.autocontrolfanspeed++;
     }
-    else if (atmp < fancontrollerValues.targetTemperature || ahm < fancontrollerValues.targetHumidity)
+    else if (atmp < fancontrollerValues.targetTemperature - 1 && ahm < fancontrollerValues.targetHumidity - 2)
     {
-        if (atmp < (fancontrollerValues.targetTemperature - 1))
-            fancontrollerValues.autocontrolfanspeed--;
-        else
-        {
-            if (millis() > nextTick)
-            {
-                if (lastTemp > atmp)
-                    fancontrollerValues.autocontrolfanspeed--;
-                else if (lastTemp < atmp)
-                    fancontrollerValues.autocontrolfanspeed++;
-                lastTemp = atmp;
-                nextTick = millis() +waitTime;
-            }
-        }
+        fancontrollerValues.autocontrolfanspeed--;
     }
-    if(fancontrollerValues.autocontrolfanspeed == old_speed)
+    else if (millis() > nextTick)
+    {
+        if (lastTemp > atmp || lastHumdidity > ahm)
+            fancontrollerValues.autocontrolfanspeed--;
+        else if (lastTemp < atmp || lastHumdidity < ahm)
+            fancontrollerValues.autocontrolfanspeed++;
+        lastTemp = atmp;
+        nextTick = millis() + waitTime;
+    }
+
+    if (fancontrollerValues.autocontrolfanspeed == old_speed)
         return;
 
     if (fancontrollerValues.autocontrolfanspeed > fancontrollerValues.maxspeed)
