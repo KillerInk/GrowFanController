@@ -72,6 +72,8 @@ void sendSocketMsg()
     socketmsg["nightmode"] = FanController_getValues()->nightmodeActive;
     tm time;
     getLocalTime(&time);
+    if (time.tm_isdst)
+        time.tm_hour++;
     ret = snprintf(buf, sizeof buf, "%02i:%02i:%02i", time.tm_hour, time.tm_min, time.tm_sec);
     socketmsg["time"] = buf;
     socketmsg["lightvalP"] = LightController_getValues()->currentLightP;
@@ -156,7 +158,7 @@ void setup()
     mdns_hostname_set("Esp32FanController");
     mdns_instance_name_set("Esp32FanController");
     mdns_service_add("Esp32FanController", "_http", "_tcp", 80, NULL, 0);
-    configTime(2 * 60 * 60, 0, "pool.ntp.org");
+    configTime(1 * 60 * 60, 0, "pool.ntp.org");
 
     MyWebServer_getCallbacksStruct()->applyspeed_listner = FanController_applyspeed;
     MyWebServer_getCallbacksStruct()->voltagechanged_listner = FanController_setVoltage;
@@ -212,6 +214,9 @@ void loop()
     LightController_loop();
 #ifdef SENSOR_BME280
     Bme280_loop();
+#ifndef SENSOR_ENS160AHT21
+    FileController_write(Bme280_getAvarageTemperature(), Bme280_getAvarageHumidity(), FanController_getValues()->autocontrolfanspeed, 0, LightController_getValues()->voltage.voltage, Bme280_getVpdAir());
+#endif
 #endif
 #ifdef SENSOR_ENS160AHT21
     Ens160Aht2x_loop();

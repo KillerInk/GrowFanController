@@ -42,6 +42,8 @@ void FileController_write(double temp, double hum, int fanspeed, int co2, int li
         return;
     tm time;
     getLocalTime(&time);
+    if(time.tm_isdst)
+        time.tm_hour++;
     int year = time.tm_year + 1900;
     String ret = "/" + String(year);
     if (!SD.exists(ret))
