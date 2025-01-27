@@ -22,10 +22,10 @@ void govee_dataListner(double temp, double hum, int bat)
     JSONVar socketmsg;
     char buf[64];
     snprintf(buf, sizeof buf, "%.2f", temp);
-    socketmsg["temperatur"] = buf;
+    socketmsg["govee"]["temperatur"] = buf;
     snprintf(buf, sizeof buf, "%.2f", hum);
-    socketmsg["humidity"] = buf;
-    socketmsg["battery"] = bat;
+    socketmsg["govee"]["humidity"] = buf;
+    socketmsg["govee"]["battery"] = bat;
     MyWebServer_sendSocketMsg(JSON.stringify(socketmsg));
 }
 
@@ -215,7 +215,7 @@ void loop()
 #ifdef SENSOR_BME280
     Bme280_loop();
 #ifndef SENSOR_ENS160AHT21
-    FileController_write(Bme280_getAvarageTemperature(), Bme280_getAvarageHumidity(), FanController_getValues()->autocontrolfanspeed, 0, LightController_getValues()->voltage.voltage, Bme280_getVpdAir());
+    FileController_write(Bme280_getAvarageTemperature(), Bme280_getAvarageHumidity(), FanController_getValues()->autocontrolfanspeed, 0, LightController_getValues()->voltage.voltage, Bme280_getVpdLeaf());
 #endif
 #endif
 #ifdef SENSOR_ENS160AHT21
