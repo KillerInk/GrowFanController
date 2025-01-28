@@ -74,7 +74,7 @@ void FileController_write(double temp, double hum, int fanspeed, int co2, int li
     }
     else
     {
-        log_i("append to file %s", ret.c_str());
+        //log_i("append to file %s", ret.c_str());
         myFile = SD.open(ret, "a");
     }
     if (myFile)

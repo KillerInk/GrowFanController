@@ -48,17 +48,17 @@ void process_cloud_sim(tm time)
             if (!lvalues.cloud_rising)
             {
                 lvalues.currentLightP = lvalues.max_light_cloudP - finalP;
-                lvalues.voltage.voltage = getVoltageFromPercent(lvalues.voltage.max, lvalues.voltage.min, lvalues.currentLightP);
+                lvalues.voltage.voltage = getVoltageFromPercent(lvalues.voltage.max, lvalues.voltage.min, lvalues.max_light_cloudP - finalP);
             }
             else
             {
                 lvalues.currentLightP = lvalues.min_light_cloudP + finalP;
-                lvalues.voltage.voltage = getVoltageFromPercent(lvalues.voltage.max, lvalues.voltage.min, lvalues.currentLightP);
+                lvalues.voltage.voltage = getVoltageFromPercent(lvalues.voltage.max, lvalues.voltage.min, lvalues.min_light_cloudP + finalP);
             }
 
             // log_i("p:%f final:%f percent:%f rising:%i", p, finalP, (lvalues.min_light_cloudP + finalP), lvalues.cloud_rising);
         }
-        // log_i("cloud sim timedif: %i cloudtime: %i:%i time:%i:%i volt:%i maxv:%i minv%i", timedif, lvalues.next_cloud_cycle_change_time.hour, lvalues.next_cloud_cycle_change_time.min, time.tm_hour, time.tm_min, lvalues.voltage.voltage, lvalues.voltage.max, lvalues.voltage.min);
+        log_i("cloud sim timedif: %i cloudtime: %i:%i time:%i:%i volt:%i maxv:%i minv%i", timedif, lvalues.next_cloud_cycle_change_time.hour, lvalues.next_cloud_cycle_change_time.min, time.tm_hour, time.tm_min, lvalues.voltage.voltage, lvalues.voltage.max, lvalues.voltage.min);
     }
 }
 
