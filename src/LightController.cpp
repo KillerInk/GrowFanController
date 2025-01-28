@@ -66,55 +66,37 @@ void control_light()
 {
     tm time;
     getLocalTime(&time);
-    // log_i("time %s",asctime(&time));
-    // log_i("time %i %i %i",time.tm_year+1900, time.tm_mon+1, time.tm_mday);
-    // when light is off and its time to turn it on
-    if (timeEquals(time, lvalues.turnOnTime) && lvalues.current_state == off)
+    switch (lvalues.current_state)
     {
-        log_i("turn on");
-        // switch to sunrise if enabled
-        if (lvalues.enableSunrise && timeEqualsOrSmaler(time, lvalues.sunriseEnd))
+    case off:
+        // when light is off and its time to turn it on
+        if (timeEqualsOrGreater(time, lvalues.turnOnTime))
         {
-            lvalues.current_state = sunrise;
-            log_i("switch to sunrise");
+            log_i("turn on");
+            // switch to sunrise if enabled
+            if (lvalues.enableSunrise && timeEqualsOrSmaler(time, lvalues.sunriseEnd))
+            {
+                lvalues.current_state = sunrise;
+                log_i("switch to sunrise");
+            }
+            else if (timeEqualsOrGreater(time, lvalues.turnOnTime) && timeEqualsOrSmaler(time, lvalues.turnOffTime)) // turn lamp on
+            {
+                lvalues.current_state = on;
+                lvalues.currentLightP = lvalues.maxLightP;
+                lvalues.voltage.voltage = getVoltageFromPercent(lvalues.voltage.max, lvalues.voltage.min, lvalues.maxLightP);
+            }
         }
-        else if (timeEqualsOrGreater(time, lvalues.turnOnTime) && timeEqualsOrSmaler(time, lvalues.turnOffTime) && lvalues.current_state == off) // turn lamp on
+        break;
+    case on:
+        // check if its time to turn the light off
+        if (timeEqualsOrGreater(time, lvalues.turnOffTime) && lvalues.current_state != off)
         {
-            lvalues.current_state = on;
-            lvalues.currentLightP = lvalues.maxLightP;
-            lvalues.voltage.voltage = getVoltageFromPercent(lvalues.voltage.max, lvalues.voltage.min, lvalues.maxLightP);
+            lvalues.current_state = off;
+            log_i("turn off");
+            lvalues.voltage.voltage = 0;
+            lvalues.currentLightP = 0;
         }
-    }
-    // check if its time to turn the light off
-    else if (timeEqualsOrGreater(time, lvalues.turnOffTime) && lvalues.current_state != off)
-    {
-        lvalues.current_state = off;
-        log_i("turn off");
-        lvalues.voltage.voltage = 0;
-        lvalues.currentLightP = 0;
-    }
-    // do sunrise stuff
-    else if (lvalues.current_state == sunrise && lvalues.enableSunrise)
-    {
-        int timedif = ((getTimeDiff(time, lvalues.sunriseEnd) * 60) + time.tm_sec) * -1;
-        int timediftotal = (getTimeDiff(lvalues.turnOnTime, lvalues.sunriseEnd) * 60) * -1;
-        double p = 100 - (((double)timedif / (double)timediftotal) * 100);
-        if (p > lvalues.maxLightP)
-            p = lvalues.maxLightP;
-        lvalues.currentLightP = p;
-        lvalues.voltage.voltage = getVoltageFromPercent(lvalues.voltage.max, lvalues.voltage.min, p);
-        log_i("sunrise timedif: %i timediftotal: %i p:%f volt:%i maxv:%i minv%i", timedif, timediftotal, p, lvalues.voltage.voltage, lvalues.voltage.max, lvalues.voltage.min);
-
-        if (timeEquals(time, lvalues.sunriseEnd))
-        {
-            lvalues.current_state = on;
-            log_i("switch to on");
-        }
-    }
-    // handel different stuff while lamp is on or esp rebooted and we have to continue
-    else if (lvalues.current_state == on)
-    {
-        if (lvalues.enableSunset && timeEqualsOrGreater(time, lvalues.sunsetStart))
+        else if (lvalues.enableSunset && timeEqualsOrGreater(time, lvalues.sunsetStart))
         {
             lvalues.current_state = sunset;
             log_i("switch to sunset");
@@ -140,32 +122,42 @@ void control_light()
             lvalues.currentLightP = lvalues.maxLightP;
             lvalues.current_state = on;
         }
-
-        // else do nothing
-    }
-    // do sunset stuff
-    else if (lvalues.current_state == sunset && lvalues.enableSunset)
-    {
-        int timedif = ((getTimeDiff(time, lvalues.sunsetStart) * 60) + time.tm_sec);
-        int timediftotal = getTimeDiff(lvalues.turnOffTime, lvalues.sunsetStart) * 60;
-        double p = 100 - (((double)timedif / (double)timediftotal) * 100);
-        if (p > lvalues.maxLightP)
-            p = lvalues.maxLightP;
-        lvalues.currentLightP = p;
-        lvalues.voltage.voltage = getVoltageFromPercent(lvalues.voltage.max, lvalues.voltage.min, p);
-        log_i("sunset timedif: %i timediftotal: %i p:%f volt:%i maxv:%i minv%i", timedif, timediftotal, p, lvalues.voltage.voltage, lvalues.voltage.max, lvalues.voltage.min);
-    }
-    else // handel fallback methods in case esp got rebooted and turn off/on event never happend but we are in the middle off something,
-         //  like sunrise/sunset or just to turn lamp on/off because it is in the time range
-    {
-        log_i("No change currenstate %i", lvalues.current_state);
-        if (lvalues.current_state == off && timeEqualsOrGreater(time, lvalues.turnOnTime) && timeEqualsOrSmaler(time, lvalues.turnOffTime))
+        break;
+    case sunrise:
+        if (lvalues.enableSunrise)
         {
-            lvalues.current_state = on;
-            log_i("switch to on");
+            int timedif = ((getTimeDiff(time, lvalues.sunriseEnd) * 60) + time.tm_sec) * -1;
+            int timediftotal = (getTimeDiff(lvalues.turnOnTime, lvalues.sunriseEnd) * 60) * -1;
+            double p = 100 - (((double)timedif / (double)timediftotal) * 100);
+            if (p > lvalues.maxLightP)
+                p = lvalues.maxLightP;
+            lvalues.currentLightP = p;
+            lvalues.voltage.voltage = getVoltageFromPercent(lvalues.voltage.max, lvalues.voltage.min, p);
+            log_i("sunrise timedif: %i timediftotal: %i p:%f volt:%i maxv:%i minv%i", timedif, timediftotal, p, lvalues.voltage.voltage, lvalues.voltage.max, lvalues.voltage.min);
+
+            if (timeEquals(time, lvalues.sunriseEnd))
+            {
+                lvalues.current_state = on;
+                log_i("switch to on");
+            }
         }
-        else
-            lvalues.current_state = off;
+        break;
+    case sunset:
+        if (lvalues.enableSunset)
+        {
+            int timedif = ((getTimeDiff(time, lvalues.sunsetStart) * 60) + time.tm_sec);
+            int timediftotal = getTimeDiff(lvalues.turnOffTime, lvalues.sunsetStart) * 60;
+            double p = 100 - (((double)timedif / (double)timediftotal) * 100);
+            if (p > lvalues.maxLightP)
+                p = lvalues.maxLightP;
+            lvalues.currentLightP = p;
+            lvalues.voltage.voltage = getVoltageFromPercent(lvalues.voltage.max, lvalues.voltage.min, p);
+            log_i("sunset timedif: %i timediftotal: %i p:%f volt:%i maxv:%i minv%i", timedif, timediftotal, p, lvalues.voltage.voltage, lvalues.voltage.max, lvalues.voltage.min);
+        }
+        break;
+
+    default:
+        break;
     }
     ldac.setDACOutVoltage(lvalues.voltage.voltage, 0);
 }
