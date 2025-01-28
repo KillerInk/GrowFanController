@@ -54,7 +54,7 @@ void Bme280_loop()
     data.avg_humidity = MyMath_avg(data.avg_humidity, data.humidity);
     data.avg_pressure = MyMath_avg(data.avg_pressure, data.pressure);
     data.vpdleaf = MyMath_vpd_leaf(data.avg_temperature,data.avg_humidity);
-    log_i("temp:%.2f a:%.2f humidity:%.2f a:%.2f pressure:%.2f a:%.2f vdp:%.2f", data.temperature, data.avg_temperature, data.humidity, data.avg_humidity, data.pressure, data.avg_pressure, data.vpdleaf);
+    //log_i("temp:%.2f a:%.2f humidity:%.2f a:%.2f pressure:%.2f a:%.2f vdp:%.2f", data.temperature, data.avg_temperature, data.humidity, data.avg_humidity, data.pressure, data.avg_pressure, data.vpdleaf);
     if (bme280_eventlistner != nullptr)
     {
         bme280_eventlistner(&data);

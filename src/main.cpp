@@ -16,9 +16,11 @@
 #ifdef SENSOR_BME280
 #include "Bme280.h"
 #endif
+#include <nvs_flash.h>
 
 void govee_dataListner(double temp, double hum, int bat)
 {
+
     JSONVar socketmsg;
     char buf[64];
     snprintf(buf, sizeof buf, "%.2f", temp);
@@ -135,6 +137,11 @@ String getSettings()
     myObject["lightlimitspmin"] = LightController_getValues()->minLightP;
     myObject["lightlimitspmax"] = LightController_getValues()->maxLightP;
 
+    myObject["cloud"]["active"] = LightController_getValues()->cloudsim;
+    myObject["cloud"]["cycleduration"] = LightController_getValues()->cloud_cycle_duration_min;
+    myObject["cloud"]["min"] = LightController_getValues()->min_light_cloudP;
+    myObject["cloud"]["max"] = LightController_getValues()->max_light_cloudP;
+
     return JSON.stringify(myObject);
 }
 
@@ -143,6 +150,16 @@ void setup()
     // put your setup code here, to run once:
     if (Serial.available())
         Serial.begin(115200);
+
+    // Initialisieren Sie den NVS-Speicher
+	esp_err_t ret = nvs_flash_init();
+	if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND)
+	{
+		// NVS-Partition ist beschädigt oder eine neue Version wurde gefunden
+		ESP_ERROR_CHECK(nvs_flash_erase());
+		ret = nvs_flash_init();
+	}
+	ESP_ERROR_CHECK(ret);
     FileController_setup();
 
     WiFi.setHostname("Esp32FanController");
@@ -182,6 +199,8 @@ void setup()
     MyWebServer_getCallbacksStruct()->lightController_setVoltageLimits = LightController_setVoltageLimits;
     MyWebServer_getCallbacksStruct()->lightController_setAuto = LightController_setAutoMode;
     MyWebServer_getCallbacksStruct()->lightController_setPercentLimits = LightController_setPercentLimits;
+    MyWebServer_getCallbacksStruct()->lightController_setCloudActive = LightController_setCloudActive;
+    MyWebServer_getCallbacksStruct()->lightController_setCloudValues = LightController_setCloudValues;
     MyWebServer_setup();
 
 #ifdef SENSOR_ENS160AHT21
@@ -222,6 +241,7 @@ void loop()
     Ens160Aht2x_loop();
     FileController_write(Ens160Aht2x_getAvarageTemperature(), Ens160Aht2x_getAvarageHumidity(), FanController_getValues()->autocontrolfanspeed, Ens160Aht2x_getCo2(), LightController_getValues()->voltage.voltage, Ens160Aht2x_getVpdAir());
 #endif
-    sendSocketMsg();
+    if(MyWebServer_WsClientsConnected)
+        sendSocketMsg();
     vTaskDelay(1000);
 }

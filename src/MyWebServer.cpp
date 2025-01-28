@@ -10,20 +10,26 @@ AsyncWebSocket *ws;
 
 MyWebServerMethodCallbacks methcallbacks;
 
+int ws_clients = 0;
+
 void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len)
 {
 
     if (type == WS_EVT_CONNECT)
     {
         Serial.printf("ws[%s][%u] connect\n", server->url(), client->id());
+        ws_clients++;
     }
     else if (type == WS_EVT_DISCONNECT)
     {
         Serial.printf("ws[%s][%u] disconnect\n", server->url(), client->id());
+        ws_clients--;
     }
     else if (type == WS_EVT_ERROR)
     {
         Serial.printf("ws[%s][%u] error(%u): %s\n", server->url(), client->id(), *((uint16_t *)arg), (char *)data);
+        if(ws_clients > 0)
+            ws_clients--;
     }
     else if (type == WS_EVT_PONG)
     {
@@ -175,6 +181,22 @@ void onCmd(AsyncWebServerRequest *request)
             methcallbacks.lightController_setAuto(enable.toInt());
         request->send(200);
     }
+    else if(variable == "cloudsim")
+    {
+        String min = request->arg("min");
+        String max = request->arg("max");
+        String duration = request->arg("cloudduration");
+        if(methcallbacks.lightController_setCloudValues != nullptr)
+            methcallbacks.lightController_setCloudValues(min.toInt(), max.toInt(), duration.toInt());
+        request->send(200);
+    }
+    else if(variable == "cloudsimactive")
+    {
+        String on = request->arg("val");
+        if(methcallbacks.lightController_setCloudActive != nullptr)
+            methcallbacks.lightController_setCloudActive(on.toInt());
+        request->send(200);
+    }
     else
         request->send(404);
 }
@@ -207,4 +229,9 @@ void MyWebServer_setup()
 void MyWebServer_sendSocketMsg(String msg)
 {
     ws->textAll(msg);
+}
+
+bool MyWebServer_WsClientsConnected()
+{
+    return ws_clients > 0;
 }

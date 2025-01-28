@@ -18,8 +18,11 @@ struct MyWebServerMethodCallbacks
     void (*lightController_setLight)(int mv);
     void (*lightController_setAuto)(bool automode);
     void(*lightController_setPercentLimits)(int min, int max);
+    void (*lightController_setCloudActive)(bool automode);
+    void (*lightController_setCloudValues)(int min, int max, int cycleduration);
 };
 
 MyWebServerMethodCallbacks * MyWebServer_getCallbacksStruct();
 void MyWebServer_setup();
 void MyWebServer_sendSocketMsg(String msg);
+bool MyWebServer_WsClientsConnected();

@@ -186,10 +186,43 @@ window.addEventListener('load', (event) => {
       document.getElementById("lightminp").value = json["lightlimitspmin"];
       document.getElementById("lightmaxp").value = json["lightlimitspmax"];
 
+      document.getElementById("enablecloud").checked = json["cloud"]["active"];
+      document.getElementById("cloudcycle").value = json["cloud"]["cycleduration"];
+      document.getElementById("cloudmin").value = json["cloud"]["min"];
+      document.getElementById("cloudmax").value = json["cloud"]["max"];
+
     });
   getChartDataForToday();
   createWebsocket();
 });
+
+
+document.getElementById("enablecloud").onclick = function () {
+  let host = document.location.origin;
+  let val = document.getElementById("enablecloud").checked;
+  if (val == false)
+    val = 0;
+  else
+    val = 1;
+  const query = `${host}/cmd?var=cloudsimactive&val=${val}`;
+  fetch(query)
+    .then(response => {
+      console.log(`request to ${query} finished, status: ${response.status}`);
+    });
+}
+
+document.getElementById("cloudsubmit").onclick = function () {
+  let host = document.location.origin;
+  let min = document.getElementById("cloudmin").value;
+  let max = document.getElementById("cloudmax").value;
+  let dur = document.getElementById("cloudcycle").value;
+ 
+  const query = `${host}/cmd?var=cloudsim&min=${min}&max=${max}&cloudduration=${dur}`;
+  fetch(query)
+    .then(response => {
+      console.log(`request to ${query} finished, status: ${response.status}`);
+    });
+}
 
 // Display the default slider value
 

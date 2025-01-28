@@ -25,7 +25,6 @@ double MyPreferences_getDouble(const char * preferencename, const char *key, dou
 
 void MyPreferences_setDouble(const char * preferencename, const char *key, double defaultval)
 {
-    double ret = 0;
     preferences.begin(preferencename);
     preferences.putDouble(key,defaultval);
     preferences.end();
