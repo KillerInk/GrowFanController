@@ -8,6 +8,7 @@
 DFRobot_GP8403 ldac(&Wire, i2c_light_addr);
 
 LightControllerValues lvalues;
+MyTime cyclestartTime;
 
 void process_cloud_sim(tm time)
 {
