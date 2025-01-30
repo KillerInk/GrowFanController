@@ -225,8 +225,10 @@ void setup()
     GoveeBTh5179_setup();
 }
 
+long startTime;
 void loop()
 {
+    startTime = millis();
     GoveeBTh5179_loop();
     FanController_loop();
 
@@ -243,5 +245,8 @@ void loop()
 #endif
     if(MyWebServer_WsClientsConnected)
         sendSocketMsg();
-    vTaskDelay(1000);
+    long end = 1000 -(millis()-startTime);
+    if(end < 0)
+        end = 1000;
+    vTaskDelay(end);
 }
