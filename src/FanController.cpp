@@ -43,27 +43,29 @@ void FanController_processAutoControl()
         nextTick = millis() + waitTime;
     }
 
-    if (fancontrollerValues.autocontrolfanspeed == old_speed)
-        return;
-
     if (fancontrollerValues.autocontrolfanspeed > fancontrollerValues.maxspeed)
-        fancontrollerValues.autocontrolfanspeed = fancontrollerValues.maxspeed;
-    if (fancontrollerValues.nightmodeActive && fancontrollerValues.autocontrolfanspeed > fancontrollerValues.nightmodeMaxSpeed)
-        fancontrollerValues.autocontrolfanspeed = fancontrollerValues.nightmodeMaxSpeed;
+            fancontrollerValues.autocontrolfanspeed = fancontrollerValues.maxspeed;
+        if (fancontrollerValues.nightmodeActive && fancontrollerValues.autocontrolfanspeed > fancontrollerValues.nightmodeMaxSpeed)
+            fancontrollerValues.autocontrolfanspeed = fancontrollerValues.nightmodeMaxSpeed;
 
-    if (fancontrollerValues.autocontrolfanspeed < fancontrollerValues.minspeed)
-        fancontrollerValues.autocontrolfanspeed = fancontrollerValues.minspeed;
-    fancontrollerValues.fan0Voltage.voltage = getVoltageFromPercent(fancontrollerValues.fan0Voltage.max, fancontrollerValues.fan0Voltage.min, fancontrollerValues.autocontrolfanspeed);
+        if (fancontrollerValues.autocontrolfanspeed < fancontrollerValues.minspeed)
+            fancontrollerValues.autocontrolfanspeed = fancontrollerValues.minspeed;
 
-    int fan2speed = fancontrollerValues.autocontrolfanspeed - fancontrollerValues.filtercompensation;
-    if (fan2speed < 0)
-        fan2speed = 0;
-    if (fan2speed > 100)
-        fan2speed = 100;
-    fancontrollerValues.fan1Voltage.voltage = getVoltageFromPercent(fancontrollerValues.fan1Voltage.max, fancontrollerValues.fan1Voltage.min, fan2speed);
-    dac.setDACOutVoltage(fancontrollerValues.fan0Voltage.voltage, 0);
-    dac.setDACOutVoltage(fancontrollerValues.fan1Voltage.voltage, 1);
-    log_i("autocontrol set speed to: %i fan0 mv:%i fan1 mv:%i", fancontrollerValues.autocontrolfanspeed, fancontrollerValues.fan0Voltage.voltage, fancontrollerValues.fan1Voltage.voltage);
+    if (fancontrollerValues.autocontrolfanspeed != old_speed)
+    {
+        
+        fancontrollerValues.fan0Voltage.voltage = getVoltageFromPercent(fancontrollerValues.fan0Voltage.max, fancontrollerValues.fan0Voltage.min, fancontrollerValues.autocontrolfanspeed);
+
+        int fan2speed = fancontrollerValues.autocontrolfanspeed - fancontrollerValues.filtercompensation;
+        if (fan2speed < 0)
+            fan2speed = 0;
+        if (fan2speed > 100)
+            fan2speed = 100;
+        fancontrollerValues.fan1Voltage.voltage = getVoltageFromPercent(fancontrollerValues.fan1Voltage.max, fancontrollerValues.fan1Voltage.min, fan2speed);
+        dac.setDACOutVoltage(fancontrollerValues.fan0Voltage.voltage, 0);
+        dac.setDACOutVoltage(fancontrollerValues.fan1Voltage.voltage, 1);
+        log_i("autocontrol set speed to: %i fan0 mv:%i fan1 mv:%i", fancontrollerValues.autocontrolfanspeed, fancontrollerValues.fan0Voltage.voltage, fancontrollerValues.fan1Voltage.voltage);
+    }
 }
 
 void FanController_setVoltage(int id, int min, int max)
