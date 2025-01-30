@@ -9,7 +9,7 @@ struct MyTime
 
 static bool timeEquals(tm tim, MyTime t)
 {
-    return tim.tm_hour == t.hour && tim.tm_min == t.min;
+    return tim.tm_hour == t.hour && tim.tm_min == t.min && tim.tm_sec == 0;
 }
 
 static bool timeEqualsOrGreater(tm tim, MyTime t)
@@ -17,7 +17,7 @@ static bool timeEqualsOrGreater(tm tim, MyTime t)
     return tim.tm_hour > t.hour || (tim.tm_hour == t.hour && tim.tm_min >= t.min);
 }
 
-static bool timeEqualsOrSmaler(tm tim, MyTime t)
+static bool timeEqualsOrSmaller(tm tim, MyTime t)
 {
     return tim.tm_hour < t.hour || (tim.tm_hour == t.hour && tim.tm_min <= t.min);
 }
@@ -75,7 +75,7 @@ static void addMinutes(MyTime * t, int min)
     if (t->min + min > 60)
     {
         t->hour++;
-        t->min = 60 - t->min +min;
+        t->min = t->min +min - 60;
     }
     else if(t->min + min < 0)
     {
