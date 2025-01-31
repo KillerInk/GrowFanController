@@ -77,30 +77,36 @@ void control_light()
 {
     tm time;
     getLocalTime(&time);
+    //log_i("light state:%i", lvalues.current_state);
     switch (lvalues.current_state)
     {
     case off:
         // when light is off and its time to turn it on
         if (timeEqualsOrGreater(time, lvalues.turnOnTime))
         {
-            log_i("turn on");
             // switch to sunrise if enabled
             if (lvalues.enableSunrise && timeEqualsOrSmaller(time, lvalues.sunriseEnd) && timeEqualsOrGreater(time, lvalues.turnOnTime))
             {
                 lvalues.current_state = sunrise;
                 log_i("switch to sunrise");
             }
-            else if (timeEqualsOrGreater(time, lvalues.turnOnTime) && timeEqualsOrSmaller(time, lvalues.turnOffTime)) // turn lamp on
+            else if (timeEqualsOrGreater(time, lvalues.turnOnTime) && timeGreater(lvalues.turnOnTime, lvalues.turnOffTime) ? timeGreater(time, lvalues.turnOffTime) : timeSmaller(time, lvalues.turnOffTime)) // turn lamp on
             {
+                log_i("turn on");
                 lvalues.current_state = on;
                 lvalues.currentLightP = lvalues.maxLightP;
                 lvalues.voltage.voltage = getVoltageFromPercent(lvalues.voltage.max, lvalues.voltage.min, lvalues.maxLightP);
+                if (lvalues.cloudsim)
+                {
+                    lvalues.next_cloud_cycle_change_time.hour = 0;
+                    lvalues.next_cloud_cycle_change_time.min = 0;
+                }
             }
         }
         break;
     case on:
         // check if its time to turn the light off
-        if (timeEqualsOrGreater(time, lvalues.turnOffTime))
+        if (timeEqualsOrGreater(time, lvalues.turnOffTime) && timeGreater(lvalues.turnOffTime, lvalues.turnOnTime) ? timeGreater(time, lvalues.turnOnTime) : timeSmaller(time, lvalues.turnOnTime))
         {
             lvalues.current_state = off;
             log_i("turn off");
@@ -135,10 +141,15 @@ void control_light()
             lvalues.voltage.voltage = getVoltageFromPercent(lvalues.voltage.max, lvalues.voltage.min, p);
             log_i("sunrise timedif: %i timediftotal: %i p:%f volt:%i maxv:%i minv%i", timedif, timediftotal, p, lvalues.voltage.voltage, lvalues.voltage.max, lvalues.voltage.min);
 
-            if (timeEquals(time, lvalues.sunriseEnd))
+            if (timeEquals(time, lvalues.sunriseEnd) || timedif < 0)
             {
                 lvalues.current_state = on;
                 log_i("switch to on");
+                if (lvalues.cloudsim)
+                {
+                    lvalues.next_cloud_cycle_change_time.hour = 0;
+                    lvalues.next_cloud_cycle_change_time.min = 0;
+                }
             }
         }
         break;
@@ -172,6 +183,8 @@ void LightController_setup()
 {
     Mypreferences_getBytes("light", &lvalues, sizeof(LightControllerValues));
     lvalues.current_state = off;
+    lvalues.voltage.voltage = 0;
+    lvalues.currentLightP = 0;
     ldac.setDACOutRange(ldac.eOutputRange10V);
     lvalues.next_cloud_cycle_change_time.hour = 0;
     lvalues.next_cloud_cycle_change_time.min = 0;
@@ -221,6 +234,8 @@ void LightController_setAutoMode(bool active)
 void LightController_setCloudActive(bool active)
 {
     lvalues.cloudsim = active;
+    lvalues.next_cloud_cycle_change_time.hour = 0;
+    lvalues.next_cloud_cycle_change_time.min = 0;
     MyPreferences_setBytes("light", &lvalues, sizeof(LightControllerValues));
 }
 

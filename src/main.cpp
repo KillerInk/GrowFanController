@@ -81,9 +81,10 @@ void sendSocketMsg()
     socketmsg["lightvalP"] = LightController_getValues()->currentLightP;
     socketmsg["lightvalmv"] = LightController_getValues()->voltage.voltage;
     socketmsg["lightstate"] = LightController_getValues()->current_state;
+    #ifdef SENSOR_BME280
     ret = snprintf(buf, sizeof buf, "%.2f", Bme280_getVpdLeaf());
-
     socketmsg["vpdair"] = buf;
+    #endif
     MyWebServer_sendSocketMsg(JSON.stringify(socketmsg));
 }
 

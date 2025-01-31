@@ -22,6 +22,27 @@ static bool timeEqualsOrSmaller(tm tim, MyTime t)
     return tim.tm_hour < t.hour || (tim.tm_hour == t.hour && tim.tm_min <= t.min);
 }
 
+
+static bool timeGreater(tm tim, MyTime t)
+{
+    return tim.tm_hour > t.hour || (tim.tm_hour == t.hour && tim.tm_min > t.min);
+}
+
+static bool timeGreater(MyTime tim, MyTime t)
+{
+    return tim.hour > t.hour || (tim.hour == t.hour && tim.min > t.min);
+}
+
+static bool timeSmaller(tm tim, MyTime t)
+{
+    return tim.tm_hour < t.hour || (tim.tm_hour == t.hour && tim.tm_min < t.min);
+}
+
+static bool timeSmaller(MyTime tim, MyTime t)
+{
+    return tim.hour < t.hour || (tim.hour == t.hour && tim.min < t.min);
+}
+
 static int getTimeDiff(int h1, int min1, int h2, int min2)
 {
     int dif;
