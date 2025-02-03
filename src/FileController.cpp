@@ -7,22 +7,17 @@
 File myFile;
 char filename[] = "/yyyymmdd.csv";
 bool havesdcard = false;
+bool sdinit = false;
 
-void FileController_setup()
+bool haveSdInsert()
 {
-    if (!SD.begin(5))
-    {
-        log_i("Card Mount Failed");
-        return;
-    }
     uint8_t cardType = SD.cardType();
 
     if (cardType == CARD_NONE)
     {
         log_i("No SD card attached");
-        return;
+        return false;
     }
-    havesdcard = true;
     if (cardType == CARD_MMC)
         log_i("SD Card Type: MMC");
     else if (cardType == CARD_SD)
@@ -31,15 +26,34 @@ void FileController_setup()
         log_i("SD Card Type: SDHC");
     else
         log_i("SD Card Type: UNKNOWN");
-    uint64_t cardSize = SD.cardSize() / (1024 * 1024);
-    log_i("SD Card Size: %lluMB\n", cardSize);
+    return true;
 }
 
-int currentday = -1;
+void FileController_setup()
+{
+    if (!SD.begin(5))
+    {
+        log_i("Card Mount Failed");
+        return;
+    }
+    sdinit = true;
+
+    havesdcard = haveSdInsert();
+    uint64_t cardSize = SD.cardSize() / (1024 * 1024);
+    uint64_t usedbytes = SD.usedBytes() / (1024 * 1024);
+    log_i("SD Card Size: %lluMB  used %lluMB", cardSize, usedbytes);
+}
+
 void FileController_write(double temp, double hum, int fanspeed, int co2, int lightmv, double vpd)
 {
-    if (!havesdcard)
+    if(!sdinit)
         return;
+    if (!havesdcard)
+    {
+        havesdcard = haveSdInsert();
+        if(!havesdcard)
+            return;
+    }
     tm time;
     getLocalTime(&time);
     if(time.tm_isdst)
@@ -70,12 +84,12 @@ void FileController_write(double temp, double hum, int fanspeed, int co2, int li
     if (!SD.exists(ret))
     {
         log_i("create new file %s", ret.c_str());
-        myFile = SD.open(ret, "w");
+        myFile = SD.open(ret, FILE_WRITE);
     }
     else
     {
         //log_i("append to file %s", ret.c_str());
-        myFile = SD.open(ret, "a");
+        myFile = SD.open(ret, FILE_APPEND);
     }
     if (myFile)
     {
