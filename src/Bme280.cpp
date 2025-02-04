@@ -3,29 +3,33 @@
 #include "MyMath.h"
 #include "Wire.h"
 #include "MyPreferences.h"
+#include "config.h"
 
-#define BME_I2C_ADD 119
 Bme280_data data;
 const char *prefName = "Correction";
 void (*bme280_eventlistner)(Bme280_data *data);
 
 BME280I2C::Settings settings(
-   BME280::OSR_X1,
-   BME280::OSR_X1,
-   BME280::OSR_X1,
-   BME280::Mode_Forced,
-   BME280::StandbyTime_1000ms,
-   BME280::Filter_Off,
-   BME280::SpiEnable_False,
-   BME280I2C::I2CAddr_0x77 // I2C address. I2C specific.
+    BME280::OSR_X1,
+    BME280::OSR_X1,
+    BME280::OSR_X1,
+    BME280::Mode_Forced,
+    BME280::StandbyTime_1000ms,
+    BME280::Filter_Off,
+    BME280::SpiEnable_False,
+#if BME_I2C_ADD == 119
+    BME280I2C::I2CAddr_0x77
+#else
+    BME280I2C::I2CAddr_0x76
+#endif // I2C address. I2C specific.
 );
 
 BME280I2C bme(settings);
 
 void Bme280_setup()
 {
-    //data.temp_diff = MyPreferences_getDouble("Correction", "tempdif", data.temp_diff);
-    //data.hum_diff = MyPreferences_getDouble("Correction", "humdif", data.hum_diff);
+    // data.temp_diff = MyPreferences_getDouble("Correction", "tempdif", data.temp_diff);
+    // data.hum_diff = MyPreferences_getDouble("Correction", "humdif", data.hum_diff);
 
     Wire.begin();
     Wire.setClock(100000);
@@ -53,8 +57,8 @@ void Bme280_loop()
     data.avg_temperature = MyMath_avg(data.avg_temperature, data.temperature);
     data.avg_humidity = MyMath_avg(data.avg_humidity, data.humidity);
     data.avg_pressure = MyMath_avg(data.avg_pressure, data.pressure);
-    data.vpdleaf = MyMath_vpd_leaf(data.avg_temperature,data.avg_humidity);
-    //log_i("temp:%.2f a:%.2f humidity:%.2f a:%.2f pressure:%.2f a:%.2f vdp:%.2f", data.temperature, data.avg_temperature, data.humidity, data.avg_humidity, data.pressure, data.avg_pressure, data.vpdleaf);
+    data.vpdleaf = MyMath_vpd_leaf(data.avg_temperature, data.avg_humidity);
+    // log_i("temp:%.2f a:%.2f humidity:%.2f a:%.2f pressure:%.2f a:%.2f vdp:%.2f", data.temperature, data.avg_temperature, data.humidity, data.avg_humidity, data.pressure, data.avg_pressure, data.vpdleaf);
     if (bme280_eventlistner != nullptr)
     {
         bme280_eventlistner(&data);
@@ -85,8 +89,8 @@ void Bme280_setTempHumDif(double tempdif, double humdif)
 {
     data.temp_diff = tempdif;
     data.hum_diff = humdif;
-    //MyPreferences_setDouble("Correction","tempdif", data.temp_diff);
-    //MyPreferences_setDouble("Correction","humdif", data.hum_diff);
+    // MyPreferences_setDouble("Correction","tempdif", data.temp_diff);
+    // MyPreferences_setDouble("Correction","humdif", data.hum_diff);
 }
 
 double Bme280_getTemperatureDif()

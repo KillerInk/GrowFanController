@@ -176,7 +176,7 @@ void setup()
     mdns_hostname_set("Esp32FanController");
     mdns_instance_name_set("Esp32FanController");
     mdns_service_add("Esp32FanController", "_http", "_tcp", 80, NULL, 0);
-    configTime(1 * 60 * 60, 0, "pool.ntp.org");
+    configTime(time_zone_hour_utc_offset * 60 * 60, 0, "pool.ntp.org");
 
     MyWebServer_getCallbacksStruct()->applyspeed_listner = FanController_applyspeed;
     MyWebServer_getCallbacksStruct()->voltagechanged_listner = FanController_setVoltage;
