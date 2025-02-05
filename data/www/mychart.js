@@ -81,21 +81,21 @@ async function getChartDataForToday() {
     lastPosition = mychart.config.options.scales.x.max;
     console.log(`getChartDataForToday ${lastPosition}`);
     getChartDataForDay(now, false).then(() => {
-        now.setUTCHours(now.getUTCHours() - 1);
+        now.setHours(now.getHours() - 1);
         getChartDataForDay(now, false).then(() => {
             setTimeRangeToShow(5 * 60);//5min
             console.log(`getChartDataForToday 2h get ${lastPosition}`);
             updateChartPosition1(lastPosition);
         }, () => {
             console.log(`failed to get data  for ${now}`);
-            now.setUTCHours(now.getUTCHours() + 1);
+            now.setHours(now.getHours() + 1);
         });
     });
 }
 
 async function getNextChartData() {
-    now.setHours(now.getUTCHours() - 1);
-    getChartDataForDay(now, false).then(() => { }, () => now.setUTCHours(now.getUTCHours() + 1));
+    now.setHours(now.getHours() - 1);
+    getChartDataForDay(now, false).then(() => { }, () => now.setHours(now.getHours() + 1));
     mychart.config.options.scales.x.min = 50;
     mychart.config.options.scales.x.max = mychart.config.options.scales.x.max + 50;
 }
