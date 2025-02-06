@@ -4,10 +4,10 @@
 #include "SPI.h"
 #include "time.h"
 
-File myFile;
 char filename[] = "/yyyymmdd.csv";
 bool havesdcard = false;
 bool sdinit = false;
+xSemaphoreHandle xMutex = xSemaphoreCreateMutex();
 
 bool haveSdInsert()
 {
@@ -46,65 +46,83 @@ void FileController_setup()
 
 void FileController_write(double temp, double hum, int fanspeed, int co2, int lightmv, double vpd)
 {
-    if(!sdinit)
-        return;
-    if (!havesdcard)
+    if (xSemaphoreTake(xMutex, portMAX_DELAY))
     {
-        havesdcard = haveSdInsert();
-        if(!havesdcard)
+        if (!sdinit)
             return;
+        if (!havesdcard)
+        {
+            havesdcard = haveSdInsert();
+            log_i("checked if sd is insert:%i", havesdcard);
+            if (!havesdcard)
+                return;
+        }
+        tm time;
+        getLocalTime(&time);
+        if (time.tm_isdst)
+            time.tm_hour++;
+        int year = time.tm_year + 1900;
+        String ret = "/" + String(year);
+        if (!SD.exists(ret))
+            SD.mkdir(ret);
+        int month = time.tm_mon + 1;
+        if (month < 10)
+            ret = ret + "/" + "0" + String(month);
+        else
+            ret = ret + "/" + String(month);
+        if (!SD.exists(ret))
+            SD.mkdir(ret);
+        int day = time.tm_mday;
+        if (day < 10)
+            ret = ret + "/" + "0" + String(day);
+        else
+            ret = ret + "/" + String(day);
+        if (!SD.exists(ret))
+            SD.mkdir(ret);
+        if (time.tm_hour < 10)
+            ret = ret + "/" + "0" + String(time.tm_hour) + ".csv";
+        else
+            ret = ret + "/" + String(time.tm_hour) + ".csv";
+        File myFile;
+        if (!SD.exists(ret))
+        {
+            log_i("create new file %s", ret.c_str());
+            myFile = SD.open(ret, FILE_WRITE);
+        }
+        else
+        {
+            // log_i("append to file %s", ret.c_str());
+            myFile = SD.open(ret, FILE_APPEND);
+        }
+        if (myFile)
+        {
+            myFile.printf("%i:%i:%i, ", time.tm_hour, time.tm_min, time.tm_sec);
+            myFile.printf("%.2f, ", temp);
+            myFile.printf("%.2f, ", hum);
+            myFile.printf("%i, ", fanspeed);
+            myFile.printf("%i, ", co2);
+            myFile.printf("%i, ", lightmv);
+            myFile.printf("%.3f\r\n", vpd);
+            myFile.close();
+        }
+        else
+        {
+            log_e("Failed to write to file %s", ret.c_str());
+            havesdcard = false;
+        }
+        xSemaphoreGive(xMutex);
     }
-    tm time;
-    getLocalTime(&time);
-    if(time.tm_isdst)
-        time.tm_hour++;
-    int year = time.tm_year + 1900;
-    String ret = "/" + String(year);
-    if (!SD.exists(ret))
-        SD.mkdir(ret);
-    int month = time.tm_mon + 1;
-    if(month < 10)
-        ret = ret + "/" + "0" + String(month);
-    else
-        ret = ret + "/" + String(month);
-    if (!SD.exists(ret))
-        SD.mkdir(ret);
-    int day = time.tm_mday;
-    if (day < 10)
-        ret = ret + "/" + "0" + String(day);
-    else
-        ret = ret + "/" + String(day);
-    if (!SD.exists(ret))
-        SD.mkdir(ret);
-    if (time.tm_hour < 10)
-        ret = ret + "/" + "0" + String(time.tm_hour) + ".csv";
-    else
-        ret = ret + "/" + String(time.tm_hour) + ".csv";
+}
 
-    if (!SD.exists(ret))
+String FileController_read(String name)
+{
+    String ret;
+    if (xSemaphoreTake(xMutex, portMAX_DELAY))
     {
-        log_i("create new file %s", ret.c_str());
-        myFile = SD.open(ret, FILE_WRITE);
-    }
-    else
-    {
-        //log_i("append to file %s", ret.c_str());
-        myFile = SD.open(ret, FILE_APPEND);
-    }
-    if (myFile)
-    {
-        myFile.printf("%i:%i:%i, ", time.tm_hour, time.tm_min, time.tm_sec);
-        myFile.printf("%.2f, ", temp);
-        myFile.printf("%.2f, ", hum);
-        myFile.printf("%i, ", fanspeed);
-        myFile.printf("%i, ", co2);
-        myFile.printf("%i, ", lightmv);
-        myFile.printf("%.3f\r\n", vpd);
+        File myFile = SD.open(name, FILE_READ);
+        ret = myFile.readString();
         myFile.close();
+        xSemaphoreGive(xMutex);
     }
-    else
-    {
-        log_e("Failed to write to file %s", ret.c_str());
-        havesdcard = false;
-    }
+    return ret;
 }

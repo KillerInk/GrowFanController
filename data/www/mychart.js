@@ -31,8 +31,8 @@ function getChartDataForDay(date, newdata) {
         let hour = date.getHours();
         if (hour < 10)
             hour = 0 + "" + hour;
-        const da = `${year}/${month}/${day}/${hour}.csv`;
-        const query = `${host}/${da}`;
+        //const da = `${year}/${month}/${day}/${hour}.csv`;
+        const query = `${host}/data?year=${year}&month=${month}&day=${day}&hour=${hour}`;
         Papa.parse(query, {
             download: true,
             complete: function(results) {

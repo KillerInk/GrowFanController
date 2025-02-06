@@ -202,6 +202,7 @@ void setup()
     MyWebServer_getCallbacksStruct()->lightController_setPercentLimits = LightController_setPercentLimits;
     MyWebServer_getCallbacksStruct()->lightController_setCloudActive = LightController_setCloudActive;
     MyWebServer_getCallbacksStruct()->lightController_setCloudValues = LightController_setCloudValues;
+    MyWebServer_getCallbacksStruct()->fileController_read = FileController_read;
     MyWebServer_setup();
 
 #ifdef SENSOR_ENS160AHT21

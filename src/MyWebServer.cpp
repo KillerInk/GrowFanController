@@ -211,14 +211,26 @@ MyWebServerMethodCallbacks * MyWebServer_getCallbacksStruct()
     return &methcallbacks;
 }
 
+void getFile(AsyncWebServerRequest *request)
+{
+    String year = request->arg("year");
+    String month = request->arg("month");
+    String day = request->arg("day");
+    String hour = request->arg("hour");
+    String ret = "/" +year +"/" +month +"/" +day+"/"+hour+".csv";
+    if(methcallbacks.fileController_read != nullptr)
+        request->send(200,"text/csv",methcallbacks.fileController_read(ret));
+}
+
 void MyWebServer_setup()
 {
     SPIFFS.begin();
     server = new AsyncWebServer(http_port);
     server->on("/cmd", HTTP_GET, onCmd);
     server->on("/settings", HTTP_GET, onGetSettings);
+    server->on("/data",HTTP_GET,getFile);
     server->serveStatic("/", SPIFFS, "/www/").setDefaultFile("index.html");
-    server->serveStatic("/", SD, "/");
+    //server->serveStatic("/", SD, "/");
     //server->serveStatic("/", SPIFFS, "/www/");
     ws = new AsyncWebSocket("/ws");
     ws->onEvent(onWsEvent);

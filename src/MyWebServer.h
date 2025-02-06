@@ -20,6 +20,7 @@ struct MyWebServerMethodCallbacks
     void(*lightController_setPercentLimits)(int min, int max);
     void (*lightController_setCloudActive)(bool automode);
     void (*lightController_setCloudValues)(int min, int max, int cycleduration);
+    String (*fileController_read)(String name);
 };
 
 MyWebServerMethodCallbacks * MyWebServer_getCallbacksStruct();
