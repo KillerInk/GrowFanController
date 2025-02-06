@@ -244,7 +244,7 @@ void loop()
     Ens160Aht2x_loop();
     FileController_write(Ens160Aht2x_getAvarageTemperature(), Ens160Aht2x_getAvarageHumidity(), FanController_getValues()->autocontrolfanspeed, Ens160Aht2x_getCo2(), LightController_getValues()->voltage.voltage, Ens160Aht2x_getVpdAir());
 #endif
-    if(MyWebServer_WsClientsConnected)
+    if(MyWebServer_WsClientsConnected())
         sendSocketMsg();
     long end = 1000 -(millis()-startTime);
     if(end < 0)
