@@ -32,7 +32,7 @@ bool haveSdInsert()
 void FileController_setup()
 {
     pinMode(23, INPUT_PULLUP);
-    if (!SD.begin(5,SPI,2000000UL))
+    if (!SD.begin(5,SPI,500000UL))
     {
         log_i("Card Mount Failed");
         return;
