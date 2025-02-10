@@ -31,12 +31,15 @@ bool haveSdInsert()
 
 void FileController_setup()
 {
-    pinMode(23, INPUT_PULLUP);
-    if (!SD.begin(5,SPI,500000UL))
+    int ret =0;
+    while (!SD.begin(5,SPI,40000000UL) && ret < 5)
     {
         log_i("Card Mount Failed");
-        return;
+        vTaskDelay(50);
+        ret++;
     }
+    if(ret == 5)
+        return;
     sdinit = true;
 
     havesdcard = haveSdInsert();

@@ -228,9 +228,9 @@ void MyWebServer_setup()
     server = new AsyncWebServer(http_port);
     server->on("/cmd", HTTP_GET, onCmd);
     server->on("/settings", HTTP_GET, onGetSettings);
-    server->on("/data",HTTP_GET,getFile);
+    //server->on("/data",HTTP_GET,getFile);
     server->serveStatic("/", SPIFFS, "/www/").setDefaultFile("index.html");
-    //server->serveStatic("/", SD, "/");
+    server->serveStatic("/", SD, "/");
     //server->serveStatic("/", SPIFFS, "/www/");
     ws = new AsyncWebSocket("/ws");
     ws->onEvent(onWsEvent);
