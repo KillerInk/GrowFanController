@@ -11,6 +11,16 @@
 4. ENS160ATH21 Sensor
 5. 12v stepdown to 5v
 
+### Pins
+I2C 
+    SDA 21
+    SCL 22
+SDCARD
+    CS 5
+    MOSI 23
+    SCK 18
+    MISO 19
+
 ### Features:
 1. Can control 2 different Fans(in/out) based on Temperature and Humidity and apply a speed difference to keep a negative pressure
 2. Set a nightmode to reduce the fan speed for that time range
