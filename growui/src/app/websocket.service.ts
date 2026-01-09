@@ -8,7 +8,7 @@ import { Observable } from 'rxjs';
   providedIn: 'root',
 })
 export class WebsocketService {
-  private wsUrl = `${environment.apiBaseUrl}:${environment.apiPort}/ws`;
+  private wsUrl = `/ws`;
   private socket$: WebSocketSubject<string>;
 
   constructor() {

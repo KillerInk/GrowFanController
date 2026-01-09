@@ -27,7 +27,7 @@ export class ApiService {
 
   /** Generic GET to /cmd */
   getCmd<T>(params: Record<string, any>): Observable<T> {
-    const url = `${this.baseUrl}/cmd`;
+    const url = `/cmd`;
     const httpParams = this.buildCmdParams(params);
     return this.http.get<T>(url, { params: httpParams }).pipe(
       catchError(this.handleError)
@@ -36,13 +36,13 @@ export class ApiService {
 
   /** GET /settings */
   getFanControllerSettings(): Observable<DeviceState> {
-    const url = `${this.baseUrl}/settings`;
+    const url = `/settings`;
     return this.http.get<DeviceState>(url).pipe(catchError(this.handleError));
   }
 
   /** GET /data */
   getData(year: string, month: string, day: string, hour: string): Observable<string> {
-    const url = `${this.baseUrl}/data`;
+    const url = `/data`;
     const httpParams = new HttpParams()
       .set('year', year)
       .set('month', month)
