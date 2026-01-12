@@ -28,7 +28,7 @@ void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventTyp
     else if (type == WS_EVT_ERROR)
     {
         Serial.printf("ws[%s][%u] error(%u): %s\n", server->url(), client->id(), *((uint16_t *)arg), (char *)data);
-        if(ws_clients > 0)
+        if (ws_clients > 0)
             ws_clients--;
     }
     else if (type == WS_EVT_PONG)
@@ -128,37 +128,37 @@ void onCmd(AsyncWebServerRequest *request)
             methcallbacks.fancoltroller_nightmodecallback(onh.toInt(), onm.toInt(), offh.toInt(), offm.toInt(), mspeed.toInt());
         request->send(200);
     }
-    else if(variable == "fannightmodeactive")
+    else if (variable == "fannightmodeactive")
     {
         String on = request->arg("nighton");
-        if(methcallbacks.fancoltroller_nightmodeactivcecallback != nullptr)
+        if (methcallbacks.fancoltroller_nightmodeactivcecallback != nullptr)
             methcallbacks.fancoltroller_nightmodeactivcecallback(on.toInt());
         request->send(200);
     }
-    else if(variable == "lightvoltage")
+    else if (variable == "lightvoltage")
     {
         String min = request->arg("min");
         String max = request->arg("max");
-        if(methcallbacks.lightController_setVoltageLimits != nullptr)
+        if (methcallbacks.lightController_setVoltageLimits != nullptr)
             methcallbacks.lightController_setVoltageLimits(min.toInt(), max.toInt());
         request->send(200);
     }
-    else if(variable == "lightval")
+    else if (variable == "lightval")
     {
         String val = request->arg("val");
-        if(methcallbacks.lightController_setLight != nullptr)
+        if (methcallbacks.lightController_setLight != nullptr)
             methcallbacks.lightController_setLight(val.toInt());
         request->send(200);
     }
-    else if(variable == "lightlimitsp")
+    else if (variable == "lightlimitsp")
     {
         String val = request->arg("min");
         String max = request->arg("max");
-        if(methcallbacks.lightController_setPercentLimits != nullptr)
-            methcallbacks.lightController_setPercentLimits(val.toInt(),max.toInt());
+        if (methcallbacks.lightController_setPercentLimits != nullptr)
+            methcallbacks.lightController_setPercentLimits(val.toInt(), max.toInt());
         request->send(200);
     }
-    else if(variable == "lightsettime")
+    else if (variable == "lightsettime")
     {
         String onh = request->arg("onh");
         String onmin = request->arg("onmin");
@@ -170,30 +170,30 @@ void onCmd(AsyncWebServerRequest *request)
         String setmin = request->arg("setmin");
         String riseenable = request->arg("riseenable");
         String setenable = request->arg("setenable");
-        if(methcallbacks.lightController_setTimes != nullptr)
-            methcallbacks.lightController_setTimes(onh.toInt(),onmin.toInt(),offh.toInt(),offmin.toInt(),riseh.toInt(),risemin.toInt(),seth.toInt(), setmin.toInt(), riseenable.toInt(), setenable.toInt());
+        if (methcallbacks.lightController_setTimes != nullptr)
+            methcallbacks.lightController_setTimes(onh.toInt(), onmin.toInt(), offh.toInt(), offmin.toInt(), riseh.toInt(), risemin.toInt(), seth.toInt(), setmin.toInt(), riseenable.toInt(), setenable.toInt());
         request->send(200);
     }
-    else if(variable == "lightautomode")
+    else if (variable == "lightautomode")
     {
         String enable = request->arg("enable");
-        if(methcallbacks.lightController_setAuto != nullptr)
+        if (methcallbacks.lightController_setAuto != nullptr)
             methcallbacks.lightController_setAuto(enable.toInt());
         request->send(200);
     }
-    else if(variable == "cloudsim")
+    else if (variable == "cloudsim")
     {
         String min = request->arg("min");
         String max = request->arg("max");
         String duration = request->arg("cloudduration");
-        if(methcallbacks.lightController_setCloudValues != nullptr)
+        if (methcallbacks.lightController_setCloudValues != nullptr)
             methcallbacks.lightController_setCloudValues(min.toInt(), max.toInt(), duration.toInt());
         request->send(200);
     }
-    else if(variable == "cloudsimactive")
+    else if (variable == "cloudsimactive")
     {
         String on = request->arg("val");
-        if(methcallbacks.lightController_setCloudActive != nullptr)
+        if (methcallbacks.lightController_setCloudActive != nullptr)
             methcallbacks.lightController_setCloudActive(on.toInt());
         request->send(200);
     }
@@ -206,21 +206,23 @@ void onGetSettings(AsyncWebServerRequest *request)
     request->send(200, "text/json", methcallbacks.getFanControllerSettings());
 }
 
-MyWebServerMethodCallbacks * MyWebServer_getCallbacksStruct()
+MyWebServerMethodCallbacks *MyWebServer_getCallbacksStruct()
 {
     return &methcallbacks;
 }
 
+#ifdef USE_SDCARD
 void getFile(AsyncWebServerRequest *request)
 {
     String year = request->arg("year");
     String month = request->arg("month");
     String day = request->arg("day");
     String hour = request->arg("hour");
-    String ret = "/" +year +"/" +month +"/" +day+"/"+hour+".csv";
-    if(methcallbacks.fileController_read != nullptr)
-        request->send(200,"text/csv",methcallbacks.fileController_read(ret));
+    String ret = "/" + year + "/" + month + "/" + day + "/" + hour + ".csv";
+    if (methcallbacks.fileController_read != nullptr)
+        request->send(200, "text/csv", methcallbacks.fileController_read(ret));
 }
+#endif
 
 void MyWebServer_setup()
 {
@@ -228,10 +230,12 @@ void MyWebServer_setup()
     server = new AsyncWebServer(http_port);
     server->on("/cmd", HTTP_GET, onCmd);
     server->on("/settings", HTTP_GET, onGetSettings);
-    //server->on("/data",HTTP_GET,getFile);
+#ifdef USE_SDCARD
+    server->on("/data", HTTP_GET, getFile);
+#endif
     server->serveStatic("/", SPIFFS, "/www/").setDefaultFile("index.html");
     server->serveStatic("/", SD, "/");
-    //server->serveStatic("/", SPIFFS, "/www/");
+    // server->serveStatic("/", SPIFFS, "/www/");
     ws = new AsyncWebSocket("/ws");
     ws->onEvent(onWsEvent);
     server->addHandler(ws);

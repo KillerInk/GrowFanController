@@ -12,7 +12,9 @@
 #include "MyWebServer.h"
 #include "time.h"
 #include "LightController.h"
+#ifdef USE_SDCARD
 #include "FileController.h"
+#endif
 #ifdef SENSOR_BME280
 #include "Bme280.h"
 #endif
@@ -81,10 +83,10 @@ void sendSocketMsg()
     socketmsg["lightvalP"] = LightController_getValues()->currentLightP;
     socketmsg["lightvalmv"] = LightController_getValues()->voltage.voltage;
     socketmsg["lightstate"] = LightController_getValues()->current_state;
-    #ifdef SENSOR_BME280
+#ifdef SENSOR_BME280
     ret = snprintf(buf, sizeof buf, "%.2f", Bme280_getVpdLeaf());
     socketmsg["vpdair"] = buf;
-    #endif
+#endif
     MyWebServer_sendSocketMsg(JSON.stringify(socketmsg));
 }
 
@@ -152,16 +154,19 @@ void setup()
     if (Serial.available())
         Serial.begin(115200);
 
+    vTaskDelay(500);
     // Initialisieren Sie den NVS-Speicher
-	esp_err_t ret = nvs_flash_init();
-	if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND)
-	{
-		// NVS-Partition ist beschädigt oder eine neue Version wurde gefunden
-		ESP_ERROR_CHECK(nvs_flash_erase());
-		ret = nvs_flash_init();
-	}
-	ESP_ERROR_CHECK(ret);
+    esp_err_t ret = nvs_flash_init();
+    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND)
+    {
+        // NVS-Partition ist beschädigt oder eine neue Version wurde gefunden
+        ESP_ERROR_CHECK(nvs_flash_erase());
+        ret = nvs_flash_init();
+    }
+    ESP_ERROR_CHECK(ret);
+#ifdef USE_SDCARD
     FileController_setup();
+#endif
 
     WiFi.setHostname("Esp32FanController");
     WiFi.mode(WIFI_STA);
@@ -202,7 +207,9 @@ void setup()
     MyWebServer_getCallbacksStruct()->lightController_setPercentLimits = LightController_setPercentLimits;
     MyWebServer_getCallbacksStruct()->lightController_setCloudActive = LightController_setCloudActive;
     MyWebServer_getCallbacksStruct()->lightController_setCloudValues = LightController_setCloudValues;
+#ifdef USE_SDCARD
     MyWebServer_getCallbacksStruct()->fileController_read = FileController_read;
+#endif
     MyWebServer_setup();
 
 #ifdef SENSOR_ENS160AHT21
@@ -238,17 +245,21 @@ void loop()
 #ifdef SENSOR_BME280
     Bme280_loop();
 #ifndef SENSOR_ENS160AHT21
+#ifdef USE_SDCARD
     FileController_write(Bme280_getAvarageTemperature(), Bme280_getAvarageHumidity(), FanController_getValues()->autocontrolfanspeed, 0, LightController_getValues()->voltage.voltage, Bme280_getVpdLeaf());
+#endif
 #endif
 #endif
 #ifdef SENSOR_ENS160AHT21
     Ens160Aht2x_loop();
+#ifdef USE_SDCARD
     FileController_write(Ens160Aht2x_getAvarageTemperature(), Ens160Aht2x_getAvarageHumidity(), FanController_getValues()->autocontrolfanspeed, Ens160Aht2x_getCo2(), LightController_getValues()->voltage.voltage, Ens160Aht2x_getVpdAir());
 #endif
-    if(MyWebServer_WsClientsConnected())
+#endif
+    if (MyWebServer_WsClientsConnected())
         sendSocketMsg();
-    long end = 1000 -(millis()-startTime);
-    if(end < 0)
+    long end = 1000 - (millis() - startTime);
+    if (end < 0)
         end = 1000;
     vTaskDelay(end);
 }

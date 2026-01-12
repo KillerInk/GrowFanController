@@ -14,16 +14,18 @@ struct MyWebServerMethodCallbacks
     void (*fancoltroller_nightmodecallback)(int onhour, int onmin, int offhour, int offmin, int maxspeed);
     void (*fancoltroller_nightmodeactivcecallback)(bool active);
     void (*lightController_setVoltageLimits)(int min, int max);
-    void (*lightController_setTimes)(int onhour, int onmin, int offhour, int offmin, int risehour, int risemin, int sethour, int setmin,bool riseenable, bool setenable);
+    void (*lightController_setTimes)(int onhour, int onmin, int offhour, int offmin, int risehour, int risemin, int sethour, int setmin, bool riseenable, bool setenable);
     void (*lightController_setLight)(int mv);
     void (*lightController_setAuto)(bool automode);
-    void(*lightController_setPercentLimits)(int min, int max);
+    void (*lightController_setPercentLimits)(int min, int max);
     void (*lightController_setCloudActive)(bool automode);
     void (*lightController_setCloudValues)(int min, int max, int cycleduration);
+#ifdef USE_SDCARD
     String (*fileController_read)(String name);
+#endif
 };
 
-MyWebServerMethodCallbacks * MyWebServer_getCallbacksStruct();
+MyWebServerMethodCallbacks *MyWebServer_getCallbacksStruct();
 void MyWebServer_setup();
 void MyWebServer_sendSocketMsg(String msg);
 bool MyWebServer_WsClientsConnected();

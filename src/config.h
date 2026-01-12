@@ -2,6 +2,7 @@
 
 #define SENSOR_ENS160AHT21
 #define SENSOR_BME280
+//#define USE_SDCARD
 
 #define I2C_SDA 21 //default i2c sda
 #define I2C_SCL 22 //default i2c scl
