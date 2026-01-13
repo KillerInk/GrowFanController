@@ -12,7 +12,7 @@ import { DeviceState } from './types';
 export class ApiService {
   private baseUrl = `${environment.apiBaseUrl}:${environment.apiPort}`;
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) { }
 
   /** Helper that builds query string for /cmd */
   private buildCmdParams(params: Record<string, any>): HttpParams {
@@ -29,7 +29,12 @@ export class ApiService {
   getCmd<T>(params: Record<string, any>): Observable<T> {
     const url = `/cmd`;
     const httpParams = this.buildCmdParams(params);
-    return this.http.get<T>(url, { params: httpParams }).pipe(
+
+    // Options with plain‑text response
+    const options = { params: httpParams, responseType: 'text' } as any;
+
+    // TypeScript needs a cast because the generic type T could be anything.
+    return (this.http.get<string>(url, options) as unknown as Observable<T>).pipe(
       catchError(this.handleError)
     );
   }
@@ -56,7 +61,28 @@ export class ApiService {
   // Example: set speed
   setSpeed(id: number, val: number): Observable<any> {
     if (val < 0 || val > 100) return throwError('speed out of range');
-    return this.getCmd({ var: 'speed', id, val });
+
+    const params = this.buildCmdParams({ var: 'speed', id, val });
+
+    // Tell HttpClient to treat the response as text
+    // Cast options so TypeScript accepts the 'text' value.
+    const options = { params, responseType: 'text' } as any;
+    return this.http.get<string>(`/cmd`, options).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+    setLight(val: number): Observable<any> {
+    if (val < 0 || val > 100) return throwError('speed out of range');
+
+    const params = this.buildCmdParams({ var: 'lightval', val });
+
+    // Tell HttpClient to treat the response as text
+    // Cast options so TypeScript accepts the 'text' value.
+    const options = { params, responseType: 'text' } as any;
+    return this.http.get<string>(`/cmd`, options).pipe(
+      catchError(this.handleError)
+    );
   }
 
   // voltage change

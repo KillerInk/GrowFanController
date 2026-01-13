@@ -45,7 +45,7 @@ void onCmd(AsyncWebServerRequest *request)
 {
 
     String variable = request->arg("var");
-
+    log_i("Command: %s", variable);
     if (variable == "speed")
     {
         String value = request->arg("val");
@@ -233,7 +233,7 @@ void MyWebServer_setup()
 #ifdef USE_SDCARD
     server->on("/data", HTTP_GET, getFile);
 #endif
-    server->serveStatic("/", SPIFFS, "/www/").setDefaultFile("index.html");
+    server->serveStatic("/", SPIFFS, "/angular-www/").setDefaultFile("index.html");
     server->serveStatic("/", SD, "/");
     // server->serveStatic("/", SPIFFS, "/www/");
     ws = new AsyncWebSocket("/ws");

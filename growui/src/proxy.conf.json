@@ -1,12 +1,12 @@
 {
   "/settings": {
-    "target": "http://192.168.178.143",
+    "target": "http://192.168.178.156",
     "changeOrigin": true,
     "secure": false,
     "logLevel": "debug"
   },
   "/ws": {
-    "target": "http://192.168.178.143",
+    "target": "http://192.168.178.156",
     "changeOrigin": true,
     "secure": false,
     "logLevel": "debug",

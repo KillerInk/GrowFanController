@@ -155,7 +155,7 @@ void setup()
         Serial.begin(115200);
 
     vTaskDelay(500);
-    // Initialisieren Sie den NVS-Speicher
+    log_i("init flash");
     esp_err_t ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND)
     {
@@ -164,10 +164,13 @@ void setup()
         ret = nvs_flash_init();
     }
     ESP_ERROR_CHECK(ret);
+    log_i("init flash done");
 #ifdef USE_SDCARD
+    log_i("init filecontroller");
     FileController_setup();
+    log_i("init filecontroller done");
 #endif
-
+    log_i("connect wifi");
     WiFi.setHostname("Esp32FanController");
     WiFi.mode(WIFI_STA);
     WiFi.begin(SSID, PW);
@@ -176,12 +179,14 @@ void setup()
     {
         vTaskDelay(500);
     }
-
+    log_i("connect wifi done");
+    log_i("init mdns");
     mdns_init();
     mdns_hostname_set("Esp32FanController");
     mdns_instance_name_set("Esp32FanController");
     mdns_service_add("Esp32FanController", "_http", "_tcp", 80, NULL, 0);
     configTime(time_zone_hour_utc_offset * 60 * 60, 0, "pool.ntp.org");
+    log_i("init mdns done");
 
     MyWebServer_getCallbacksStruct()->applyspeed_listner = FanController_applyspeed;
     MyWebServer_getCallbacksStruct()->voltagechanged_listner = FanController_setVoltage;
@@ -213,25 +218,32 @@ void setup()
     MyWebServer_setup();
 
 #ifdef SENSOR_ENS160AHT21
+    log_i("init Ens160Aht2x");
     Ens160Aht2x_setup();
 #ifndef SENSOR_BME280
     FanController_setHumidityAndTempFunctions(Ens160Aht2x_getHumidity, Ens160Aht2x_getTemperature);
     FanController_setAvgHumidityAndTempFunctions(Ens160Aht2x_getAvarageHumidity, Ens160Aht2x_getAvarageTemperature);
 #endif
+    log_i("init Ens160Aht2x done");
 #endif
 
 #ifdef SENSOR_BME280
+    log_i("init bme280");
     Bme280_setup();
 
     FanController_setHumidityAndTempFunctions(Bme280_getHumidity, Bme280_getTemperature);
     FanController_setAvgHumidityAndTempFunctions(Bme280_getAvarageHumidity, Bme280_getAvarageTemperature);
+    log_i("init bme280 done");
 #endif
+    log_i("setup fancontroller");
     FanController_setup();
-
+    log_i("setup lightcontroller");
     LightController_setup();
 
     GoveeBTh5179_setEventListner(govee_dataListner);
+    log_i("setup GoveeBTh5179");
     GoveeBTh5179_setup();
+    log_i("setup done");
 }
 
 long startTime;

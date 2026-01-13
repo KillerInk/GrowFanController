@@ -39,12 +39,12 @@ void Ens160Aht2x_setup()
     Wire.setClock(100000);
     temp_dif = MyPreferences_getDouble("Correction","tempdif", temp_dif);
     hum_dif = MyPreferences_getDouble("Correction","humdif", hum_dif);
-    for (byte i = 1; i < 127; i++)
+    /*for (byte i = 1; i < 127; i++)
     {
         int avail = checkI2C(i);
         if (avail == 1)
             log_i("found address %i", i);
-    }
+    }*/
     // Wire.end();
     boolean rdy = 0;
     rdy = aht20.begin();

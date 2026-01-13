@@ -6,10 +6,12 @@ import { WebsocketService } from './websocket.service';
 import { DeviceState, SocketMsg } from './types';
 import { OnInit } from '@angular/core';
 import { UIChart } from 'primeng/chart';
+import { FormsModule } from '@angular/forms';
+import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, UIChart],
+  imports: [RouterOutlet, UIChart, FormsModule, CommonModule],
   templateUrl: './app.html',
   styleUrl: './app.scss'
 })
@@ -22,12 +24,20 @@ export class App implements OnInit {
 
   }
 
-  fanSettings!: DeviceState;
+  deviceState: DeviceState | null = null;
   socketdata: SocketMsg | null = null;
   @ViewChild('chart')
   chart?: UIChart
 
-  chartOptions?: any = {animation: false,};
+  chartOptions?: any = {
+    animation: false,
+    responsive: true,
+    maintainAspectRatio: true,
+    scales: {
+      x: { display: true, title: { text: 'Time' } },
+      y: { display: true, title: { text: 'Value' } }
+    }
+  };
 
   chartData?: any = {};
 
@@ -41,8 +51,9 @@ export class App implements OnInit {
     };
     this.api.getFanControllerSettings().subscribe(
       (data) => {
-        this.fanSettings = data;
-        console.log('Fan controller settings loaded:', this.fanSettings);
+        this.deviceState = data;
+        console.log('Fan controller settings loaded:', this.deviceState);
+        this.cdr.markForCheck();
       },
       (err) => {
         console.error('Failed to load fan settings', err);
@@ -210,6 +221,11 @@ export class App implements OnInit {
   onSpeed1Change(value: string) {                    // <-- changed
     const num = Number(value);
     this.api.setSpeed(1, num).subscribe();
+  }
+
+  onLightChange(value: string) {                    // <-- changed
+    const num = Number(value);
+    this.api.setLight(num).subscribe();
   }
 
   /* ---------- Fan voltage limits (Fan 0 & 1) ---------- */

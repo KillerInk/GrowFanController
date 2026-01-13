@@ -20,14 +20,17 @@
         "build": {
           "builder": "@angular/build:application",
           "options": {
-            
+            "outputPath": { "base": "../data/angular-www",
+             "browser": ""},
+            "index": "src/index.html",
             "browser": "src/main.ts",
+            "baseHref": "/",
             "tsConfig": "tsconfig.app.json",
             "inlineStyleLanguage": "scss",
             "assets": [
               {
                 "glob": "**/*",
-                "input": "public"
+                "input": "public/"
               }
             ],
             "styles": [
