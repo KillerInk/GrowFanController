@@ -72,7 +72,7 @@ export class ApiService {
     );
   }
 
-    setLight(val: number): Observable<any> {
+  setLight(val: number): Observable<any> {
     if (val < 0 || val > 100) return throwError('speed out of range');
 
     const params = this.buildCmdParams({ var: 'lightval', val });
@@ -99,5 +99,70 @@ export class ApiService {
   private handleError(error: HttpErrorResponse) {
     const msg = error.status ? `HTTP ${error.status}: ${error.message}` : 'Network error';
     return throwError(msg);
+  }
+
+  setMinMaxSpeed(min: number, max: number): Observable<any> {
+    // Validate input ranges if needed (e.g., 0‑100)
+    if (min < 0 || min > 100) return throwError('min speed out of range');
+    if (max < 0 || max > 100) return throwError('max speed out of range');
+
+    const params = this.buildCmdParams({ var: 'minsmaxspeed', min, max });
+
+    // Tell HttpClient to treat the response as text
+    const options = { params, responseType: 'text' } as any;
+    return this.http.get<string>(`/cmd`, options).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  setTargetTempHum(targetTemp: number, targetHum: number, speedDiff: number): Observable<any> {
+    // Optional validation (e.g., range checks)
+    const params = this.buildCmdParams({
+      var: 'targettemphum',
+      targetTemp,
+      targetHum,
+      speedDiff
+    });
+
+    // Tell HttpClient to treat the response as text
+    const options = { params, responseType: 'text' } as any;
+    return this.http.get<string>(`/cmd`, options).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  setLightAutoControl(val: number): Observable<any> {
+    const params = this.buildCmdParams({ var: 'lightautomode', val });
+
+    // Tell HttpClient to treat the response as text
+    const options = { params, responseType: 'text' } as any;
+    return this.http.get<string>(`/cmd`, options).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+
+  setNightModeActive(val: number): Observable<any> {
+    const params = this.buildCmdParams({ var: 'fannightmodeactive', val });
+
+    // Tell HttpClient to treat the response as text
+    const options = { params, responseType: 'text' } as any;
+    return this.http.get<string>(`/cmd`, options).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  setFanAutoControl(val: number): Observable<any> {
+    const params = this.buildCmdParams({ var: 'autocontrol', val });
+
+    // Tell HttpClient to treat the response as text
+    const options = { params, responseType: 'text' } as any;
+    return this.http.get<string>(`/cmd`, options).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  setLightSchedule(params: Record<string, any>): Observable<any> {
+    return this.getCmd(params);   // simply forwards to /cmd
   }
 }

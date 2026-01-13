@@ -295,4 +295,59 @@ export class App implements OnInit {
     }).subscribe();
   }
 
+  submitMinMaxSpeed() {
+    const min = Number((document.getElementById('minspeed') as HTMLInputElement)?.value);
+    const max = Number((document.getElementById('maxspeed') as HTMLInputElement)?.value);
+
+    this.api.setMinMaxSpeed(min, max).subscribe();
+  }
+
+  submitTargetTempHum() {
+    const targetTemp = Number((document.getElementById('targettemp') as HTMLInputElement)?.value);
+    const targetHum = Number((document.getElementById('targethum') as HTMLInputElement)?.value);
+    const speedDiff = Number((document.getElementById('speeddif') as HTMLInputElement)?.value);
+
+    this.api.setTargetTempHum(targetTemp, targetHum, speedDiff).subscribe();
+  }
+
+  onLightAutoChange(checked: boolean) {
+    this.api.setLightAutoControl(checked ? 1 : 0).subscribe();
+  }
+
+  onNightModeActiveChange(checked: boolean) {
+    this.api.setNightModeActive(checked ? 1 : 0).subscribe();
+  }
+
+  onAutoControlChange(checked: boolean) {
+    this.api.setFanAutoControl(checked ? 1 : 0).subscribe();
+  }
+
+  submitLightSchedule() {
+  const turnOnHour = Number((document.getElementById('turnlightonhour') as HTMLInputElement)?.value);
+  const turnOnMin  = Number((document.getElementById('turnlightonmin')  as HTMLInputElement)?.value);
+  const turnOffHour = Number((document.getElementById('turnlightoffhour') as HTMLInputElement)?.value);
+  const turnOffMin  = Number((document.getElementById('turnlightoffmin')  as HTMLInputElement)?.value);
+
+  const enableSunrise = (document.getElementById('enablesunrise') as HTMLInputElement).checked ? 1 : 0;
+  const sunriseHour   = Number((document.getElementById('sunrisehour') as HTMLInputElement)?.value);
+  const sunriseMin    = Number((document.getElementById('sunrisemin')  as HTMLInputElement)?.value);
+
+  const enableSunset  = (document.getElementById('enablesunset') as HTMLInputElement).checked ? 1 : 0;
+  const sunsetHour   = Number((document.getElementById('sunsethour') as HTMLInputElement)?.value);
+  const sunsetMin    = Number((document.getElementById('sunsetmin')  as HTMLInputElement)?.value);
+
+  this.api.setLightSchedule({var: 'lightschedule',
+    turnOnHour,
+    turnOnMin,
+    turnOffHour,
+    turnOffMin,
+    enableSunrise,
+    sunriseHour,
+    sunriseMin,
+    enableSunset,
+    sunsetHour,
+    sunsetMin
+  });
+}
+
 }

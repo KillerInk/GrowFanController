@@ -1,215 +1,315 @@
 <!-- growui/src/app/app.html -->
 <ng-container class="mybody">
-       <div>
-              <!-- Fan 1 speed slider -->
-              <div class="slidecontainer">
-                     <label for="speed">Fan1 Speed:</label><br>
-                     <input type="range" min="0" max="100" value="50" class="slider" id="speed"
-                            (input)="onSpeedChange($event.target.value)">
-              </div>
+	<div style="margin:0 auto; max-width:80%;">
+		<div>
+			<!-- Fan 1 speed slider -->
+			<div class="slidecontainer">
+				<label for="speed">Fan1 Speed:</label><br>
+				<input type="range" min="0" max="100" value="50" class="slider" id="speed"
+					(input)="onSpeedChange($event.target.value)">
+			</div>
 
-              <!-- Fan 2 speed slider -->
-              <div class="slidecontainer2">
-                     <label for="speed1">Fan2 Speed:</label><br>
-                     <input type="range" min="0" max="100" value="50" class="slider" id="speed1"
-                            (input)="onSpeed1Change($event.target.value)">
-              </div>
+			<!-- Fan 2 speed slider -->
+			<div class="slidecontainer2">
+				<label for="speed1">Fan2 Speed:</label><br>
+				<input type="range" min="0" max="100" value="50" class="slider" id="speed1"
+					(input)="onSpeed1Change($event.target.value)">
+			</div>
 
-              <!-- Light strength slider -->
-              <label for="lightstrength">Light Strength:</label>
-              <div id="sliderAmount2"></div><br>
-              <input type="range" min="0" max="100" value="80" class="slider" id="lightstrength"
-                     (input)="onLightChange($event.target.value)">
-       </div>
+			<!-- Light strength slider -->
+			<label for="lightstrength">Light Strength:</label>
+			<div id="sliderAmount2"></div><br>
+			<input type="range" min="0" max="100" value="80" class="slider" id="lightstrength"
+				(input)="onLightChange($event.target.value)">
+		</div>
 
-       <div class="flex-container">
-              <!-- Fan voltage limits (Fan 0) -->
-              <div id="fansettings_container">
-                     <label for="fan0min">Fan1 Min Voltage mv:</label>
-                     <input type="number" id="fan0min" [(ngModel)]="deviceState!.fan0min"><br>
+		<div class="flex-container">
+			<!-- Fan voltage limits (Fan 0) -->
+			<div id="fansettings_container">
+				<div class="fan-row">
 
-                     <label for="fan0max">Fan1 Max Voltage mv:</label>
-                     <input type="number" id="fan0max" [(ngModel)]="deviceState!.fan0max"><br>
+					<!-- Fan 1 -->
+					<div class="pair">
+						<label for="fan0min" class="left-label">Fan1 Min Voltage mv:</label>
+						<input type="number" id="fan0min" [(ngModel)]="deviceState!.fan0min" class="right-input">
+					</div>
 
-                     <input type="submit" id="fan0sub" value="Submit" (click)="submitFan0()">
-                     <label for="fan1min">Fan2 Min Voltage mv:</label>
-                     <input type="number" id="fan1min" [(ngModel)]="deviceState!.fan1min"><br>
+					<div class="pair">
+						<label for="fan0max" class="left-label">Fan1 Max Voltage mv:</label>
+						<input type="number" id="fan0max" [(ngModel)]="deviceState!.fan0max" class="right-input">
+					</div>
 
-                     <label for="fan1max">Fan2 Max Voltage mv:</label>
-                     <input type="number" id="fan1max" [(ngModel)]="deviceState!.fan1max"><br>
+					<button id="fan0sub" (click)="submitFan0()">Submit</button>
 
-                     <input type="submit" id="fan1sub" value="Submit" (click)="submitFan1()">
-              </div>
+					<!-- Fan 2 -->
+					<div class="pair">
+						<label for="fan1min" class="left-label">Fan2 Min Voltage mv:</label>
+						<input type="number" id="fan1min" [(ngModel)]="deviceState!.fan1min" class="right-input">
+					</div>
+
+					<div class="pair">
+						<label for="fan1max" class="left-label">Fan2 Max Voltage mv:</label>
+						<input type="number" id="fan1max" [(ngModel)]="deviceState!.fan1max" class="right-input">
+					</div>
+
+					<button id="fan1sub" (click)="submitFan1()">Submit</button>
+				</div>
+			</div>
 
 
-              <!-- Automatic control -->
-              <div id="auto">
-                     <label for="enableauto">Fan Automatic Control</label>
-                     <input type="checkbox" id="enableauto" [(ngModel)]="deviceState!.autocontrol"><br>
+			<!-- Automatic control -->
+			<div id="auto">
+				<label for="enableauto">Fan Automatic Control</label>
+				<input type="checkbox" id="enableauto" [(ngModel)]="deviceState!.autocontrol"
+					(change)="onAutoControlChange($event.target.checked)"><br>
 
-                     <div>
-                            <label for="targettemp">Target Temperature &deg;C</label>
-                            <input type="number" id="targettemp" [(ngModel)]="deviceState!.targetTemperature" size="5">
-                            <br>
-                            <label for="targethum">Target Humidity %</label>
-                            <input type="number" id="targethum" [(ngModel)]="deviceState!.targetHumidity" size="5">
-                            <br>
-                            <label for="speeddif">Fans Speed Difference %</label>
-                            <input type="number" id="speeddif" [(ngModel)]="deviceState!.speeddif" size="5"><br>
+				<div class="fan-row">
 
-                            <input type="submit" id="targetTempHumSub" value="Submit">
-                            <br>
-                            <label for="minspeed">Min Speed</label>
-                            <input type="number" id="minspeed" [(ngModel)]="deviceState!.minspeed" size="5"><br>
+					<!-- Target Temperature -->
+					<div class="pair">
+						<label for="targettemp">Target Temperature &deg;C</label>
+						<input type="number" id="targettemp" [(ngModel)]="deviceState!.targetTemperature" size="5">
+					</div>
 
-                            <label for="maxspeed">Max Speed</label>
-                            <input type="number" id="maxspeed" [(ngModel)]="deviceState!.maxspeed" size="5"><br>
+					<!-- Target Humidity -->
+					<div class="pair">
+						<label for="targethum">Target Humidity %</label>
+						<input type="number" id="targethum" [(ngModel)]="deviceState!.targetHumidity" size="5">
+					</div>
 
-                            <input type="submit" id="minmaxspeedsub" value="Submit">
-                            <br>
-                     </div>
-              </div>
+					<!-- Fans Speed Difference -->
+					<div class="pair">
+						<label for="speeddif">Fans Speed Difference %</label>
+						<input type="number" id="speeddif" [(ngModel)]="deviceState!.speeddif" size="5">
+					</div>
 
-              <!-- Night mode controls -->
-              <div id="nightmodeactive">
-                     <label for="enablenightmode">Fan Nightmode</label>
-                     <input type="checkbox" id="enablenightmode" [(ngModel)]="deviceState!.nightmodeactive"><br>
+					<button id="targetTempHumSub" (click)="submitTargetTempHum()">Submit</button>
 
-                     <label for="onhour">Nightmode On</label>
-                     <input type="number" id="onhour" [(ngModel)]="deviceState!.nightmodeonhour"><span>hour</span>
-                     <input type="number" id="onmin" [(ngModel)]="deviceState!.nightmodeonmin"><span>min</span><br>
+					<!-- Min Speed -->
+					<div class="pair">
+						<label for="minspeed">Min Speed</label>
+						<input type="number" id="minspeed" [(ngModel)]="deviceState!.minspeed" size="5">
+					</div>
 
-                     <label for="offhour">Nightmode Off</label>
-                     <input type="number" id="offhour" [(ngModel)]="deviceState!.nightmodeoffhour"><span>hour</span>
-                     <input type="number" id="offmin" [(ngModel)]="deviceState!.nightmodeoffmin"><span>min</span><br>
+					<!-- Max Speed -->
+					<div class="pair">
+						<label for="maxspeed">Max Speed</label>
+						<input type="number" id="maxspeed" [(ngModel)]="deviceState!.maxspeed" size="5">
+					</div>
 
-                     <label>Max Speed at night</label>
-                     <input type="number" id="nightmodemaxspeed" [(ngModel)]="deviceState!.nightmodemaxspeed"
-                            size="5"><br>
+					<button id="minmaxspeedsub" (click)="submitMinMaxSpeed()">Submit</button>
+				</div>
+			</div>
 
-                     <input type="submit" id="nightmodesub" value="Submit" (click)="submitNightMode()">
-              </div>
+			<!-- Night mode controls -->
+			<div id="nightmodeactive" class="fan-row">
+				<div>
+					<label for="enablenightmode">Fan Nightmode</label>
+					<input type="checkbox" id="enablenightmode" [(ngModel)]="deviceState!.nightmodeactive"
+						(change)="onNightModeActiveChange($event.target.checked)"><br>
+				</div>
+				<!-- Nightmode On -->
+				<div class="pair">
+					<label for="onhour">Nightmode On</label>
+					<input type="number" id="onhour" [(ngModel)]="deviceState!.nightmodeonhour"><span>hour</span>
+					<input type="number" id="onmin" [(ngModel)]="deviceState!.nightmodeonmin"><span>min</span>
+				</div>
 
-              <!-- Light control voltage -->
-              <div>
-                     <label for="enablelightcontrol">Light AutoControl</label>
-                     <input type="checkbox" id="enablelightcontrol" [(ngModel)]="deviceState!.lightautomode"><br>
+				<!-- Nightmode Off -->
+				<div class="pair">
+					<label for="offhour">Nightmode Off</label>
+					<input type="number" id="offhour" [(ngModel)]="deviceState!.nightmodeoffhour"><span>hour</span>
+					<input type="number" id="offmin" [(ngModel)]="deviceState!.nightmodeoffmin"><span>min</span>
+				</div>
 
-                     <label for="lightminv">Light min Voltage mv</label>
-                     <input type="number" id="lightminv" [(ngModel)]="deviceState!.lightminvolt" size="5"><br>
+				<!-- Max Speed at night -->
+				<div class="pair">
+					<label for="nightmodemaxspeed">Max Speed at night</label>
+					<input type="number" id="nightmodemaxspeed" [(ngModel)]="deviceState!.nightmodemaxspeed" size="5">
+				</div>
 
-                     <label for="lightmaxv">Light max Voltage mv</label>
-                     <input type="number" id="lightmaxv" [(ngModel)]="deviceState!.lightmaxvolt" size="5"><br>
+				<button id="nightmodesub" (click)="submitNightMode()">Submit</button>
+			</div>
 
-                     <input type="submit" id="lightcontrolvoltagesub" value="Submit"
-                            (click)="submitLightControlVoltage()">
-              </div>
+			<!-- Light control voltage -->
+			<div class="fan-row">
+				
+				<!-- Light min Voltage mv -->
+				<div class="pair">
+					<label for="lightminv">Light min Voltage mv</label>
+					<input type="number" id="lightminv" [(ngModel)]="deviceState!.lightminvolt" size="5">
+				</div>
 
-              <!-- Light control percentage -->
-              <div>
-                     <label for="lightminp">Light min Voltage %</label>
-                     <input type="number" id="lightminp" [(ngModel)]="deviceState!.lightlimitspmin" size="5"><br>
+				<!-- Light max Voltage mv -->
+				<div class="pair">
+					<label for="lightmaxv">Light max Voltage mv</label>
+					<input type="number" id="lightmaxv" [(ngModel)]="deviceState!.lightmaxvolt" size="5">
+				</div>
 
-                     <label for="lightmaxp">Light max Voltage %</label>
-                     <input type="number" id="lightmaxp" [(ngModel)]="deviceState!.lightlimitspmax" size="5"><br>
+				<button id="lightcontrolvoltagesub" (click)="submitLightControlVoltage()">Submit</button>
 
-                     <input type="submit" id="lightcontrolvoltagepsub" value="Submit"
-                            (click)="submitLightControlPercentage()">
-              </div>
+				<!-- Light min Voltage % -->
+				<div class="pair">
+					<label for="lightminp">Light min Voltage %</label>
+					<input type="number" id="lightminp" [(ngModel)]="deviceState!.lightlimitspmin" size="5">
+				</div>
 
-              <!-- Cloud simulation -->
-              <div>
-                     <label for="cloudcycle">Cloud Cycle Duration</label>
-                     <input type="number" id="cloudcycle" [(ngModel)]="deviceState!.cloud.cycleduration"
-                            size="5">min<br>
+				<!-- Light max Voltage % -->
+				<div class="pair">
+					<label for="lightmaxp">Light max Voltage %</label>
+					<input type="number" id="lightmaxp" [(ngModel)]="deviceState!.lightlimitspmax" size="5">
+				</div>
 
-                     <label for="cloudmin">Cloud min %</label>
-                     <input type="number" id="cloudmin" [(ngModel)]="deviceState!.cloud.min" size="5"><br>
+				<button id="lightcontrolvoltagepsub" (click)="submitLightControlPercentage()">Submit</button>
+			</div>
 
-                     <label for="cloudmax">Cloud max %</label>
-                     <input type="number" id="cloudmax" [(ngModel)]="deviceState!.cloud.max" size="5"><br>
+			<div class="fan-row">
+				<div>
+					<label for="enablelightcontrol">Light AutoControl</label>
+					<input type="checkbox" id="enablelightcontrol" [(ngModel)]="deviceState!.lightautomode"
+						(change)="onLightAutoChange($event.target.checked)"><br>
+				</div>
+				<div class="pair">
+					<label for="turnlightonhour">Turn light on</label>
+					<input type="number" id="turnlightonhour" [(ngModel)]="deviceState!.lightonh" size="5">hour
+					<input type="number" id="turnlightonmin" [(ngModel)]="deviceState!.lightonmin" size="5">min
+				</div>
+				<br>
+				<div class="pair">
+					<label for="turnlightoffhour">Turn light off</label>
+					<input type="number" id="turnlightoffhour" [(ngModel)]="deviceState!.lightoffh" size="5">hour
+					<input type="number" id="turnlightoffmin" [(ngModel)]="deviceState!.lightoffmin" size="5">min
+				</div>
+				<br>
+				<div class="pair">
+					<label for="enablesunrise">Enable Sunrise</label>
+					<input type="checkbox" id="enablesunrise" [(ngModel)]="deviceState!.lightriseenable">
+				</div>
+				<br>
+				<div class="pair">
+					<label for="sunrisehour">Sunrise End</label>
+					<input type="number" id="sunrisehour" [(ngModel)]="deviceState!.lightriseh" size="5">hour
+					<input type="number" id="sunrisemin" [(ngModel)]="deviceState!.lightrisemin" size="5">min
+				</div>
+				<br>
+				<div class="pair">
+					<label for="enablesunset">Enable Sunset</label>
+					<input type="checkbox" id="enablesunset" [(ngModel)]="deviceState!.lightsetenable">
+				</div>
+				<br>
+				<div class="pair">
+					<label for="sunsethour">Sunset Start</label>
+					<input type="number" id="sunsethour" [(ngModel)]="deviceState!.lightseth" size="5">hour
+					<input type="number" id="sunsetmin" [(ngModel)]="deviceState!.lightsetmin" size="5">min
+				</div>
+				<br>
+				<input type="submit" id="lightcontrolsub" value="Submit" (click)="submitLightSchedule()">
+			</div>
+			<!-- Cloud simulation -->
+			<div class="fan-row">
+				<div>
+					<label for="enablelightcloud">Simulate Clouds</label>
+					<input type="checkbox" id="enablelightcloud" [(ngModel)]="deviceState!.cloud.active"><br>
+				</div>
+				<!-- Cloud Cycle Duration -->
+				<div class="pair">
+					<label for="cloudcycle">Cloud Cycle Duration</label>
+					<input type="number" id="cloudcycle" [(ngModel)]="deviceState!.cloud.cycleduration" size="5">min
+				</div>
 
-                     <input type="submit" id="cloudsubmit" value="Submit" (click)="submitCloud()">
-              </div>
-       </div>
+				<!-- Cloud min % -->
+				<div class="pair">
+					<label for="cloudmin">Cloud min %</label>
+					<input type="number" id="cloudmin" [(ngModel)]="deviceState!.cloud.min" size="5">
+				</div>
 
-       <!-- Remaining UI elements stay unchanged -->
-       <div class="flex-container">
-              <div>
-                     <div>
-                            <div id="lightpercent">Light:{{socketdata?.lightvalP}}%</div>
-                            <div id="lightmv">{{socketdata?.lightvalmv}}Mv</div>
-                            <div id="lightstate">LightState:{{socketdata?.lightstate? "On":"Off"}}</div>
+				<!-- Cloud max % -->
+				<div class="pair">
+					<label for="cloudmax">Cloud max %</label>
+					<input type="number" id="cloudmax" [(ngModel)]="deviceState!.cloud.max" size="5">
+				</div>
 
-                            <label id="autofan0" name="autofan0">
-                                   Fan1:{{socketdata?.voltage0}}
-                            </label><br>
+				<button id="cloudsubmit" (click)="submitCloud()">Submit</button>
+			</div>
+		</div>
+		<div class="flex-container">
+			<div>
+				<div>
+					<div id="lightpercent">Light:{{socketdata?.lightvalP}}%</div>
+					<div id="lightmv">{{socketdata?.lightvalmv}}Mv</div>
+					<div id="lightstate">LightState:{{socketdata?.lightstate? "On":"Off"}}</div>
 
-                            <label id="autofan1" name="autofan1">
-                                   Fan2:{{socketdata?.voltage1}}
-                            </label>
-                     </div>
+					<label id="autofan0" name="autofan0">
+						Fan1:{{socketdata?.voltage0}}
+					</label><br>
 
-                     <div *ngIf="socketdata?.ens160aht21">
-                            <div id="temperatur">Temp:{{socketdata?.ens160aht21?.temperatur}}°C</div>
-                            <div id="humidity">Hum:{{socketdata?.ens160aht21?.humidity}}%</div>
-                            <div id="eco2">Eco2:{{socketdata?.ens160aht21?.eco2}}</div>
-                            <div id="tvoc">Tvoc:{{socketdata?.ens160aht21?.tvoc}}</div>
-                            <div id="aqi">aqi:{{socketdata?.ens160aht21?.aqi}}</div>
-                            <div id="time">{{socketdata?.time}}</div>
-                     </div>
+					<label id="autofan1" name="autofan1">
+						Fan2:{{socketdata?.voltage1}}
+					</label>
+				</div>
 
-                     <div *ngIf="socketdata?.bme280">
-                            <div id="temperatur_bme280">
-                                   Temp:{{socketdata?.bme280?.temperatur}}°C
-                            </div>
-                            <div id="humidity_bme280">
-                                   Hum:{{socketdata?.bme280?.humidity}}%
-                            </div>
-                            <div id="pressure_bme280">
-                                   Pressure:{{socketdata?.bme280?.pressure}}hpa
-                            </div>
-                     </div>
-              </div>
+				<div *ngIf="socketdata?.ens160aht21">
+					<div id="temperatur">Temp:{{socketdata?.ens160aht21?.temperatur}}°C</div>
+					<div id="humidity">Hum:{{socketdata?.ens160aht21?.humidity}}%</div>
+					<div id="eco2">Eco2:{{socketdata?.ens160aht21?.eco2}}</div>
+					<div id="tvoc">Tvoc:{{socketdata?.ens160aht21?.tvoc}}</div>
+					<div id="aqi">aqi:{{socketdata?.ens160aht21?.aqi}}</div>
+					<div id="time">{{socketdata?.time}}</div>
+				</div>
 
-              <div>
-                     <div id="readgovee">
-                            <input type="checkbox" id="enablereadgovee" [(ngModel)]="deviceState!.readgovee"><br>
-                            <label for="enablereadgovee">Get Temperature and Humidity from Govee H5179</label><br>
-                            <div id="temperatur_govee"></div>
-                            <div id="humidity_govee"></div>
-                            <div id="battery"></div>
-                     </div>
+				<div *ngIf="socketdata?.bme280">
+					<div id="temperatur_bme280">
+						Temp:{{socketdata?.bme280?.temperatur}}°C
+					</div>
+					<div id="humidity_bme280">
+						Hum:{{socketdata?.bme280?.humidity}}%
+					</div>
+					<div id="pressure_bme280">
+						Pressure:{{socketdata?.bme280?.pressure}}hpa
+					</div>
+				</div>
+			</div>
 
-                     <div>
-                            <input type="number" id="tempdif" [(ngModel)]="deviceState!.tempdif" size="5"><br>
-                            <label for="tempdif">Temperature correction for AHT2X Sensor &deg;C</label><br>
+			<div>
+				<div id="readgovee">
+					<div>
+						<input type="checkbox" id="enablereadgovee" [(ngModel)]="deviceState!.readgovee">
+						<label for="enablereadgovee">Get Temperature and Humidity from Govee
+							H5179</label>
+					</div><br>
+					<div id="temperatur_govee"></div>
+					<div id="humidity_govee"></div>
+					<div id="battery"></div>
+				</div>
 
-                            <input type="number" id="humdif" [(ngModel)]="deviceState!.humdif" size="5"><br>
-                            <label for="humdif">Humidity correction for AHT2X Sensor %</label><br>
+				<div>
+					<div>
+						<input type="number" id="tempdif" [(ngModel)]="deviceState!.tempdif" size="5"><br>
+						<label for="tempdif">Temperature correction for AHT2X Sensor &deg;C</label><br>
+					</div>
+					<div>
+						<input type="number" id="humdif" [(ngModel)]="deviceState!.humdif" size="5"><br>
+						<label for="humdif">Humidity correction for AHT2X Sensor %</label><br>
+					</div>
+					<input type="submit" id="targetTempHumDiffSub" value="Submit">
+				</div>
+			</div>
+		</div>
 
-                            <input type="submit" id="targetTempHumDiffSub" value="Submit">
-                     </div>
-              </div>
-       </div>
+		<div>
+			<button id="1min">1min</button>
+			<button id="5min">5min</button>
+			<button id="15min">15min</button>
+			<button id="30min">30min</button>
+			<button id="1h">1h</button>
+			<button id="4h">4h</button>
 
-       <div class="flex-container">
-              <!-- Duplicate section removed – all inputs already bound above -->
-       </div>
+			<input type="checkbox" id="zoomdata" name="zoomdata" checked="true">
+			<label for="zoomdata"> Zoom Data</label><br>
+		</div>
 
-       <div>
-              <button id="1min">1min</button>
-              <button id="5min">5min</button>
-              <button id="15min">15min</button>
-              <button id="30min">30min</button>
-              <button id="1h">1h</button>
-              <button id="4h">4h</button>
-
-              <input type="checkbox" id="zoomdata" name="zoomdata" checked="true">
-              <label for="zoomdata"> Zoom Data</label><br>
-       </div>
-
-       <div>
-              <p-chart #chart id="chart" [data]="chartData" [options]="chartOptions"></p-chart>
-       </div>
+		<div>
+			<p-chart #chart id="chart" [data]="chartData" [options]="chartOptions"></p-chart>
+		</div>
+	</div>
 </ng-container>

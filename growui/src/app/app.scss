@@ -83,4 +83,25 @@ div.a {
 .mybody
 {
   background-color: rgb(70, 70, 70);
+  margin:0 auto; max-width:800px;
+}
+
+.fan-row {
+  display: flex;
+  flex-direction: column;   /* stack pairs vertically */
+}
+
+.pair {
+  display: flex;
+  justify-content: space-between;   /* label left, input right */
+  align-items: center;
+  margin-bottom: 8px;                /* spacing between rows */
+}
+
+.left-label {
+  text-align: left;
+}
+
+.right-input {
+  width: auto;                     /* keep natural width */
 }
