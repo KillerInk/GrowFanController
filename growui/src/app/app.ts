@@ -364,4 +364,18 @@ export class App implements OnInit {
     }).subscribe();
   }
 
+    submitTargetTempHumDiff() {
+    const temp = Number((document.getElementById('tempdif') as HTMLInputElement)?.value);
+    const hum = Number((document.getElementById('humdif') as HTMLInputElement)?.value);
+
+    this.api.setTargetTempHumDiff(temp, hum).subscribe();
+  }
+
+  onReadGoveeChange(checked: boolean): void {
+  this.api.setReadGovee(checked).subscribe(
+    () => console.log('ReadGovee setting updated', checked),
+    err => console.error('Failed to update ReadGovee:', err)
+  );
+}
+
 }

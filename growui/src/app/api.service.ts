@@ -115,13 +115,28 @@ export class ApiService {
     );
   }
 
-  setTargetTempHum(targetTemp: number, targetHum: number, speedDiff: number): Observable<any> {
+  setTargetTempHum(temp: number, hum: number, speeddif: number): Observable<any> {
     // Optional validation (e.g., range checks)
     const params = this.buildCmdParams({
       var: 'autovals',
-      targetTemp,
-      targetHum,
-      speedDiff
+      temp,
+      hum,
+      speeddif
+    });
+
+    // Tell HttpClient to treat the response as text
+    const options = { params, responseType: 'text' } as any;
+    return this.http.get<string>(`/cmd`, options).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  setTargetTempHumDiff(temp: number, hum: number): Observable<any> {
+    // Optional validation (e.g., range checks)
+    const params = this.buildCmdParams({
+      var: 'temphumdif',
+      temp,
+      hum
     });
 
     // Tell HttpClient to treat the response as text
@@ -164,5 +179,19 @@ export class ApiService {
 
   setLightSchedule(params: Record<string, any>): Observable<any> {
     return this.getCmd(params);   // simply forwards to /cmd
+  }
+
+  setReadGovee(enabled: boolean): Observable<any> {
+    // `enabled` is sent as 1 or 0 (true → 1, false → 0)
+    const params = this.buildCmdParams({
+      var: 'readgovee',
+      val: enabled ? 1 : 0
+    });
+
+    // Tell HttpClient to treat the response as text
+    const options = { params, responseType: 'text' } as any;
+    return this.http.get<string>(`/cmd`, options).pipe(
+      catchError(this.handleError)
+    );
   }
 }

@@ -273,7 +273,7 @@
 			<div>
 				<div id="readgovee">
 					<div>
-						<input type="checkbox" id="enablereadgovee" [(ngModel)]="deviceState!.readgovee">
+						<input type="checkbox" id="enablereadgovee" [(ngModel)]="deviceState!.readgovee" (change)="onReadGoveeChange($event.target.checked)">
 						<label for="enablereadgovee">Get Temperature and Humidity from Govee
 							H5179</label>
 					</div><br>
@@ -291,7 +291,7 @@
 						<input type="number" id="humdif" [(ngModel)]="deviceState!.humdif" size="5"><br>
 						<label for="humdif">Humidity correction for AHT2X Sensor %</label><br>
 					</div>
-					<input type="submit" id="targetTempHumDiffSub" value="Submit">
+					<input type="submit" id="targetTempHumDiffSub" value="Submit" (click)="submitTargetTempHumDiff()">
 				</div>
 			</div>
 		</div>
