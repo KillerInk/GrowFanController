@@ -106,7 +106,7 @@ export class ApiService {
     if (min < 0 || min > 100) return throwError('min speed out of range');
     if (max < 0 || max > 100) return throwError('max speed out of range');
 
-    const params = this.buildCmdParams({ var: 'minsmaxspeed', min, max });
+    const params = this.buildCmdParams({ var: 'autospeed', min, max });
 
     // Tell HttpClient to treat the response as text
     const options = { params, responseType: 'text' } as any;
@@ -118,7 +118,7 @@ export class ApiService {
   setTargetTempHum(targetTemp: number, targetHum: number, speedDiff: number): Observable<any> {
     // Optional validation (e.g., range checks)
     const params = this.buildCmdParams({
-      var: 'targettemphum',
+      var: 'autovals',
       targetTemp,
       targetHum,
       speedDiff

@@ -8,6 +8,7 @@ import { OnInit } from '@angular/core';
 import { UIChart } from 'primeng/chart';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
+import 'chartjs-adapter-date-fns';
 
 @Component({
   selector: 'app-root',
@@ -34,7 +35,20 @@ export class App implements OnInit {
     responsive: true,
     maintainAspectRatio: true,
     scales: {
-      x: { display: true, title: { text: 'Time' } },
+      x: {
+        display: true,
+        title: { text: 'Time' },
+        type: 'time',                     // <-- tell Chart.js the X axis is time
+        time: {
+          unit: 'second',                 // adjust as needed (second/minute/hour)
+          tooltipFormat: 'HH:mm:ss',      // format in tooltips
+          displayFormats: {              // format on the axis labels
+            second: 'HH:mm:ss',
+            minute: 'HH:mm',
+            hour: 'HH:mm'
+          }
+        },
+      },
       y: { display: true, title: { text: 'Value' } }
     }
   };
@@ -107,128 +121,130 @@ export class App implements OnInit {
             datasets: []
           };
 
-          // Create datasets dynamically
+          const yAxisIds: Record<string, string> = {
+            voltage0: 'yVoltage0',
+            voltage1: 'yVoltage1',
+            temperature: 'yTemperature',
+            humidity: 'yHumidity',
+            co2: 'yCO2',
+            lightPower: 'yLightPower',
+            lightVoltage: 'yLightVoltage'
+          };
+
           for (const [key, value] of Object.entries(validFields)) {
+            const commonOpts = {
+              type: 'line',
+              data: [],
+              tension: 0.3,
+              //yAxisID: yAxisIds[key as keyof typeof yAxisIds]   // unique Y‑axis
+            };
+
             if (key === 'voltage0') {
               this.chartData.datasets.push({
-                type: 'line',
-                data: [],
+                ...commonOpts,
                 label: 'Fan Voltage',
                 backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                borderColor: 'rgba(75, 192, 192, 1)',
-                tension: 0.3
+                borderColor: 'rgba(75, 192, 192, 1)'
               });
             } else if (key === 'voltage1') {
               this.chartData.datasets.push({
-                type: 'line',
-                data: [],
+                ...commonOpts,
                 label: 'Fan2 Voltage',
                 backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                borderColor: 'rgba(75, 192, 192, 1)',
-                tension: 0.3
+                borderColor: 'rgba(75, 192, 192, 1)'
               });
             } else if (key === 'temperature') {
               this.chartData.datasets.push({
-                type: 'line',
-                data: [],
+                ...commonOpts,
                 label: 'Temperature (°C)',
                 backgroundColor: 'rgba(255, 159, 64, 0.2)',
-                borderColor: 'rgba(255, 159, 64, 1)',
-                tension: 0.3
+                borderColor: 'rgba(255, 159, 64, 1)'
               });
             } else if (key === 'humidity') {
               this.chartData.datasets.push({
-                type: 'line',
-                data: [],
+                ...commonOpts,
                 label: 'Humidity (%)',
                 backgroundColor: 'rgba(54, 162, 235, 0.2)',
-                borderColor: 'rgba(54, 162, 235, 1)',
-                tension: 0.3
+                borderColor: 'rgba(54, 162, 235, 1)'
               });
             } else if (key === 'co2') {
               this.chartData.datasets.push({
-                type: 'line',
-                data: [],
+                ...commonOpts,
                 label: 'CO₂ (ppm)',
                 backgroundColor: 'rgba(255, 99, 132, 0.2)',
-                borderColor: 'rgba(255, 99, 132, 1)',
-                tension: 0.3
+                borderColor: 'rgba(255, 99, 132, 1)'
               });
             } else if (key === 'lightPower') {
               this.chartData.datasets.push({
-                type: 'line',
-                data: [],
+                ...commonOpts,
                 label: 'Light Power (%)',
                 backgroundColor: 'rgba(153, 102, 255, 0.2)',
-                borderColor: 'rgba(153, 102, 255, 1)',
-                tension: 0.3
+                borderColor: 'rgba(153, 102, 255, 1)'
               });
             } else if (key === 'lightVoltage') {
               this.chartData.datasets.push({
-                type: 'line',
-                data: [],
+                ...commonOpts,
                 label: 'Light Voltage (mV)',
                 backgroundColor: 'rgba(255, 159, 64, 0.2)',
-                borderColor: 'rgba(255, 159, 64, 1)',
-                tension: 0.3
+                borderColor: 'rgba(255, 159, 64, 1)'
               });
             }
+
+            // Now start adding data points (first message)
+            const timeLabel = Date.now();
+            const fan1Val = this.socketdata.voltage0 ?? 0;
+            const fan2Val = this.socketdata.voltage1 ?? 0;
+            const temp = this.socketdata.bme280?.temperatur ?? 0;
+            const hum = this.socketdata.bme280?.humidity ?? 0;
+            const co2 = this.socketdata.ens160aht21?.eco2 ?? 0;
+            const lightP = this.socketdata.lightvalP ?? 0;
+            const lightV = this.socketdata.lightvalmv ?? 0;
+
+            // Push all values
+            this.chartData.labels.push(timeLabel);
+            this.chartData.datasets[0]?.data?.push(fan1Val); // Fan Voltage
+            this.chartData.datasets[1]?.data?.push(fan2Val); // Fan2 Voltage
+            this.chartData.datasets[2]?.data?.push(temp);     // Temperature
+            this.chartData.datasets[3]?.data?.push(hum);     // Humidity
+            this.chartData.datasets[4]?.data?.push(co2);     // CO2
+            this.chartData.datasets[5]?.data?.push(lightP);  // Light %
+            this.chartData.datasets[6]?.data?.push(lightV);  // Light Voltage
+
+            // Keep only the last 50 points
+            /*if (this.chartData.labels.length > 50) {
+              this.chartData.labels.shift();
+              this.chartData.datasets[0]?.data?.shift();
+              this.chartData.datasets[1]?.data?.shift();
+              this.chartData.datasets[2]?.data?.shift();
+              this.chartData.datasets[3]?.data?.shift();
+              this.chartData.datasets[4]?.data?.shift();
+              this.chartData.datasets[5]?.data?.shift();
+              this.chartData.datasets[6]?.data?.shift();
+            }*/
+            this.chart.chart.update();
+
           }
         }
-        // Now start adding data points (first message)
-        const timeLabel = Date.now();
-        const fan1Val = this.socketdata.voltage0 ?? 0;
-        const fan2Val = this.socketdata.voltage1 ?? 0;
-        const temp = this.socketdata.bme280?.temperatur ?? 0;
-        const hum = this.socketdata.bme280?.humidity ?? 0;
-        const co2 = this.socketdata.ens160aht21?.eco2 ?? 0;
-        const lightP = this.socketdata.lightvalP ?? 0;
-        const lightV = this.socketdata.lightvalmv ?? 0;
-
-        // Push all values
-        this.chartData.labels.push(timeLabel);
-        this.chartData.datasets[0]?.data?.push(fan1Val); // Fan Voltage
-        this.chartData.datasets[1]?.data?.push(fan2Val); // Fan2 Voltage
-        this.chartData.datasets[2]?.data?.push(temp);     // Temperature
-        this.chartData.datasets[3]?.data?.push(hum);     // Humidity
-        this.chartData.datasets[4]?.data?.push(co2);     // CO2
-        this.chartData.datasets[5]?.data?.push(lightP);  // Light Power
-        this.chartData.datasets[6]?.data?.push(lightV);  // Light Voltage
-
-        // Keep only the last 50 points
-        /*if (this.chartData.labels.length > 50) {
-          this.chartData.labels.shift();
-          this.chartData.datasets[0]?.data?.shift();
-          this.chartData.datasets[1]?.data?.shift();
-          this.chartData.datasets[2]?.data?.shift();
-          this.chartData.datasets[3]?.data?.shift();
-          this.chartData.datasets[4]?.data?.shift();
-          this.chartData.datasets[5]?.data?.shift();
-          this.chartData.datasets[6]?.data?.shift();
-        }*/
-        this.chart.chart.update();
-
       }
     } catch (e) {
       console.warn('Invalid websocket message', e);
     }
   }
   /* ---------- Slider change handlers ---------- */
-  onSpeedChange(value: string) {                     // <-- changed
-    const num = Number(value);                       // convert to number
+  onSpeedChange(value: string) {
+    const num = Number(value);
     this.api.setSpeed(0, num).subscribe();
   }
-  onSpeed1Change(value: string) {                    // <-- changed
+  onSpeed1Change(value: string) {
     const num = Number(value);
     this.api.setSpeed(1, num).subscribe();
   }
 
-  onLightChange(value: string) {                    // <-- changed
+  onLightChange(value: string) {
     const num = Number(value);
     this.api.setLight(num).subscribe();
   }
 
-  /* ---------- Fan voltage limits (Fan 0 & 1) ---------- */
   submitFan0() {
     const min = Number((document.getElementById('fan0min') as HTMLInputElement)?.value);
     const max = Number((document.getElementById('fan0max') as HTMLInputElement)?.value);
@@ -240,56 +256,53 @@ export class App implements OnInit {
     this.api.setVoltageLimits(1, min, max).subscribe();
   }
 
-  /* ---------- Night mode settings (example) ---------- */
   submitNightMode() {
-    const onHour = Number((document.getElementById('onhour') as HTMLInputElement)?.value);
-    const onMin = Number((document.getElementById('onmin') as HTMLInputElement)?.value);
-    const offHour = Number((document.getElementById('offhour') as HTMLInputElement)?.value);
-    const offMin = Number((document.getElementById('offmin') as HTMLInputElement)?.value);
-    const maxSpeed = Number((document.getElementById('nightmodemaxspeed') as HTMLInputElement)?.value);
+    const onh = Number((document.getElementById('onhour') as HTMLInputElement)?.value);
+    const onm = Number((document.getElementById('onmin') as HTMLInputElement)?.value);
+    const offh = Number((document.getElementById('offhour') as HTMLInputElement)?.value);
+    const offm = Number((document.getElementById('offmin') as HTMLInputElement)?.value);
+    const mspeed = Number((document.getElementById('nightmodemaxspeed') as HTMLInputElement)?.value);
 
     this.api.getCmd({
-      var: 'nightmode',
-      onHour,
-      onMin,
-      offHour,
-      offMin,
-      maxSpeed
+      var: 'fannightmode',
+      onh,
+      onm,
+      offh,
+      offm,
+      mspeed
     }).subscribe();
   }
 
-  /* ---------- Light control (example) ---------- */
   submitLightControlVoltage() {
-    const minV = Number((document.getElementById('lightminv') as HTMLInputElement)?.value);
-    const maxV = Number((document.getElementById('lightmaxv') as HTMLInputElement)?.value);
+    const min = Number((document.getElementById('lightminv') as HTMLInputElement)?.value);
+    const max = Number((document.getElementById('lightmaxv') as HTMLInputElement)?.value);
 
     this.api.getCmd({
       var: 'lightvoltage',
-      minV,
-      maxV
+      min,
+      max
     }).subscribe();
   }
 
   submitLightControlPercentage() {
-    const minP = Number((document.getElementById('lightminp') as HTMLInputElement)?.value);
-    const maxP = Number((document.getElementById('lightmaxp') as HTMLInputElement)?.value);
+    const min = Number((document.getElementById('lightminp') as HTMLInputElement)?.value);
+    const max = Number((document.getElementById('lightmaxp') as HTMLInputElement)?.value);
 
     this.api.getCmd({
-      var: 'lightpercentage',
-      minP,
-      maxP
+      var: 'lightlimitsp',
+      min,
+      max
     }).subscribe();
   }
 
-  /* ---------- Cloud simulation (example) ---------- */
   submitCloud() {
-    const cycle = Number((document.getElementById('cloudcycle') as HTMLInputElement)?.value);
+    const cloudduration = Number((document.getElementById('cloudcycle') as HTMLInputElement)?.value);
     const min = Number((document.getElementById('cloudmin') as HTMLInputElement)?.value);
     const max = Number((document.getElementById('cloudmax') as HTMLInputElement)?.value);
 
     this.api.getCmd({
-      var: 'cloud',
-      cycle,
+      var: 'cloudsim',
+      cloudduration,
       min,
       max
     }).subscribe();
@@ -303,11 +316,11 @@ export class App implements OnInit {
   }
 
   submitTargetTempHum() {
-    const targetTemp = Number((document.getElementById('targettemp') as HTMLInputElement)?.value);
-    const targetHum = Number((document.getElementById('targethum') as HTMLInputElement)?.value);
-    const speedDiff = Number((document.getElementById('speeddif') as HTMLInputElement)?.value);
+    const temp = Number((document.getElementById('targettemp') as HTMLInputElement)?.value);
+    const hum = Number((document.getElementById('targethum') as HTMLInputElement)?.value);
+    const speeddif = Number((document.getElementById('speeddif') as HTMLInputElement)?.value);
 
-    this.api.setTargetTempHum(targetTemp, targetHum, speedDiff).subscribe();
+    this.api.setTargetTempHum(temp, hum, speeddif).subscribe();
   }
 
   onLightAutoChange(checked: boolean) {
@@ -323,31 +336,32 @@ export class App implements OnInit {
   }
 
   submitLightSchedule() {
-  const turnOnHour = Number((document.getElementById('turnlightonhour') as HTMLInputElement)?.value);
-  const turnOnMin  = Number((document.getElementById('turnlightonmin')  as HTMLInputElement)?.value);
-  const turnOffHour = Number((document.getElementById('turnlightoffhour') as HTMLInputElement)?.value);
-  const turnOffMin  = Number((document.getElementById('turnlightoffmin')  as HTMLInputElement)?.value);
+    const onh = Number((document.getElementById('turnlightonhour') as HTMLInputElement)?.value);
+    const onmin = Number((document.getElementById('turnlightonmin') as HTMLInputElement)?.value);
+    const offh = Number((document.getElementById('turnlightoffhour') as HTMLInputElement)?.value);
+    const offmin = Number((document.getElementById('turnlightoffmin') as HTMLInputElement)?.value);
 
-  const enableSunrise = (document.getElementById('enablesunrise') as HTMLInputElement).checked ? 1 : 0;
-  const sunriseHour   = Number((document.getElementById('sunrisehour') as HTMLInputElement)?.value);
-  const sunriseMin    = Number((document.getElementById('sunrisemin')  as HTMLInputElement)?.value);
+    const riseenable = (document.getElementById('enablesunrise') as HTMLInputElement).checked ? 1 : 0;
+    const riseh = Number((document.getElementById('sunrisehour') as HTMLInputElement)?.value);
+    const risemin = Number((document.getElementById('sunrisemin') as HTMLInputElement)?.value);
 
-  const enableSunset  = (document.getElementById('enablesunset') as HTMLInputElement).checked ? 1 : 0;
-  const sunsetHour   = Number((document.getElementById('sunsethour') as HTMLInputElement)?.value);
-  const sunsetMin    = Number((document.getElementById('sunsetmin')  as HTMLInputElement)?.value);
+    const setenable = (document.getElementById('enablesunset') as HTMLInputElement).checked ? 1 : 0;
+    const seth = Number((document.getElementById('sunsethour') as HTMLInputElement)?.value);
+    const setmin = Number((document.getElementById('sunsetmin') as HTMLInputElement)?.value);
 
-  this.api.setLightSchedule({var: 'lightschedule',
-    turnOnHour,
-    turnOnMin,
-    turnOffHour,
-    turnOffMin,
-    enableSunrise,
-    sunriseHour,
-    sunriseMin,
-    enableSunset,
-    sunsetHour,
-    sunsetMin
-  });
-}
+    this.api.setLightSchedule({
+      var: 'lightsettime',
+      onh,
+      onmin,
+      offh,
+      offmin,
+      riseenable,
+      riseh,
+      risemin,
+      setenable,
+      seth,
+      setmin
+    }).subscribe();
+  }
 
 }

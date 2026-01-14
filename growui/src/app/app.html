@@ -282,7 +282,7 @@
 					<div id="battery"></div>
 				</div>
 
-				<div>
+				<div *ngIf="socketdata?.ens160aht21">
 					<div>
 						<input type="number" id="tempdif" [(ngModel)]="deviceState!.tempdif" size="5"><br>
 						<label for="tempdif">Temperature correction for AHT2X Sensor &deg;C</label><br>
