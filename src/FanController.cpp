@@ -1,6 +1,6 @@
 #include "FanController.h"
 #include "DFRobot_GP8403.h"
-#include "config.h"
+
 #include "MyPreferences.h"
 #include "JSON.h"
 

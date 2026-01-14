@@ -2,7 +2,7 @@
 #include "MyPreferences.h"
 
 #include "DFRobot_GP8403.h"
-#include "config.h"
+
 #include "time.h"
 
 DFRobot_GP8403 ldac(&Wire, i2c_light_addr);

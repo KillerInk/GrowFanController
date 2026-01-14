@@ -1,7 +1,7 @@
 #include <Arduino.h>
 #include <FS.h>
 #include <WiFi.h>
-#include "config.h"
+
 #include "mdns.h"
 #include "FanController.h"
 #include "Arduino_JSON.h"
@@ -173,7 +173,7 @@ void setup()
     log_i("connect wifi");
     WiFi.setHostname("Esp32FanController");
     WiFi.mode(WIFI_STA);
-    WiFi.begin(SSID, PW);
+    WiFi.begin(MYSSID, PW);
 
     while (WiFi.status() != WL_CONNECTED)
     {

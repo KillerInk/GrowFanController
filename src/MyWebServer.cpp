@@ -2,7 +2,7 @@
 #include "ESPAsyncWebServer.h"
 #include "MyWebServer.h"
 #include "SPIFFS.h"
-#include "config.h"
+
 #include "SD.h"
 
 AsyncWebServer *server;

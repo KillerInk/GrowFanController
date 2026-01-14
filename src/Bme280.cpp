@@ -3,7 +3,7 @@
 #include "MyMath.h"
 #include "Wire.h"
 #include "MyPreferences.h"
-#include "config.h"
+
 
 Bme280_data data;
 const char *prefName = "Correction";
