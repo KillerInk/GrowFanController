@@ -133,7 +133,7 @@
 
 			<!-- Light control voltage -->
 			<div class="fan-row">
-				
+
 				<!-- Light min Voltage mv -->
 				<div class="pair">
 					<label for="lightminv">Light min Voltage mv</label>
@@ -273,7 +273,8 @@
 			<div>
 				<div id="readgovee">
 					<div>
-						<input type="checkbox" id="enablereadgovee" [(ngModel)]="deviceState!.readgovee" (change)="onReadGoveeChange($event.target.checked)">
+						<input type="checkbox" id="enablereadgovee" [(ngModel)]="deviceState!.readgovee"
+							(change)="onReadGoveeChange($event.target.checked)">
 						<label for="enablereadgovee">Get Temperature and Humidity from Govee
 							H5179</label>
 					</div><br>
@@ -292,6 +293,16 @@
 						<label for="humdif">Humidity correction for AHT2X Sensor %</label><br>
 					</div>
 					<input type="submit" id="targetTempHumDiffSub" value="Submit" (click)="submitTargetTempHumDiff()">
+				</div>
+				<div>
+					<h6>Upload new SPIFFS image</h6>
+					<input type="file" id="spiffsFile" accept=".bin" (change)="onSpiffsFileSelected($event)">
+					<button (click)="uploadSpiffs()">Upload</button>
+				</div>
+				<div>
+					<h6>Upload new Firmware image</h6>
+					<input type="file" id="firmwareFile" accept=".bin" (change)="onFirmwareFileSelected($event)">
+					<button (click)="uploadFirmware()">Upload</button>
 				</div>
 			</div>
 		</div>

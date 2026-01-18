@@ -2,8 +2,10 @@
 #include "ESPAsyncWebServer.h"
 #include "MyWebServer.h"
 #include "SPIFFS.h"
-
+#include <esp_partition.h>
 #include "SD.h"
+#include <FS.h>
+#include <esp_ota_ops.h>
 
 AsyncWebServer *server;
 AsyncWebSocket *ws;
@@ -224,6 +226,35 @@ void getFile(AsyncWebServerRequest *request)
 }
 #endif
 
+static const size_t MAX_SPIFS_UPLOAD = 1024 * 256; // 256 KiB – adjust to your partition size
+
+// Helper: write the uploaded data directly into the SPIFFS partition
+static void writeSpiffsBin(const uint8_t *buf, size_t len)
+{
+    const esp_partition_t *part = esp_partition_find_first(
+        ESP_PARTITION_TYPE_DATA,
+        ESP_PARTITION_SUBTYPE_DATA_SPIFFS,
+        NULL); // first SPIFFS partition
+
+    if (!part)
+    {
+        log_e("SPIFFS partition not found");
+        return;
+    }
+
+    size_t written = 0;
+    esp_err_t err = esp_partition_write(part, 0, buf, len);
+    if (err != ESP_OK)
+    {
+        log_e("esp_partition_write failed: %d", err);
+    }
+    else
+    {
+        written = len;
+        log_i("Written %u bytes to SPIFFS partition", (uint32_t)written);
+    }
+}
+
 void MyWebServer_setup()
 {
     SPIFFS.begin();
@@ -233,6 +264,121 @@ void MyWebServer_setup()
 #ifdef USE_SDCARD
     server->on("/data", HTTP_GET, getFile);
 #endif
+    static const esp_partition_t *spi_part = nullptr;
+
+    server->on("/flashspiffs", HTTP_POST,
+               /* request‑start handler (optional) */
+               [](AsyncWebServerRequest *request)
+               {
+            // Nothing special needed here – just confirm the method
+            if (!request->hasHeader("Content-Type")) {
+                request->send(400, "text/plain", "Missing Content-Type");
+                return;
+            } },
+               /* upload‑handler: (req, filename, index, data, len, final) */
+               [](AsyncWebServerRequest *request, const String &filename, size_t index, uint8_t *data, size_t len, bool final)
+               {
+            // Find the SPIFFS partition once per upload
+            if (index == 0) {
+                spi_part = esp_partition_find_first(
+                    ESP_PARTITION_TYPE_DATA,
+                    ESP_PARTITION_SUBTYPE_DATA_SPIFFS,
+                    NULL);
+                if (!spi_part) {
+                    request->send(500, "text/plain", "SPIFFS partition not found");
+                    return;
+                }
+            }
+
+            // Write the current chunk
+            esp_err_t err = esp_partition_write(spi_part, index, data, len);
+            if (err != ESP_OK) {
+                request->send(500, "text/plain",
+                              "Failed to write to SPIFFS");
+                return;
+            }
+
+            // When the final chunk arrives we finish the upload
+            if (final) {
+                log_i("File %s uploaded (%zu bytes)", filename.c_str(), index + len);
+                request->send(200,
+                              "text/plain",
+                              "File uploaded successfully. Rebooting in 3 seconds...");
+                delay(3000);
+                ESP.restart();
+            } });
+
+    static const esp_partition_t *fw_part = nullptr;
+    static esp_ota_handle_t ota_handle = 0;
+
+    server->on("/flashfirmware", HTTP_POST,
+               /* request‑start handler (optional) */
+               [](AsyncWebServerRequest *request)
+               {
+                   if (!request->hasHeader("Content-Type")) {
+                       request->send(400, "text/plain", "Missing Content-Type");
+                       return;
+                   } },
+               /* upload‑handler: (req, filename, index, data, len, final) */
+               [](AsyncWebServerRequest *request, const String &filename, size_t index, uint8_t *data, size_t len, bool final)
+               {
+                   // Static OTA handle that survives across chunks
+                   static esp_ota_handle_t ota_handle = 0;
+                   static const esp_partition_t *fw_part_const = nullptr;
+
+                   if (index == 0) {                 // first chunk – start new OTA
+                       ota_handle = 0;              // reset any stale handle
+
+                       fw_part_const = esp_partition_find_first(
+                           ESP_PARTITION_TYPE_APP,
+                           ESP_PARTITION_SUBTYPE_APP_OTA_1, NULL);
+
+                       if (!fw_part_const) {
+                           request->send(500, "text/plain",
+                                         "Firmware partition not found");
+                           return;
+                       }
+
+                       esp_err_t err = esp_ota_begin((esp_partition_t *)fw_part_const,
+                                                     OTA_WITH_SEQUENTIAL_WRITES,
+                                                     &ota_handle);
+                       if (err != ESP_OK) {
+                           request->send(500, "text/plain",
+                                         "OTA begin failed: " + String(err));
+                           return;
+                       }
+                   }
+
+                   // Ensure we have a valid handle before writing
+                   if (ota_handle == 0) {
+                       request->send(500, "text/plain", "Invalid OTA handle");
+                       return;
+                   }
+
+                   esp_err_t err = esp_ota_write(ota_handle, data, len);
+                   if (err != ESP_OK) {
+                       request->send(500, "text/plain",
+                                     "OTA write failed: " + String(err));
+                       return;
+                   }
+
+                   if (final) {                     // last chunk
+                       err = esp_ota_end(ota_handle);
+                       if (err == ESP_OK) {
+                           log_i("Firmware %s uploaded (%zu bytes)",
+                                 filename.c_str(), index + len);
+
+                           request->send(200,
+                                         "text/plain",
+                                         "Firmware uploaded successfully. Rebooting in 3 seconds...");
+                           delay(3000);                // give client time to read response
+                           ESP.restart();              // reboot into new firmware
+                       } else {
+                           request->send(500, "text/plain",
+                                         "OTA end failed: " + String(err));
+                       }
+                   } });
+
     server->serveStatic("/", SPIFFS, "/angular-www/").setDefaultFile("index.html");
     server->serveStatic("/", SD, "/");
     // server->serveStatic("/", SPIFFS, "/www/");

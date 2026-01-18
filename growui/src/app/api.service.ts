@@ -194,4 +194,30 @@ export class ApiService {
       catchError(this.handleError)
     );
   }
+
+  flashSpiffs(file: File): Observable<any> {
+    const formData = new FormData();
+    formData.append('file', file, file.name);   // the name is optional
+
+    return this.http.post<string>(
+      `/flashspiffs`,
+      formData,
+      { responseType: 'text' } as any
+    ).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  flashFirmware(file: File): Observable<any> {
+    const formData = new FormData();
+    formData.append('file', file, file.name);   // optional name
+
+    return this.http.post<string>(
+        `/flashfirmware`,
+        formData,
+        { responseType: 'text' } as any
+    ).pipe(
+        catchError(this.handleError)
+    );
+}
 }

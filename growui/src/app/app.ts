@@ -30,6 +30,8 @@ export class App implements OnInit {
   @ViewChild('chart')
   chart?: UIChart
 
+  selectedFile: File | null = null;
+  selectedFileFw: File | null = null;
   chartOptions?: any = {
     animation: false,
     responsive: true,
@@ -364,7 +366,7 @@ export class App implements OnInit {
     }).subscribe();
   }
 
-    submitTargetTempHumDiff() {
+  submitTargetTempHumDiff() {
     const temp = Number((document.getElementById('tempdif') as HTMLInputElement)?.value);
     const hum = Number((document.getElementById('humdif') as HTMLInputElement)?.value);
 
@@ -372,10 +374,59 @@ export class App implements OnInit {
   }
 
   onReadGoveeChange(checked: boolean): void {
-  this.api.setReadGovee(checked).subscribe(
-    () => console.log('ReadGovee setting updated', checked),
-    err => console.error('Failed to update ReadGovee:', err)
-  );
-}
+    this.api.setReadGovee(checked).subscribe(
+      () => console.log('ReadGovee setting updated', checked),
+      err => console.error('Failed to update ReadGovee:', err)
+    );
+  }
 
+  onSpiffsFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files.length) {
+      this.selectedFile = input.files[0];
+      console.log('Chosen file:', this.selectedFile.name);
+    }
+  }
+
+  onFirmwareFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files.length) {
+      this.selectedFileFw = input.files[0];
+      console.log('Chosen file:', this.selectedFileFw.name);
+    }
+  }
+
+  /* ---------- Upload method ----------
+   * Sends the selected file to `/flashspiffs`
+   */
+  uploadSpiffs(): void {
+    if (!this.selectedFile) {
+      alert('Please choose a file first.');
+      return;
+    }
+
+    // Call ApiService.flashSpiffs
+    this.api.flashSpiffs(this.selectedFile).subscribe({
+      next: msg => {
+        console.log('Upload succeeded:', msg);
+        //alert(msg);   // optional user feedback
+      },
+      error: err => {
+        console.error('Upload failed', err);
+        alert(`Error: ${err}`);
+      }
+    });
+  }
+
+  uploadFirmware(): void {
+    if (!this.selectedFileFw) {
+        alert('Please choose a file first.');
+        return;
+    }
+
+    this.api.flashFirmware(this.selectedFileFw).subscribe({
+      next: msg => console.log('Firmware upload succeeded:', msg),
+      error: err => { console.error(err); alert(`Error: ${err}`); }
+    });
+}
 }
