@@ -279,34 +279,46 @@ void MyWebServer_setup()
                [](AsyncWebServerRequest *request, const String &filename, size_t index, uint8_t *data, size_t len, bool final)
                {
             // Find the SPIFFS partition once per upload
-            if (index == 0) {
-                spi_part = esp_partition_find_first(
-                    ESP_PARTITION_TYPE_DATA,
-                    ESP_PARTITION_SUBTYPE_DATA_SPIFFS,
-                    NULL);
-                if (!spi_part) {
-                    request->send(500, "text/plain", "SPIFFS partition not found");
-                    return;
-                }
-            }
+                   if (index == 0) {
+                       spi_part = esp_partition_find_first(
+                           ESP_PARTITION_TYPE_DATA,
+                           ESP_PARTITION_SUBTYPE_DATA_SPIFFS,
+                           NULL);
+                       if (!spi_part) {
+                           request->send(500, "text/plain",
+                                          "SPIFFS partition not found");
+                           return;
+                       }
+                   }
 
-            // Write the current chunk
-            esp_err_t err = esp_partition_write(spi_part, index, data, len);
-            if (err != ESP_OK) {
-                request->send(500, "text/plain",
-                              "Failed to write to SPIFFS");
-                return;
-            }
+                   // Keep track of the current byte offset
+                   static size_t offset = 0;   // <‑‑ added
 
-            // When the final chunk arrives we finish the upload
-            if (final) {
-                log_i("File %s uploaded (%zu bytes)", filename.c_str(), index + len);
-                request->send(200,
-                              "text/plain",
-                              "File uploaded successfully. Rebooting in 3 seconds...");
-                delay(3000);
-                ESP.restart();
-            } });
+                   // Write the current chunk at the correct offset
+                   esp_err_t err = esp_partition_write(spi_part,
+                                                       offset,
+                                                       data,
+                                                       len);
+                   if (err != ESP_OK) {
+                       request->send(500, "text/plain",
+                                     "Failed to write to SPIFFS");
+                       return;
+                   }
+
+                   // Update the offset for the next chunk
+                   offset += len;   // <‑‑ added
+
+                   // When the final chunk arrives we finish the upload
+                   if (final) {
+                       log_i("File %s uploaded (%zu bytes)",
+                             filename.c_str(),
+                             offset);
+                       request->send(200,
+                                     "text/plain",
+                                     "File uploaded successfully. Rebooting in 3 seconds...");
+                       delay(3000);
+                       ESP.restart();
+                   } });
 
     static const esp_partition_t *fw_part = nullptr;
     static esp_ota_handle_t ota_handle = 0;
