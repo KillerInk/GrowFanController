@@ -8,6 +8,7 @@ import { CommonModule } from '@angular/common';
 @Component({
   selector: 'app-chart',
   imports: [UIChart, CommonModule],
+  styleUrl: "./chart.component.scss",
   templateUrl: './chart.component.html',
 })
 export class ChartComponent {
@@ -17,7 +18,7 @@ export class ChartComponent {
   chartOptions: any = {
     animation: false,
     responsive: true,
-    maintainAspectRatio: true,
+    maintainAspectRatio: false,
     scales: {
       x: { display: true, title: { text: 'Time' }, type: 'time', time: { unit: 'second', tooltipFormat: 'HH:mm:ss', displayFormats: { second: 'HH:mm:ss', minute: 'HH:mm', hour: 'HH:mm' } } },
       y: { display: true, title: { text: 'Value' } }
@@ -133,7 +134,9 @@ export class ChartComponent {
         ...commonOpts,
         label,
         backgroundColor: colors[key] + ',0.2',
-        borderColor: colors[key]
+        borderColor: colors[key],
+        yAxisID: key,
+        grid: { display: false }
       });
     });
   }
