@@ -298,11 +298,24 @@
 					<label>Upload new SPIFFS image</label>
 					<input type="file" id="spiffsFile" accept=".bin" (change)="onSpiffsFileSelected($event)">
 					<button (click)="uploadSpiffs()">Upload</button>
+
+					<!-- Progress bar for SPIFFS -->
+					<div *ngIf="spiffsUploadPercent > 0">
+						<progress [value]="spiffsUploadPercent" max="100"></progress>
+						{{ spiffsUploadPercent }}%
+					</div>
 				</div>
+
 				<div>
 					<label>Upload new Firmware image</label>
 					<input type="file" id="firmwareFile" accept=".bin" (change)="onFirmwareFileSelected($event)">
 					<button (click)="uploadFirmware()">Upload</button>
+
+					<!-- Progress bar for firmware -->
+					<div *ngIf="firmwareUploadPercent > 0">
+						<progress [value]="firmwareUploadPercent" max="100"></progress>
+						{{ firmwareUploadPercent }}%
+					</div>
 				</div>
 			</div>
 		</div>

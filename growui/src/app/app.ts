@@ -5,14 +5,14 @@ import { ApiService } from './api.service';
 import { WebsocketService } from './websocket.service';
 import { DeviceState, SocketMsg } from './types';
 import { OnInit } from '@angular/core';
-
+import { HttpEventType, HttpProgressEvent } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { ChartComponent } from './chart/chart.component';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, FormsModule, CommonModule,ChartComponent],
+  imports: [RouterOutlet, FormsModule, CommonModule, ChartComponent],
   templateUrl: './app.html',
   styleUrl: './app.scss'
 })
@@ -61,7 +61,7 @@ export class App implements OnInit {
         : JSON.stringify(message));
       this.socketdata = JSON.parse(cleaned);   // set plain value
       this.cdr.markForCheck();                // notify Angular
-      if(this.socketdata)
+      if (this.socketdata)
         this.chart?.addSocketMessage(this.socketdata);
     } catch (e) {
       console.warn('Invalid websocket message', e);
@@ -231,6 +231,11 @@ export class App implements OnInit {
     }
   }
 
+  /** Progress percentage for SPIFFS upload (0‑100) */
+  spiffsUploadPercent: number = 0;
+  /** Progress percentage for firmware upload (0‑100) */
+  firmwareUploadPercent: number = 0;
+
   /* ---------- Upload method ----------
    * Sends the selected file to `/flashspiffs`
    */
@@ -242,26 +247,39 @@ export class App implements OnInit {
 
     // Call ApiService.flashSpiffs
     this.api.flashSpiffs(this.selectedFile).subscribe({
-      next: msg => {
-        console.log('Upload succeeded:', msg);
-        //alert(msg);   // optional user feedback
+      next: (event) => {
+        /* Handle progress events */
+        if (event.type === HttpEventType.UploadProgress && event.total) {
+          this.spiffsUploadPercent = Math.round(100 * event.loaded / event.total);
+          return; // don't treat as a final response
+        }
+        /* Final response when upload completes */
+        //console.log('Upload succeeded:', event.body);
       },
       error: err => {
         console.error('Upload failed', err);
         alert(`Error: ${err}`);
-      }
+      },
+      complete: () => this.spiffsUploadPercent = 0 // reset after finish
     });
   }
 
   uploadFirmware(): void {
     if (!this.selectedFileFw) {
-        alert('Please choose a file first.');
-        return;
+      alert('Please choose a file first.');
+      return;
     }
 
     this.api.flashFirmware(this.selectedFileFw).subscribe({
-      next: msg => console.log('Firmware upload succeeded:', msg),
-      error: err => { console.error(err); alert(`Error: ${err}`); }
+      next: (event) => {
+        if (event.type === HttpEventType.UploadProgress && event.total) {
+          this.firmwareUploadPercent = Math.round(100 * event.loaded / event.total);
+          return;
+        }
+        //console.log('Firmware upload succeeded:', event.body);
+      },
+      error: err => { console.error(err); alert(`Error: ${err}`); },
+      complete: () => this.firmwareUploadPercent = 0
     });
-}
+  }
 }

@@ -1,6 +1,6 @@
 // src/app/services/api.service.ts
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpParams, HttpErrorResponse } from '@angular/common/http';
+import { HttpClient, HttpParams, HttpErrorResponse, HttpEvent } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 import { environment } from '../environments/environment';
@@ -195,29 +195,37 @@ export class ApiService {
     );
   }
 
-  flashSpiffs(file: File): Observable<any> {
+  flashSpiffs(file: File): Observable<HttpEvent<string>> {   // <-- return HttpEvent
     const formData = new FormData();
-    formData.append('file', file, file.name);   // the name is optional
+    formData.append('file', file, file.name);
 
     return this.http.post<string>(
       `/flashspiffs`,
       formData,
-      { responseType: 'text' } as any
+      {
+        responseType: 'text' as any,
+        observe: 'events',          // emit progress events
+        reportProgress: true       // enable progress reporting
+      }
     ).pipe(
       catchError(this.handleError)
     );
   }
 
-  flashFirmware(file: File): Observable<any> {
+  flashFirmware(file: File): Observable<HttpEvent<any>> {
     const formData = new FormData();
-    formData.append('file', file, file.name);   // optional name
+    formData.append('file', file, file.name);
 
-    return this.http.post<string>(
-        `/flashfirmware`,
-        formData,
-        { responseType: 'text' } as any
+    return this.http.post(
+      `/flashfirmware`,
+      formData,
+      {
+        responseType: 'text' as any,
+        observe: 'events',
+        reportProgress: true
+      }
     ).pipe(
-        catchError(this.handleError)
+      catchError(this.handleError)
     );
-}
+  }
 }
