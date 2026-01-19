@@ -5,7 +5,9 @@
 #include "mdns.h"
 #include "FanController.h"
 #include "Arduino_JSON.h"
+#ifdef GOVEE_BTH5179
 #include "GoveeBTh5179.h"
+#endif
 #ifdef SENSOR_ENS160AHT21
 #include "Ens160Aht2x.h"
 #endif
@@ -20,6 +22,7 @@
 #endif
 #include <nvs_flash.h>
 
+#ifdef GOVEE_BTH5179
 void govee_dataListner(double temp, double hum, int bat)
 {
 
@@ -32,6 +35,7 @@ void govee_dataListner(double temp, double hum, int bat)
     socketmsg["govee"]["battery"] = bat;
     MyWebServer_sendSocketMsg(JSON.stringify(socketmsg));
 }
+#endif
 
 void sendSocketMsg()
 {
@@ -102,7 +106,9 @@ String getSettings()
     myObject["autocontrol"] = FanController_getValues()->autocontrol;
     myObject["targetTemperature"] = FanController_getValues()->targetTemperature;
     myObject["targetHumidity"] = FanController_getValues()->targetHumidity;
+#ifdef GOVEE_BTH5179
     myObject["readgovee"] = GoveeBTh5179_isEnable();
+#endif
     myObject["speeddif"] = FanController_getValues()->filtercompensation;
 #ifdef SENSOR_ENS160AHT21
     myObject["tempdif"] = Ens160Aht2x_getTemperatureDif();
@@ -193,7 +199,9 @@ void setup()
     MyWebServer_getCallbacksStruct()->targettemphum_listner = FanController_setTargetTempHumSpeedDif;
     MyWebServer_getCallbacksStruct()->autocontrol_listner = FanController_setAutoControl;
     MyWebServer_getCallbacksStruct()->getFanControllerSettings = getSettings;
+#ifdef GOVEE_BTH5179
     MyWebServer_getCallbacksStruct()->readgovee_listner = GoveeBTh5179_enable;
+#endif
 #ifdef SENSOR_ENS160AHT21
     MyWebServer_getCallbacksStruct()->setTempHumDif = Ens160Aht2x_setTempHumDif;
 #endif
@@ -239,10 +247,11 @@ void setup()
     FanController_setup();
     log_i("setup lightcontroller");
     LightController_setup();
-
+#ifdef GOVEE_BTH5179
     GoveeBTh5179_setEventListner(govee_dataListner);
     log_i("setup GoveeBTh5179");
     GoveeBTh5179_setup();
+#endif
     log_i("setup done");
 }
 
@@ -250,7 +259,9 @@ long startTime;
 void loop()
 {
     startTime = millis();
+#ifdef GOVEE_BTH5179
     GoveeBTh5179_loop();
+#endif
     FanController_loop();
 
     LightController_loop();

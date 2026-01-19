@@ -1,3 +1,4 @@
+#ifdef GOVEE_BTH5179
 #include "GoveeBTh5179.h"
 #include "NimBLEDevice.h"
 
@@ -128,3 +129,4 @@ bool GoveeBTh5179_isEnable()
 {
     return enable;
 }
+#endif

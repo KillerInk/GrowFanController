@@ -93,6 +93,7 @@ void onCmd(AsyncWebServerRequest *request)
             methcallbacks.autocontrol_listner(autoc.toInt());
         request->send(200);
     }
+#ifdef GOVEE_BTH5179
     else if (variable == "readgovee")
     {
         String autoc = request->arg("val");
@@ -101,6 +102,7 @@ void onCmd(AsyncWebServerRequest *request)
             methcallbacks.readgovee_listner(autoc.toInt());
         request->send(200);
     }
+#endif
     else if (variable == "temphumdif")
     {
         String tmp = request->arg("temp");
@@ -226,35 +228,6 @@ void getFile(AsyncWebServerRequest *request)
 }
 #endif
 
-static const size_t MAX_SPIFS_UPLOAD = 1024 * 256; // 256 KiB – adjust to your partition size
-
-// Helper: write the uploaded data directly into the SPIFFS partition
-static void writeSpiffsBin(const uint8_t *buf, size_t len)
-{
-    const esp_partition_t *part = esp_partition_find_first(
-        ESP_PARTITION_TYPE_DATA,
-        ESP_PARTITION_SUBTYPE_DATA_SPIFFS,
-        NULL); // first SPIFFS partition
-
-    if (!part)
-    {
-        log_e("SPIFFS partition not found");
-        return;
-    }
-
-    size_t written = 0;
-    esp_err_t err = esp_partition_write(part, 0, buf, len);
-    if (err != ESP_OK)
-    {
-        log_e("esp_partition_write failed: %d", err);
-    }
-    else
-    {
-        written = len;
-        log_i("Written %u bytes to SPIFFS partition", (uint32_t)written);
-    }
-}
-
 void MyWebServer_setup()
 {
     SPIFFS.begin();
@@ -319,7 +292,6 @@ void MyWebServer_setup()
                        delay(3000);
                        ESP.restart();
                    } });
-
     static const esp_partition_t *fw_part = nullptr;
     static esp_ota_handle_t ota_handle = 0;
 
@@ -334,7 +306,7 @@ void MyWebServer_setup()
                /* upload‑handler: (req, filename, index, data, len, final) */
                [](AsyncWebServerRequest *request, const String &filename, size_t index, uint8_t *data, size_t len, bool final)
                {
-                   // Static OTA handle that survives across chunks
+                   // Static OTA handle and partition pointer that survive across chunks
                    static esp_ota_handle_t ota_handle = 0;
                    static const esp_partition_t *fw_part_const = nullptr;
 

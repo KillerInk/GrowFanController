@@ -271,7 +271,7 @@
 			</div>
 
 			<div>
-				<div id="readgovee">
+				<div id="readgovee" *ngIf="deviceState!.readgovee">
 					<div>
 						<input type="checkbox" id="enablereadgovee" [(ngModel)]="deviceState!.readgovee"
 							(change)="onReadGoveeChange($event.target.checked)">

@@ -1,3 +1,4 @@
+#ifdef SENSOR_BME280
 #include "Bme280.h"
 #include "BME280I2C.h"
 #include "MyMath.h"
@@ -122,3 +123,4 @@ double Bme280_getVpdLeaf()
 {
     return data.vpdleaf;
 }
+#endif
