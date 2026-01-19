@@ -295,73 +295,76 @@ void MyWebServer_setup()
     static const esp_partition_t *fw_part = nullptr;
     static esp_ota_handle_t ota_handle = 0;
 
-    server->on("/flashfirmware", HTTP_POST,
-               /* request‑start handler (optional) */
-               [](AsyncWebServerRequest *request)
-               {
-                   if (!request->hasHeader("Content-Type")) {
-                       request->send(400, "text/plain", "Missing Content-Type");
-                       return;
-                   } },
-               /* upload‑handler: (req, filename, index, data, len, final) */
-               [](AsyncWebServerRequest *request, const String &filename, size_t index, uint8_t *data, size_t len, bool final)
-               {
-                   // Static OTA handle and partition pointer that survive across chunks
-                   static esp_ota_handle_t ota_handle = 0;
-                   static const esp_partition_t *fw_part_const = nullptr;
+server->on("/flashfirmware", HTTP_POST,
+           /* request‑start handler (optional) */
+           [](AsyncWebServerRequest *request) {
+               if (!request->hasHeader("Content-Type")) {
+                   request->send(400, "text/plain", "Missing Content-Type");
+                   return;
+               } },
+           /* upload‑handler: (req, filename, index, data, len, final) */
+           [](AsyncWebServerRequest *request, const String &filename, size_t index, uint8_t *data, size_t len, bool final) {
+               // Determine the OTA partition that is *not* currently active
+               static esp_ota_handle_t ota_handle = 0;
+               static const esp_partition_t *fw_part = nullptr;
 
-                   if (index == 0) {                 // first chunk – start new OTA
-                       ota_handle = 0;              // reset any stale handle
+               const esp_partition_t *active_part = esp_ota_get_running_partition();
 
-                       fw_part_const = esp_partition_find_first(
-                           ESP_PARTITION_TYPE_APP,
-                           ESP_PARTITION_SUBTYPE_APP_OTA_1, NULL);
+               // Choose the opposite OTA slot (APP_OTA_0 ↔ APP_OTA_1)
+               const esp_partition_t *target_part = nullptr;
+               if (active_part && active_part->subtype == ESP_PARTITION_SUBTYPE_APP_OTA_0) {
+                   target_part = esp_partition_find_first(ESP_PARTITION_TYPE_APP, ESP_PARTITION_SUBTYPE_APP_OTA_1, nullptr);
+                   log_i("flash to ota1");
+               } else {
+                   target_part = esp_partition_find_first(ESP_PARTITION_TYPE_APP, ESP_PARTITION_SUBTYPE_APP_OTA_0, nullptr);
+                   log_i("flash to ota0");
+               }
 
-                       if (!fw_part_const) {
-                           request->send(500, "text/plain",
-                                         "Firmware partition not found");
-                           return;
-                       }
+               if (!target_part) {
+                   request->send(500, "text/plain", "Target OTA partition not found");
+                   return;
+               }
 
-                       esp_err_t err = esp_ota_begin((esp_partition_t *)fw_part_const,
-                                                     OTA_WITH_SEQUENTIAL_WRITES,
-                                                     &ota_handle);
-                       if (err != ESP_OK) {
-                           request->send(500, "text/plain",
-                                         "OTA begin failed: " + String(err));
-                           return;
-                       }
-                   }
-
-                   // Ensure we have a valid handle before writing
-                   if (ota_handle == 0) {
-                       request->send(500, "text/plain", "Invalid OTA handle");
-                       return;
-                   }
-
-                   esp_err_t err = esp_ota_write(ota_handle, data, len);
+               // First chunk: start OTA on the selected partition
+               if (index == 0) {
+                   ota_handle = 0;
+                   esp_err_t err = esp_ota_begin(target_part, OTA_WITH_SEQUENTIAL_WRITES, &ota_handle);
                    if (err != ESP_OK) {
-                       request->send(500, "text/plain",
-                                     "OTA write failed: " + String(err));
+                       request->send(500, "text/plain", "OTA begin failed: " + String(err));
                        return;
                    }
+                   fw_part = target_part;   // keep the handle for later reference if needed
+               }
 
-                   if (final) {                     // last chunk
-                       err = esp_ota_end(ota_handle);
-                       if (err == ESP_OK) {
-                           log_i("Firmware %s uploaded (%zu bytes)",
-                                 filename.c_str(), index + len);
+               // Ensure we have a valid OTA handle before writing
+               if (ota_handle == 0) {
+                   request->send(500, "text/plain", "Invalid OTA handle");
+                   return;
+               }
 
-                           request->send(200,
-                                         "text/plain",
-                                         "Firmware uploaded successfully. Rebooting in 3 seconds...");
-                           delay(3000);                // give client time to read response
-                           ESP.restart();              // reboot into new firmware
-                       } else {
-                           request->send(500, "text/plain",
-                                         "OTA end failed: " + String(err));
-                       }
-                   } });
+               // Write the current chunk
+               esp_err_t err = esp_ota_write(ota_handle, data, len);
+               if (err != ESP_OK) {
+                   request->send(500, "text/plain", "OTA write failed: " + String(err));
+                   return;
+               }
+
+               // Final chunk – finish OTA, mark the new partition as bootable and reboot
+               if (final) {
+                   err = esp_ota_end(ota_handle);
+                   if (err == ESP_OK) {
+                       // Set the newly written OTA partition as the next boot partition
+                       esp_ota_set_boot_partition(target_part);
+                       request->send(200, "text/plain",
+                                    "Firmware uploaded successfully. Rebooting in 3 seconds...");
+                       delay(3000);
+                       ESP.restart();
+                   } else {
+                       request->send(500, "text/plain", "OTA end failed: " + String(err));
+                   }
+               }
+           });
+
 
     server->serveStatic("/", SPIFFS, "/angular-www/").setDefaultFile("index.html");
     server->serveStatic("/", SD, "/");
