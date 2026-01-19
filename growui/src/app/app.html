@@ -295,12 +295,12 @@
 					<input type="submit" id="targetTempHumDiffSub" value="Submit" (click)="submitTargetTempHumDiff()">
 				</div>
 				<div>
-					<h6>Upload new SPIFFS image</h6>
+					<label>Upload new SPIFFS image</label>
 					<input type="file" id="spiffsFile" accept=".bin" (change)="onSpiffsFileSelected($event)">
 					<button (click)="uploadSpiffs()">Upload</button>
 				</div>
 				<div>
-					<h6>Upload new Firmware image</h6>
+					<label>Upload new Firmware image</label>
 					<input type="file" id="firmwareFile" accept=".bin" (change)="onFirmwareFileSelected($event)">
 					<button (click)="uploadFirmware()">Upload</button>
 				</div>
@@ -320,7 +320,7 @@
 		</div>
 
 		<div>
-			<p-chart #chart id="chart" [data]="chartData" [options]="chartOptions"></p-chart>
+			<app-chart #chart></app-chart>
 		</div>
 	</div>
 </ng-container>
