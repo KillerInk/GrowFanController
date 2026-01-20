@@ -4,6 +4,8 @@ import { UIChart } from 'primeng/chart';
 import { SocketMsg } from '../types';
 import 'chartjs-adapter-date-fns';
 import { CommonModule } from '@angular/common';
+import { Chart } from 'chart.js';
+import { LegendItem } from 'chart.js';
 
 @Component({
   selector: 'app-chart',
@@ -19,15 +21,41 @@ export class ChartComponent {
     animation: false,
     responsive: true,
     maintainAspectRatio: false,
+    interaction: { intersect: false, mode: 'index' },
+
+    plugins: {
+      legend: { display: true, onClick: (e: any, legendItem: any, legend: any) => this.onLegendClick(e, legendItem, legend) },
+    },
+
     scales: {
       x: { display: true, title: { text: 'Time' }, type: 'time', time: { unit: 'second', tooltipFormat: 'HH:mm:ss', displayFormats: { second: 'HH:mm:ss', minute: 'HH:mm', hour: 'HH:mm' } } },
-      y: { display: true, title: { text: 'Value' } }
     }
   };
 
   /** Internal chart data – initialized on first message */
   chartData: any = { labels: [], datasets: [] };
   private initialized = false;
+
+  private onLegendClick(e: any, legendItem: any, legend: any) {
+    const ci = legend.chart;
+    const datasetIndex = legendItem.datasetIndex;
+
+
+    // Toggle visibility
+    const meta = ci.getDatasetMeta(datasetIndex);
+    if (meta.hidden === null) {
+      // First time clicking – hide the dataset
+      meta.hidden = true;
+      this.chartOptions.scales[meta.yAxisID].display = false;
+    } else {
+      // Subsequent clicks toggle the hidden flag
+      meta.hidden = !meta.hidden;
+      this.chartOptions.scales[meta.yAxisID].display = !this.chartOptions.scales[meta.yAxisID].display
+    }
+    ci.update();
+
+    return false; // Prevent default legend click handling
+  }
 
   /** Public method called by parent component with raw socket data */
   addSocketMessage(msg: SocketMsg): void {
@@ -103,19 +131,22 @@ export class ChartComponent {
       humFromEns: 'yHumFromEns'
     };
 
-     const colors: Record<string, string> = {
-      voltage0:   'rgba(255,99,132,1)',   // red – fan voltage
-      voltage1:   'rgba(54,162,235,1)',   // blue – second fan voltage
-      temperature:'rgba(75,192,192,1)',    // teal – ambient temp
-      humidity:   'rgba(153,102,255,1)',  // purple – humidity
-      co2:        'rgba(255,159,64,1)',   // orange – CO₂ ppm
+    const colors: Record<string, string> = {
+      voltage0: 'rgba(255,99,132,1)',   // red – fan voltage
+      voltage1: 'rgba(54,162,235,1)',   // blue – second fan voltage
+      temperature: 'rgba(75,192,192,1)',    // teal – ambient temp
+      humidity: 'rgba(153,102,255,1)',  // purple – humidity
+      co2: 'rgba(255,159,64,1)',   // orange – CO₂ ppm
       lightPower: 'rgba(199,199,199,1)',  // gray – light power %
-      lightVoltage:'rgba(83,102,255,1)',  // indigo – light voltage mV
-      tempFromEns:'rgba(50,205,50,1)',     // green – ENS temperature
+      lightVoltage: 'rgba(83,102,255,1)',  // indigo – light voltage mV
+      tempFromEns: 'rgba(50,205,50,1)',     // green – ENS temperature
       humFromEns: 'rgba(218,165,32,1)'    // goldenrod – ENS humidity
     };
 
-    Object.entries(validFields).forEach(([key, _]) => {
+    Object.entries(validFields).forEach(([key, _], index) => {
+
+
+
       const commonOpts = { type: 'line', data: [], tension: 0.3 };
       let label = '';
       switch (key) {
@@ -133,12 +164,27 @@ export class ChartComponent {
       this.chartData.datasets.push({
         ...commonOpts,
         label,
+        display: true,
         backgroundColor: colors[key] + ',0.2',
         borderColor: colors[key],
-        yAxisID: key,
-        grid: { display: false }
+        yAxisID: yAxisIds[key],
       });
+
+      if (!this.chartOptions.scales[yAxisIds[key]]) {
+        const position = index % 2 === 0 ? 'left' : 'right';
+        this.chartOptions.scales[yAxisIds[key]] = {
+          position,
+          title: { display: false },
+          ticks: {
+            color: colors[key],
+          },
+          grid: { drawOnChartArea: false },
+          display: true,
+        }
+      }
+
     });
+
   }
 }
 
