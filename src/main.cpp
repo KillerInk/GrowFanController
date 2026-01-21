@@ -23,17 +23,18 @@
 #include <nvs_flash.h>
 
 #ifdef GOVEE_BTH5179
+typedef struct
+{
+    double temp, hum, bat;
+} govee_data;
+
+govee_data h5179_data{.temp = 0, .hum = 0, .bat = 0};
+
 void govee_dataListner(double temp, double hum, int bat)
 {
-
-    JSONVar socketmsg;
-    char buf[64];
-    snprintf(buf, sizeof buf, "%.2f", temp);
-    socketmsg["govee"]["temperatur"] = buf;
-    snprintf(buf, sizeof buf, "%.2f", hum);
-    socketmsg["govee"]["humidity"] = buf;
-    socketmsg["govee"]["battery"] = bat;
-    MyWebServer_sendSocketMsg(JSON.stringify(socketmsg));
+    h5179_data.temp = temp;
+    h5179_data.hum = hum;
+    h5179_data.bat = bat;
 }
 #endif
 
@@ -42,6 +43,16 @@ void sendSocketMsg()
     JSONVar socketmsg;
     char buf[64];
     int ret;
+#ifdef GOVEE_BTH5179
+    if (h5179_data.temp > 0 && h5179_data.hum > 0 && h5179_data.bat > 0)
+    {
+        snprintf(buf, sizeof buf, "%.2f", h5179_data.temp);
+        socketmsg["govee"]["temperatur"] = buf;
+        snprintf(buf, sizeof buf, "%.2f", h5179_data.hum);
+        socketmsg["govee"]["humidity"] = buf;
+        socketmsg["govee"]["battery"] = h5179_data.bat;
+    }
+#endif
 #ifdef SENSOR_BME280
     ret = snprintf(buf, sizeof buf, "%.2f", Bme280_getTemperature());
     socketmsg["bme280"]["temperatur"] = buf;

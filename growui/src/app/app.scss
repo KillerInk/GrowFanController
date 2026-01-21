@@ -1,107 +1,279 @@
-input[type="range"] {
-  width: 100%;
+/* Base Styles */
+:root {
+  --primary-color: #4CAF50;
+  /* Brighter green for better visibility */
+  --secondary-color: #66BB6A;
+  /* Lighter green for hover states */
+  --background-color: #121212;
+  /* Darker background for contrast */
+  --card-bg: rgba(30, 30, 30, 0.9);
+  /* Slightly lighter card background */
+  --text-color: #E0E0E0;
+  /* Lighter text color */
+  --border-color: rgba(150, 150, 150, 0.3);
+  /* Subtle border */
+  --accent-color: #FF9800;
+  /* Orange accent for important elements */
 }
 
-.slider {
-  -webkit-appearance: none;
-  /* Override default CSS styles */
-  appearance: none;
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: var(--text-color);
+  line-height: 1.4;
+  background-color: var(--background-color);
+
+}
+
+/* ---------- Layout & Spacing ----------
+   Reduced padding, gaps, and widths for a tighter UI */
+.mybody {
+  /* Smaller outer padding */
+
+  padding: 8px;
+
+  margin: 0 auto;
+}
+
+.container {
+  display: flex;
+  flex-direction: column;
+  /* Less vertical gap between cards */
+  gap: 6px;
+  align-items: center;
+}
+
+/* ---------- Cards ----------
+   Minimal internal spacing and margin */
+.card {
+  background-color: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  /* Shrink card interior */
+  padding: 6px;
+  /* Less separation between cards */
+  margin-bottom: 6px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.section-title {
+  font-size: 1rem;
+  /* Slightly smaller title */
+  font-weight: bold;
+  /* Reduced bottom border padding */
+  margin-bottom: 5px;
+  color: var(--primary-color);
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 4px;
+}
+
+.grid-layout {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 8px;
+}
+
+/* Sliders */
+.slider-container {
+  margin-bottom: 8px;
+}
+
+input[type="range"] {
   width: 100%;
-  /* Full-width */
-  height: 25px;
-  /* Specified height */
-  background: #d3d3d3;
-  /* Grey background */
+  height: 6px;
+  -webkit-appearance: none;
+  background: #444;
+  border-radius: 3px;
   outline: none;
-  /* Remove outline */
-  opacity: 0.7;
-  /* Set transparency (for mouse-over effects on hover) */
-  -webkit-transition: .2s;
-  /* 0.2 seconds transition on hover */
+  opacity: 0.9;
   transition: opacity .2s;
 }
 
-/* Mouse-over effects */
-.slider:hover {
+input[type="range"]:hover {
   opacity: 1;
-  /* Fully shown on mouse-over */
 }
 
-/* The slider handle (use -webkit- (Chrome, Opera, Safari, Edge) and -moz- (Firefox) to override default look) */
-.slider::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  /* Override default look */
-  appearance: none;
-  width: 25px;
-  /* Set a specific slider handle width */
-  height: 25px;
-  /* Slider handle height */
-  background: #04AA6D;
-  /* Green background */
-  cursor: pointer;
-  /* Cursor on hover */
-}
-
+.slider::-webkit-slider-thumb,
 .slider::-moz-range-thumb {
-  width: 25px;
-  /* Set a specific slider handle width */
-  height: 25px;
-  /* Slider handle height */
-  background: #04AA6D;
-  /* Green background */
+  -webkit-appearance: none;
+  appearance: none;
+  /* Smaller thumb for tighter UI */
+  width: 10px;
+  height: 10px;
+  background: var(--primary-color);
+  border-radius: 50%;
   cursor: pointer;
-  /* Cursor on hover */
+  box-shadow: 0 0 2px rgba(76, 175, 80, 0.5);
 }
 
-div.a {
+/* Form Controls */
+.label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 500;
+}
+
+.input-field {
+
+  /* Reduced padding for compactness */
+  padding: 4px;
+  border-radius: 2px;
+  border: 1px solid #555;
+  background-color: rgba(255, 255, 255, 0.1);
+  color: var(--text-color);
+}
+
+.input-field:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.3);
+}
+
+/* Buttons */
+.button {
+  display: inline-block;
+  padding: 8px 16px;
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s;
   margin-top: 10px;
-  margin-bottom: 10px;
-  padding-top: 10px;
-  padding-bottom: 10px;
-  outline: 1px solid black;
-  width: 600px;
 }
 
+.button:hover {
+  background-color: var(--secondary-color);
+  transform: translateY(-1px);
+}
+
+/* Checkbox Styles */
+.checkbox-container {
+  display: flex;
+  align-items: center;
+  margin-bottom: 6px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.checkbox {
+  width: 18px;
+  height: 18px;
+  margin-right: 8px;
+  accent-color: var(--primary-color);
+}
+
+/* Flex Layout */
 .flex-container {
   display: flex;
-  display: flex;
-  flex-direction: row;
   flex-wrap: wrap;
+  gap: 4px;
 }
 
-.flex-container>div {
-  background-color: rgba(110, 110, 110, 0.8);
-  border: 1px solid rgba(0, 0, 0, 0.8);
-  padding: 5px;
-  font-size: 15px;
-  margin: 5px;
-  min-width: 150px;
-  line-height: 20px;
-  flex: auto auto auto
+.flex-item {
+  background-color: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  /* Tighter padding and width for compactness */
+  padding: 4px;
+  /* smaller than before */
+  //flex: 0 1 auto;
+  /* allow shrinking */
 }
 
-.mybody
-{
-  background-color: rgb(70, 70, 70);
-  margin:0 auto; max-width:800px;
-}
-
-.fan-row {
-  display: flex;
-  flex-direction: column;   /* stack pairs vertically */
-}
-
+/* Pair Layout */
 .pair {
   display: flex;
-  justify-content: space-between;   /* label left, input right */
+  flex-wrap: wrap;
+  justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;                /* spacing between rows */
+  margin-bottom: 3px;
 }
 
 .left-label {
   text-align: left;
+  /* Reduced label width */
+  font-size: 0.75rem;
+  /* Smaller label text */
 }
 
 .right-input {
-  width: auto;                     /* keep natural width */
+  padding: 6px;
+  border-radius: 4px;
+  border: 1px solid #555;
+  width: 37%;
+}
+
+/* Status Grid */
+.status-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 4px;
+  margin-top: 5px;
+}
+
+/* Progress Bar */
+.progress-container {
+  /* Reduced vertical spacing above progress bar */
+  margin-top: 4px;
+}
+
+progress {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background-color: #444;
+}
+
+progress::-webkit-progress-value {
+  background-color: var(--primary-color);
+  border-radius: 3px;
+}
+
+/* File Upload */
+.file-upload {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  /* Reduced bottom margin for compactness */
+  margin-bottom: 4px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .mybody {
+    max-width: 98%;
+    padding: 4px;
+  }
+
+  .flex-item {
+    min-width: 100%;
+  }
+
+  .status-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.card {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* Highlight important values */
+.highlight-value {
+  color: var(--accent-color);
+  font-weight: bold;
 }

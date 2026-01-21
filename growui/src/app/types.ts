@@ -71,6 +71,13 @@ export interface DeviceState extends FanValues, LightValues {}
 // "lightstate":0,
 // "vpdair":"1.74"}
 export interface SocketMsg {
+
+  govee?:
+  {
+    temp: string;
+    hum: string;
+    bat: string;
+  }
   /** Optional BME280 sensor data */
   bme280?: {
     temperatur: string;   // e.g. "23.45"
