@@ -1,2 +1,6 @@
 <!-- growui/src/app/chart/chart.component.html -->
+ <div #chartContainer (wheel)="onMouseWheel($event)" (mousedown)="onMouseDown($event)"
+                    (mouseup)="onMouseUp($event)" (mousemove)="onMouseMove($event)"
+                    (mouseenter)="isMouseOverChart = true" (mouseleave)="isMouseOverChart = false">
 <p-chart #chart [data]="chartData" [options]="chartOptions"></p-chart>
+</div>

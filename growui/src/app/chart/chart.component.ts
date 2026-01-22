@@ -1,5 +1,5 @@
 /* growui/src/app/chart/chart.component.ts */
-import { Component, Input, ViewChild } from '@angular/core';
+import { Component, ElementRef, Input, ViewChild } from '@angular/core';
 import { UIChart } from 'primeng/chart';
 import { SocketMsg } from '../types';
 import 'chartjs-adapter-date-fns';
@@ -15,7 +15,13 @@ import { LegendItem } from 'chart.js';
 })
 export class ChartComponent {
   @ViewChild('chart') chart?: UIChart;
+  @ViewChild('chartContainer') chartContainer?: ElementRef;
 
+  private visibleItemCount = 0;
+  private itemPosition = 0;
+  private mousebuttonpressed = false;
+  private mousestartposition = 0;
+  public isMouseOverChart = false;
   /** Chart configuration – can be set externally if needed */
   chartOptions: any = {
     animation: false,
@@ -57,6 +63,117 @@ export class ChartComponent {
     return false; // Prevent default legend click handling
   }
 
+  private get zoomPanFactor(): number {
+    return Math.max(1, Math.floor(this.visibleItemCount / 40));
+  }
+
+  onMouseWheel(event: WheelEvent) {
+    if (!this.isMouseOverChart) return;
+    const factor = this.zoomPanFactor;
+    if (event.deltaY > 0)
+      this.visibleItemCount += factor;
+    else
+      this.visibleItemCount -= factor;
+
+    this.enforceVisibleItemBounds();
+    this.setTimeLimits();
+    event.preventDefault();
+  }
+
+  onMouseDown(event: MouseEvent) {
+    if (!this.isMouseOverChart) return;
+    this.mousebuttonpressed = true;
+    this.mousestartposition = event.pageX;
+    console.log("mousedown");
+    return false;
+  }
+
+  onMouseUp(event: MouseEvent) {
+    if (!this.isMouseOverChart) return;
+    this.mousebuttonpressed = false;
+    this.mousestartposition = 0;
+    console.log("mouseup");
+    return true
+  }
+
+  private stepcount = 0;
+
+  onMouseMove(event: MouseEvent) {
+    if (!this.isMouseOverChart) return;
+    const factor = this.zoomPanFactor;
+    if (this.mousebuttonpressed && this.stepcount == 1) {
+      if (this.mousestartposition > event.pageX) {
+        this.itemPosition += factor;
+        this.mousestartposition = event.pageX;
+      }
+      else if (this.mousestartposition < event.pageX) {
+        this.itemPosition -= factor;
+        this.mousestartposition = event.pageX;
+      }
+      this.stepcount = 0;
+
+      if (this.itemPosition > 0)
+        this.itemPosition = 0;
+    } else if (this.mousebuttonpressed)
+      this.stepcount++;
+
+    this.setTimeLimits();
+    return false;
+  }
+
+  private enforceVisibleItemBounds() {
+    const total = this.chartData.labels.length;
+    if (total === 0) { return; }
+
+    // Ensure we never show more points than available
+    if (this.visibleItemCount > total) {
+      this.visibleItemCount = total;
+    }
+    // Minimum visible items is 5 unless fewer points exist
+    const minVisible = Math.min(5, total);
+    if (this.visibleItemCount < minVisible) {
+      this.visibleItemCount = minVisible;
+    }
+
+    // Keep itemPosition within valid bounds
+    const maxOffset = total - this.visibleItemCount;
+    if (this.itemPosition > 0) {
+      this.itemPosition = Math.min(this.itemPosition, maxOffset);
+    } else {
+      this.itemPosition = 0;
+    }
+  }
+
+  private setTimeLimits() {
+    // Updated logic to correctly handle limited data points
+    const total = this.chartData.labels.length;
+    if (total === 0) { return; }
+
+    let minIndex = (total - this.visibleItemCount) + this.itemPosition;
+
+    // Clamp minIndex to valid range
+    if (minIndex < 0) {
+      minIndex = 0;
+      this.itemPosition = Math.min(0, this.itemPosition);
+    } else if (minIndex > total - 1) {
+      minIndex = total - 1;
+    }
+
+    // Determine maxIndex based on visibleItemCount
+    let maxIndex = minIndex + this.visibleItemCount;
+
+    if (maxIndex > total) {
+      maxIndex = total;
+    }
+
+    const minLabel = this.chartData.labels[minIndex];
+    const maxLabel = this.chartData.labels[maxIndex - 1] ?? this.chartData.labels[total - 1];
+
+    this.chartOptions.scales.x.min = minLabel;
+    this.chartOptions.scales.x.max = maxLabel;
+    (this.chart?.chart as any)?.update();
+  }
+
   /** Public method called by parent component with raw socket data */
   addSocketMessage(msg: SocketMsg): void {
     if (!this.initialized) {
@@ -77,6 +194,8 @@ export class ChartComponent {
       msg.ens160aht21?.temperatur ?? 0,
       msg.ens160aht21?.humidity ?? 0
     ];
+    const prevTotal = this.chartData.labels.length;
+    const wasFullView = (this.visibleItemCount === prevTotal) && this.itemPosition === 0;
 
     this.chartData.labels.push(timeLabel);
     values.forEach((v, idx) => {
@@ -91,7 +210,11 @@ export class ChartComponent {
       this.chartData.labels.shift();
       this.chartData.datasets.forEach((ds: any) => ds?.data?.shift());
     }
-
+    this.enforceVisibleItemBounds();
+    if (wasFullView) {
+      this.visibleItemCount = this.chartData.labels.length;
+    }
+    this.setTimeLimits();
     this.chart?.chart.update();
   }
 
