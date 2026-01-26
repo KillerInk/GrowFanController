@@ -147,18 +147,25 @@ export class ChartComponent {
     if (this.visibleItemCount > total) {
       this.visibleItemCount = total;
     }
+
+    const maxVisible = Math.min(720, total);
+    if (this.visibleItemCount > maxVisible) {
+      this.visibleItemCount = maxVisible;
+    }
     // Minimum visible items is 5 unless fewer points exist
     const minVisible = Math.min(5, total);
     if (this.visibleItemCount < minVisible) {
       this.visibleItemCount = minVisible;
     }
 
-    // Keep itemPosition within valid bounds
+    // Keep itemPosition within valid bounds – allow negative offsets
     const maxOffset = total - this.visibleItemCount;
-    if (this.itemPosition > 0) {
-      this.itemPosition = Math.min(this.itemPosition, maxOffset);
+    if (this.itemPosition < 0) {
+      // Offset back cannot exceed the maximum possible offset
+      this.itemPosition = Math.max(this.itemPosition, -maxOffset);
     } else {
-      this.itemPosition = 0;
+      // Offset forward limited by maxOffset
+      this.itemPosition = Math.min(this.itemPosition, maxOffset);
     }
   }
 
@@ -263,7 +270,7 @@ export class ChartComponent {
 
               this.chartData.labels.push(timeLabel);
               values.forEach((v: number, idx: number) => {
-                const dsIdx = colIdxToDsIdx[idx+1];
+                const dsIdx = colIdxToDsIdx[idx + 1];
                 if (dsIdx === undefined) return; // skip unmapped columns
                 const ds = this.chartData.datasets[dsIdx];
                 if (ds && Array.isArray(ds.data)) {
@@ -348,6 +355,13 @@ export class ChartComponent {
     // if (this.chartData.labels.length > 50) { … }
 
     this.enforceVisibleItemBounds();
+    if (!wasFullView && this.itemPosition < 0) {
+      // Move the offset back one more to keep the same earliest point
+      this.itemPosition -= 1;
+      // Clamp after adjustment
+      const maxOffset = this.chartData.labels.length - this.visibleItemCount;
+      this.itemPosition = Math.max(this.itemPosition, -maxOffset);
+    }
     if (wasFullView) {
       this.visibleItemCount = this.chartData.labels.length;
     }
@@ -417,7 +431,13 @@ export class ChartComponent {
 
     Object.entries(validFields).forEach(([key, _], index) => {
 
-      const commonOpts = { type: 'line', data: [], tension: 0.3 };
+      const commonOpts = {
+        type: 'line', data: [],
+        borderWidth: 1,
+        pointRadius: 0,
+        pointHoverRadius: 0,
+        tension: 0
+      };
       let label = '';
       switch (key) {
         case 'voltage0': label = 'Fan Voltage'; break;
