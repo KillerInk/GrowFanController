@@ -27,6 +27,10 @@ export class ChartComponent {
   private mousestartposition = 0;
   public isMouseOverChart = false;
 
+  private loadedHours: Set<string> = new Set();
+  /* Flag to prevent overlapping load requests */
+  private loadingPreviousHour = false;
+
   private datasetKeyIndexMap: Record<string, number> = {};
   /** Chart configuration – can be set externally if needed */
   chartOptions: any = {
@@ -207,6 +211,7 @@ export class ChartComponent {
     this.chartOptions.scales.x.min = minLabel;
     this.chartOptions.scales.x.max = maxLabel;
     (this.chart?.chart as any)?.update();
+    this.checkForPreviousHour();
   }
 
   /**
@@ -362,9 +367,6 @@ export class ChartComponent {
       const maxOffset = this.chartData.labels.length - this.visibleItemCount;
       this.itemPosition = Math.max(this.itemPosition, -maxOffset);
     }
-    if (wasFullView) {
-      this.visibleItemCount = this.chartData.labels.length;
-    }
     this.setTimeLimits();
     this.chart?.chart.update();
   }
@@ -475,6 +477,39 @@ export class ChartComponent {
         }
       }
     });
+  }
+
+  private async checkForPreviousHour(): Promise<void> {
+    if (this.loadingPreviousHour) return;
+    const total = this.chartData.labels.length;
+    if (!total) return;
+
+    // We are at the oldest point when minIndex === 0
+    const minIndex = (total - this.visibleItemCount) + this.itemPosition;
+    if (minIndex !== 0) return; // not at the start
+
+    const firstLabelMs = this.chartData.labels[0];
+    const firstDate = new Date(firstLabelMs);
+    firstDate.setHours(firstDate.getHours() - 1);   // move to previous hour
+
+    const year = firstDate.getFullYear().toString();
+    const month = (firstDate.getMonth() + 1).toString().padStart(2, '0');
+    const day = firstDate.getDate().toString().padStart(2, '0');
+    const hour = firstDate.getHours().toString().padStart(2, '0');
+
+    const key = `${year}-${month}-${day}-${hour}`;
+    if (this.loadedHours.has(key)) return;
+
+    this.loadingPreviousHour = true;
+    try {
+      await this.loadHistoricalData(year, month, day, hour);
+      /* NEW: after adding older data keep the view at the oldest point */
+      this.itemPosition = -(this.chartData.labels.length - this.visibleItemCount);
+      this.enforceVisibleItemBounds();
+      this.loadedHours.add(key);
+    } finally {
+      this.loadingPreviousHour = false;
+    }
   }
 }
 
