@@ -50,7 +50,8 @@ export class ChartComponent {
           displayFormats: { second: 'HH:mm:ss', minute: 'HH:mm', hour: 'HH:mm' },
           /* Tell Chart.js that the expected step is 1 second (1000 ms) */
           stepSize: 1000,
-        }
+        },
+        ticks: { maxTicksLimit: 100 }
       },
     }
   };
@@ -166,6 +167,16 @@ export class ChartComponent {
     const total = this.chartData.labels.length;
     if (total === 0) { return; }
 
+    /* ---- NEW: special case for a single point ---- */
+    if (total === 1) {
+      const label = this.chartData.labels[0];
+      // give the x‑axis a small window around the timestamp
+      this.chartOptions.scales.x.min = label - 10000;
+      this.chartOptions.scales.x.max = label + 10000;
+      (this.chart?.chart as any)?.update();
+      return;
+    }
+
     let minIndex = (total - this.visibleItemCount) + this.itemPosition;
 
     // Clamp minIndex to valid range
@@ -200,10 +211,6 @@ export class ChartComponent {
    * @param hour  e.g. "12" (24‑hour format)
    */
 
-
-
-  // ... existing code ...
-
   private loadHistoricalData(year: string, month: string, day: string, hour: string): Promise<void> {
     const maxGapMs = 10000; // increase allowed gap to 10 seconds (or Infinity)
     //time,tempE,humE,avgTempE,avgHumE,eco2,aqi,tvoc,vpdAirE,volt0,volt1,lightP,lightMv
@@ -212,7 +219,7 @@ export class ChartComponent {
       volt1: 'yVoltage1',
       tempB: 'yTemperature',
       humB: 'yHumidity',
-      co2: 'yCO2',
+      eco2: 'yCO2',
       lightP: 'yLightPower',
       lightMv: 'yLightVoltage',
       tempE: 'yTempFromEns',
@@ -222,7 +229,7 @@ export class ChartComponent {
       await firstValueFrom(
         this.apiService.downloadCsv(year, month, day, hour).pipe(
           tap((csv: string) => {  // <-- type the csv
-            const lines = csv.split('\n');
+            const lines = csv.split('\r\n');
             const header = lines.shift()?.split(',') || [];
 
             /* Build a mapping from CSV column index → dataset index */
@@ -256,7 +263,7 @@ export class ChartComponent {
 
               this.chartData.labels.push(timeLabel);
               values.forEach((v: number, idx: number) => {
-                const dsIdx = colIdxToDsIdx[idx];
+                const dsIdx = colIdxToDsIdx[idx+1];
                 if (dsIdx === undefined) return; // skip unmapped columns
                 const ds = this.chartData.datasets[dsIdx];
                 if (ds && Array.isArray(ds.data)) {
@@ -302,17 +309,7 @@ export class ChartComponent {
       this.initializeDatasets(msg);
       this.initialized = true;
     }
-
-    /* ---- NEW: make sure any pending historical CSV is finished ---- */
-    // The first call to loadHistoricalData uses “now - 1 hour” as a
-    // convenient anchor point that covers the initial view.
-    // If we already have data for that hour we skip the async call.
     if (!this.chartData.labels.length) {
-      // fire‑and‑forget – we don’t need the result here, we just need the
-      // side‑effect of populating chartData before we add the new point.
-      // (the Promise resolves later, but the rest of the method runs
-      // immediately; the important part is that the data is already in
-      // this.chartData when we continue.)
       this.loadTime(0);
     }
 
@@ -323,15 +320,15 @@ export class ChartComponent {
     if (timeLabel === 0) return;
 
     const valuesByKey: Record<string, number> = {
-      yVoltage0: Number(msg.voltage0 ?? 0),
-      yVoltage1: Number(msg.voltage1 ?? 0),
-      yTemperature: Number(msg.bme280?.temperatur ?? 0),
-      yHumidity: Number(msg.bme280?.humidity ?? 0),
-      yCO2: Number(msg.ens160aht21?.eco2 ?? 0),
-      yLightPower: Number(msg.lightvalP ?? 0),
-      yLightVoltage: Number(msg.lightvalmv ?? 0),
-      yTempFromEns: Number(msg.ens160aht21?.temperatur ?? 0),
-      yHumFromEns: Number(msg.ens160aht21?.humidity ?? 0)
+      voltage0: Number(msg.voltage0 ?? 0),
+      voltage1: Number(msg.voltage1 ?? 0),
+      temperature: Number(msg.bme280?.temperatur ?? 0),
+      humidity: Number(msg.bme280?.humidity ?? 0),
+      co2: Number(msg.ens160aht21?.eco2 ?? 0),
+      lightPower: Number(msg.lightvalP ?? 0),
+      lightVoltage: Number(msg.lightvalmv ?? 0),
+      tempFromEns: Number(msg.ens160aht21?.temperatur ?? 0),
+      humFromEns: Number(msg.ens160aht21?.humidity ?? 0)
     };
     const prevTotal = this.chartData.labels.length;
     const wasFullView = (this.visibleItemCount === prevTotal) && this.itemPosition === 0;
@@ -458,13 +455,6 @@ export class ChartComponent {
         }
       }
     });
-    const now = new Date();
-    const start = new Date(now.getTime() - 1 * 60 * 60 * 1000);   // 4 h ago
-
-    const year = start.getFullYear().toString();          // e.g. "2024"
-    const month = (start.getMonth() + 1).toString().padStart(2, '0'); // "03"
-    const day = start.getDate().toString().padStart(2, '0');       // "15"
-    const hour = start.getHours().toString().padStart(2, '0');        // "12"
   }
 }
 
