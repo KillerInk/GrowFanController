@@ -273,22 +273,17 @@ void loop()
 #ifdef GOVEE_BTH5179
     GoveeBTh5179_loop();
 #endif
-    FanController_loop();
-
-    LightController_loop();
 #ifdef SENSOR_BME280
     Bme280_loop();
-#ifndef SENSOR_ENS160AHT21
-#ifdef USE_SDCARD
-    FileController_write(Bme280_getAvarageTemperature(), Bme280_getAvarageHumidity(), FanController_getValues()->autocontrolfanspeed, 0, LightController_getValues()->voltage.voltage, Bme280_getVpdLeaf());
-#endif
-#endif
 #endif
 #ifdef SENSOR_ENS160AHT21
     Ens160Aht2x_loop();
-#ifdef USE_SDCARD
-    FileController_write(Ens160Aht2x_getAvarageTemperature(), Ens160Aht2x_getAvarageHumidity(), FanController_getValues()->autocontrolfanspeed, Ens160Aht2x_getCo2(), LightController_getValues()->voltage.voltage, Ens160Aht2x_getVpdAir());
 #endif
+    FanController_loop();
+
+    LightController_loop();
+#ifdef USE_SDCARD
+    FileController_write();
 #endif
     if (MyWebServer_WsClientsConnected())
         sendSocketMsg();

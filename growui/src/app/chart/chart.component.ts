@@ -6,6 +6,9 @@ import 'chartjs-adapter-date-fns';
 import { CommonModule } from '@angular/common';
 import { Chart } from 'chart.js';
 import { LegendItem } from 'chart.js';
+import { ApiService } from '../api.service';
+import { tap } from 'rxjs/operators';
+import { firstValueFrom } from 'rxjs';
 
 @Component({
   selector: 'app-chart',
@@ -14,6 +17,7 @@ import { LegendItem } from 'chart.js';
   templateUrl: './chart.component.html',
 })
 export class ChartComponent {
+  constructor(private apiService: ApiService) { }
   @ViewChild('chart') chart?: UIChart;
   @ViewChild('chartContainer') chartContainer?: ElementRef;
 
@@ -22,6 +26,8 @@ export class ChartComponent {
   private mousebuttonpressed = false;
   private mousestartposition = 0;
   public isMouseOverChart = false;
+
+  private datasetKeyIndexMap: Record<string, number> = {};
   /** Chart configuration – can be set externally if needed */
   chartOptions: any = {
     animation: false,
@@ -34,7 +40,18 @@ export class ChartComponent {
     },
 
     scales: {
-      x: { display: true, title: { text: 'Time' }, type: 'time', time: { unit: 'second', tooltipFormat: 'HH:mm:ss', displayFormats: { second: 'HH:mm:ss', minute: 'HH:mm', hour: 'HH:mm' } } },
+      x: {
+        display: true,
+        title: { text: 'Time' },
+        type: 'time',
+        time: {
+          unit: 'second',
+          tooltipFormat: 'HH:mm:ss',
+          displayFormats: { second: 'HH:mm:ss', minute: 'HH:mm', hour: 'HH:mm' },
+          /* Tell Chart.js that the expected step is 1 second (1000 ms) */
+          stepSize: 1000,
+        }
+      },
     }
   };
 
@@ -174,48 +191,183 @@ export class ChartComponent {
     (this.chart?.chart as any)?.update();
   }
 
-  /** Public method called by parent component with raw socket data */
+  /**
+   * Load historical data from the server and append it to the chart.
+   *
+   * @param year  e.g. "2024"
+   * @param month e.g. "03"
+   * @param day   e.g. "15"
+   * @param hour  e.g. "12" (24‑hour format)
+   */
+
+
+
+  // ... existing code ...
+
+  private loadHistoricalData(year: string, month: string, day: string, hour: string): Promise<void> {
+    const maxGapMs = 10000; // increase allowed gap to 10 seconds (or Infinity)
+    //time,tempE,humE,avgTempE,avgHumE,eco2,aqi,tvoc,vpdAirE,volt0,volt1,lightP,lightMv
+    const yAxisIds: Record<string, string> = {
+      volt0: 'yVoltage0',
+      volt1: 'yVoltage1',
+      tempB: 'yTemperature',
+      humB: 'yHumidity',
+      co2: 'yCO2',
+      lightP: 'yLightPower',
+      lightMv: 'yLightVoltage',
+      tempE: 'yTempFromEns',
+      humE: 'yHumFromEns'
+    };
+    return new Promise<void>(async (resolve) => {
+      await firstValueFrom(
+        this.apiService.downloadCsv(year, month, day, hour).pipe(
+          tap((csv: string) => {  // <-- type the csv
+            const lines = csv.split('\n');
+            const header = lines.shift()?.split(',') || [];
+
+            /* Build a mapping from CSV column index → dataset index */
+            const colIdxToDsIdx: Record<number, number> = {};
+            header.forEach((colName, idx) => {
+              const targetYAxisId = yAxisIds[colName];
+              if (!targetYAxisId) return; // skip columns that don't map
+              const dsIdx = this.chartData.datasets.findIndex(
+                (ds: any) => ds.yAxisID === targetYAxisId   // explicit type
+              );
+              if (dsIdx !== -1) colIdxToDsIdx[idx] = dsIdx;
+            });
+
+            let prevTime: number | null = null;
+
+            for (const line of lines) {
+              if (!line.trim()) continue;
+              const parts = line.split(',');
+              const timeLabel = Number(parts[0]) * 1000; // raw timestamp
+
+              // Skip any zero timestamps
+              if (timeLabel === 0) continue;
+
+              // Filter out large gaps between consecutive timestamps
+              if (prevTime !== null && Math.abs(timeLabel - prevTime) > maxGapMs) {
+                prevTime = timeLabel;
+                continue;
+              }
+
+              const values: number[] = parts.slice(1).map((v: string) => Number(v));
+
+              this.chartData.labels.push(timeLabel);
+              values.forEach((v: number, idx: number) => {
+                const dsIdx = colIdxToDsIdx[idx];
+                if (dsIdx === undefined) return; // skip unmapped columns
+                const ds = this.chartData.datasets[dsIdx];
+                if (ds && Array.isArray(ds.data)) {
+                  ds.data.push(v);
+                }
+              });
+
+              prevTime = timeLabel;
+            }
+
+            /* ---- NEW: sort data by timestamp ---- */
+            const sortedIndices: number[] = this.chartData.labels
+              .map((label: number, idx: number) => ({ label, idx }))
+              .sort(
+                (a: { label: number; idx: number }, b: { label: number; idx: number }) =>
+                  a.label - b.label
+              )
+              .map((item: { label: number; idx: number }) => item.idx);
+
+            /* Reorder labels and dataset data accordingly */
+            this.chartData.labels = sortedIndices.map(i => this.chartData.labels[i]);
+
+            for (const ds of this.chartData.datasets) {
+              if (Array.isArray(ds.data)) {
+                ds.data = sortedIndices.map(i => ds.data[i]);
+              }
+            }
+
+            /* ---- NEW: update visibleItemCount *before* we adjust limits ---- */
+            this.enforceVisibleItemBounds();
+            this.visibleItemCount = this.chartData.labels.length;   // ensures history is counted
+            this.setTimeLimits();
+            this.chart?.chart.update();
+          })
+        )
+      );
+      resolve();  // satisfy Promise<void>
+    });
+  }
+
   addSocketMessage(msg: SocketMsg): void {
     if (!this.initialized) {
       this.initializeDatasets(msg);
       this.initialized = true;
     }
 
-    const timeLabel = Date.now();
-    const values = [
-      msg.voltage0 ?? 0,
-      msg.voltage1 ?? 0,
-      msg.bme280?.temperatur ?? 0,
-      msg.bme280?.humidity ?? 0,
-      msg.ens160aht21?.eco2 ?? 0,
-      msg.lightvalP ?? 0,
-      msg.lightvalmv ?? 0,
-      // new fields from ens160aht21
-      msg.ens160aht21?.temperatur ?? 0,
-      msg.ens160aht21?.humidity ?? 0
-    ];
+    /* ---- NEW: make sure any pending historical CSV is finished ---- */
+    // The first call to loadHistoricalData uses “now - 1 hour” as a
+    // convenient anchor point that covers the initial view.
+    // If we already have data for that hour we skip the async call.
+    if (!this.chartData.labels.length) {
+      // fire‑and‑forget – we don’t need the result here, we just need the
+      // side‑effect of populating chartData before we add the new point.
+      // (the Promise resolves later, but the rest of the method runs
+      // immediately; the important part is that the data is already in
+      // this.chartData when we continue.)
+      this.loadTime(0);
+    }
+
+    let timeLabel: number;
+    timeLabel = Date.now();
+
+    /* ---- rest of the method stays unchanged ---- */
+    if (timeLabel === 0) return;
+
+    const valuesByKey: Record<string, number> = {
+      yVoltage0: Number(msg.voltage0 ?? 0),
+      yVoltage1: Number(msg.voltage1 ?? 0),
+      yTemperature: Number(msg.bme280?.temperatur ?? 0),
+      yHumidity: Number(msg.bme280?.humidity ?? 0),
+      yCO2: Number(msg.ens160aht21?.eco2 ?? 0),
+      yLightPower: Number(msg.lightvalP ?? 0),
+      yLightVoltage: Number(msg.lightvalmv ?? 0),
+      yTempFromEns: Number(msg.ens160aht21?.temperatur ?? 0),
+      yHumFromEns: Number(msg.ens160aht21?.humidity ?? 0)
+    };
     const prevTotal = this.chartData.labels.length;
     const wasFullView = (this.visibleItemCount === prevTotal) && this.itemPosition === 0;
 
     this.chartData.labels.push(timeLabel);
-    values.forEach((v, idx) => {
-      const ds = this.chartData.datasets[idx];
-      if (ds && Array.isArray(ds.data)) {
-        ds.data.push(v);
+    Object.entries(valuesByKey).forEach(([key, val]) => {
+      const idx = this.datasetKeyIndexMap[key];
+      if (idx !== undefined) {
+        const ds = this.chartData.datasets[idx];
+        if (ds && Array.isArray(ds.data)) {
+          ds.data.push(val);
+        }
       }
     });
 
-    // Keep only the last 50 points
-    if (this.chartData.labels.length > 50) {
-      this.chartData.labels.shift();
-      this.chartData.datasets.forEach((ds: any) => ds?.data?.shift());
-    }
+    // keep only the last 50 points – optional
+    // if (this.chartData.labels.length > 50) { … }
+
     this.enforceVisibleItemBounds();
     if (wasFullView) {
       this.visibleItemCount = this.chartData.labels.length;
     }
     this.setTimeLimits();
     this.chart?.chart.update();
+  }
+
+  private loadTime(time: number) {
+    const now = new Date();
+    const start = new Date(now.getTime() - time * 60 * 60 * 1000);   // 4 h ago
+
+    const year = start.getFullYear().toString();          // e.g. "2024"
+    const month = (start.getMonth() + 1).toString().padStart(2, '0'); // "03"
+    const day = start.getDate().toString().padStart(2, '0');       // "15"
+    const hour = start.getHours().toString().padStart(2, '0');        // "12"
+
+    this.loadHistoricalData(year, month, day, hour);
   }
 
   /** Build datasets based on available fields in the first message */
@@ -268,8 +420,6 @@ export class ChartComponent {
 
     Object.entries(validFields).forEach(([key, _], index) => {
 
-
-
       const commonOpts = { type: 'line', data: [], tension: 0.3 };
       let label = '';
       switch (key) {
@@ -293,6 +443,8 @@ export class ChartComponent {
         yAxisID: yAxisIds[key],
       });
 
+      this.datasetKeyIndexMap[key] = this.chartData.datasets.length - 1;
+
       if (!this.chartOptions.scales[yAxisIds[key]]) {
         const position = index % 2 === 0 ? 'left' : 'right';
         this.chartOptions.scales[yAxisIds[key]] = {
@@ -305,9 +457,14 @@ export class ChartComponent {
           display: true,
         }
       }
-
     });
+    const now = new Date();
+    const start = new Date(now.getTime() - 1 * 60 * 60 * 1000);   // 4 h ago
 
+    const year = start.getFullYear().toString();          // e.g. "2024"
+    const month = (start.getMonth() + 1).toString().padStart(2, '0'); // "03"
+    const day = start.getDate().toString().padStart(2, '0');       // "15"
+    const hour = start.getHours().toString().padStart(2, '0');        // "12"
   }
 }
 

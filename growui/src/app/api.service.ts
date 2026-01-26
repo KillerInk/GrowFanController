@@ -228,4 +228,19 @@ export class ApiService {
       catchError(this.handleError)
     );
   }
+
+    /**
+   * Download a CSV file containing historical data.
+   *
+   * @param year  e.g. "2024"
+   * @param month e.g. "03"
+   * @param day   e.g. "15"
+   * @param hour  e.g. "12" (24‑hour format)
+   */
+  downloadCsv(year: string, month: string, day: string, hour: string): Observable<string> {
+    const url = `/${year}/${month}/${day}/${hour}.csv`;
+    return this.http.get(url, { responseType: 'text' }).pipe(
+      catchError(this.handleError)
+    );
+  }
 }
