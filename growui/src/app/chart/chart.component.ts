@@ -69,7 +69,7 @@ export class ChartComponent {
     datasets: []
   };
 
-   private currentRange: '10min' | '30min' | '1h' | '2h' | '4h' = '10min';
+  private currentRange: '10min' | '30min' | '1h' | '2h' | '4h' = '10min';
 
   private onLegendClick(e: any, legendItem: any, legend: any) {
     const ci = legend.chart;
@@ -312,14 +312,14 @@ export class ChartComponent {
               }
             }
 
-            /* ---- NEW: update chartData.datasets after sorting ---- */
-            //this.chartData.datasets = this.fullChartData.datasets;
+            /* ---- NEW: update chartData with full history ---- */
+            this.chartData = { ...this.fullChartData };
 
-            /* ---- NEW: update visibleItemCount *before* we adjust limits ---- */
+            /* ---- NEW: sample based on current range ---- */
             this.setTimeRange(this.currentRange);
-            this.enforceVisibleItemBounds();
-            this.visibleItemCount = this.chartData.labels.length;   // ensures history is counted
-            this.setTimeLimits();
+
+            /* No need to set visibleItemCount manually – handled by setTimeRange() */
+
             this.chart?.chart.update();
           })
         )
@@ -404,7 +404,7 @@ export class ChartComponent {
     const hour = start.getHours().toString().padStart(2, '0');        // "12"
 
     this.loadHistoricalData(year, month, day, hour);
-     
+
   }
 
   /** Build datasets based on available fields in the first message */
@@ -529,20 +529,20 @@ export class ChartComponent {
     const day = firstDate.getDate().toString().padStart(2, '0');
     const hour = firstDate.getHours().toString().padStart(2, '0');
 
-    const key = `${year}-${month}-${day}-${hour}`;
-    if (this.loadedHours.has(key)) return;
+    // **Remove the guard that prevents repeated loading**
+    // this.loadedHours.add(key);
 
     this.loadingPreviousHour = true;
     try {
       await this.loadHistoricalData(year, month, day, hour);
-      /* NEW: after adding older data keep the view at the oldest point */
+      /* Keep the view at the oldest point after adding older data */
       this.itemPosition = -(this.chartData.labels.length - this.visibleItemCount);
       this.enforceVisibleItemBounds();
-      this.loadedHours.add(key);
     } finally {
       this.loadingPreviousHour = false;
     }
   }
+
   private getRangeDurationMs(range: string): number {
     switch (range) {
       case '10min': return 10 * 60 * 1000;
@@ -556,12 +556,10 @@ export class ChartComponent {
   private createSampledData(range: '10min' | '30min' | '1h' | '2h' | '4h'): { labels: number[]; datasets: any[] } {
     const intervalMap = { '10min': 1, '30min': 3, '1h': 6, '2h': 12, '4h': 24 };
     const step = intervalMap[range] ?? 1;
-    const startMs = Date.now() - this.getRangeDurationMs(range);
 
-    let startIndex = this.fullChartData.labels.findIndex(l => l >= startMs);
-    if (startIndex === -1) startIndex = 0;
-
-    const endIndex = this.fullChartData.labels.length;
+    // Use the full data set for sampling
+    let startIndex = 0;
+    let endIndex = this.fullChartData.labels.length;
 
     const newLabels: number[] = [];
     const newDatasets = this.fullChartData.datasets.map(ds => ({
@@ -581,7 +579,6 @@ export class ChartComponent {
 
     return { labels: newLabels, datasets: newDatasets };
   }
-
   setTimeRange(range: '10min' | '30min' | '1h' | '2h' | '4h'): void {
     const sampled = this.createSampledData(range);
     this.chartData = sampled;
