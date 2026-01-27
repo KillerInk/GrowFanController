@@ -64,6 +64,13 @@ export class ChartComponent {
   chartData: any = { labels: [], datasets: [] };
   private initialized = false;
 
+  private fullChartData: { labels: number[]; datasets: any[] } = {
+    labels: [],
+    datasets: []
+  };
+
+   private currentRange: '10min' | '30min' | '1h' | '2h' | '4h' = '10min';
+
   private onLegendClick(e: any, legendItem: any, legend: any) {
     const ci = legend.chart;
     const datasetIndex = legendItem.datasetIndex;
@@ -152,7 +159,7 @@ export class ChartComponent {
       this.visibleItemCount = total;
     }
 
-    const maxVisible = Math.min(720, total);
+    const maxVisible = Math.min(600, total);
     if (this.visibleItemCount > maxVisible) {
       this.visibleItemCount = maxVisible;
     }
@@ -223,6 +230,7 @@ export class ChartComponent {
    * @param hour  e.g. "12" (24‑hour format)
    */
 
+
   private loadHistoricalData(year: string, month: string, day: string, hour: string): Promise<void> {
     const maxGapMs = 10000; // increase allowed gap to 10 seconds (or Infinity)
     //time,tempE,humE,avgTempE,avgHumE,eco2,aqi,tvoc,vpdAirE,volt0,volt1,lightP,lightMv
@@ -240,7 +248,7 @@ export class ChartComponent {
     return new Promise<void>(async (resolve) => {
       await firstValueFrom(
         this.apiService.downloadCsv(year, month, day, hour).pipe(
-          tap((csv: string) => {  // <-- type the csv
+          tap((csv: string) => {
             const lines = csv.split('\r\n');
             const header = lines.shift()?.split(',') || [];
 
@@ -273,11 +281,11 @@ export class ChartComponent {
 
               const values: number[] = parts.slice(1).map((v: string) => Number(v));
 
-              this.chartData.labels.push(timeLabel);
+              this.fullChartData.labels.push(timeLabel);
               values.forEach((v: number, idx: number) => {
                 const dsIdx = colIdxToDsIdx[idx + 1];
                 if (dsIdx === undefined) return; // skip unmapped columns
-                const ds = this.chartData.datasets[dsIdx];
+                const ds = this.fullChartData.datasets[dsIdx];
                 if (ds && Array.isArray(ds.data)) {
                   ds.data.push(v);
                 }
@@ -287,7 +295,7 @@ export class ChartComponent {
             }
 
             /* ---- NEW: sort data by timestamp ---- */
-            const sortedIndices: number[] = this.chartData.labels
+            const sortedIndices: number[] = this.fullChartData.labels
               .map((label: number, idx: number) => ({ label, idx }))
               .sort(
                 (a: { label: number; idx: number }, b: { label: number; idx: number }) =>
@@ -296,15 +304,19 @@ export class ChartComponent {
               .map((item: { label: number; idx: number }) => item.idx);
 
             /* Reorder labels and dataset data accordingly */
-            this.chartData.labels = sortedIndices.map(i => this.chartData.labels[i]);
+            this.fullChartData.labels = sortedIndices.map(i => this.fullChartData.labels[i]);
 
-            for (const ds of this.chartData.datasets) {
+            for (const ds of this.fullChartData.datasets) {
               if (Array.isArray(ds.data)) {
                 ds.data = sortedIndices.map(i => ds.data[i]);
               }
             }
 
+            /* ---- NEW: update chartData.datasets after sorting ---- */
+            //this.chartData.datasets = this.fullChartData.datasets;
+
             /* ---- NEW: update visibleItemCount *before* we adjust limits ---- */
+            this.setTimeRange(this.currentRange);
             this.enforceVisibleItemBounds();
             this.visibleItemCount = this.chartData.labels.length;   // ensures history is counted
             this.setTimeLimits();
@@ -356,6 +368,17 @@ export class ChartComponent {
       }
     });
 
+    this.fullChartData.labels.push(timeLabel);
+    Object.entries(valuesByKey).forEach(([key, val]) => {
+      const idx = this.datasetKeyIndexMap[key];
+      if (idx !== undefined) {
+        const ds = this.fullChartData.datasets[idx];
+        if (ds && Array.isArray(ds.data)) {
+          ds.data.push(val);
+        }
+      }
+    });
+
     // keep only the last 50 points – optional
     // if (this.chartData.labels.length > 50) { … }
 
@@ -381,6 +404,7 @@ export class ChartComponent {
     const hour = start.getHours().toString().padStart(2, '0');        // "12"
 
     this.loadHistoricalData(year, month, day, hour);
+     
   }
 
   /** Build datasets based on available fields in the first message */
@@ -453,6 +477,14 @@ export class ChartComponent {
         case 'tempFromEns': label = 'ENS Temperature (°C)'; break;
         case 'humFromEns': label = 'ENS Humidity (%)'; break;
       }
+      this.fullChartData.datasets.push({
+        ...commonOpts,
+        label,
+        display: true,
+        backgroundColor: colors[key] + ',0.2',
+        borderColor: colors[key],
+        yAxisID: yAxisIds[key],
+      });
       this.chartData.datasets.push({
         ...commonOpts,
         label,
@@ -510,6 +542,70 @@ export class ChartComponent {
     } finally {
       this.loadingPreviousHour = false;
     }
+  }
+  private getRangeDurationMs(range: string): number {
+    switch (range) {
+      case '10min': return 10 * 60 * 1000;
+      case '30min': return 30 * 60 * 1000;
+      case '1h': return 1 * 60 * 60 * 1000;
+      case '2h': return 2 * 60 * 60 * 1000;
+      case '4h': return 4 * 60 * 60 * 1000;
+      default: return 0;
+    }
+  }
+  private createSampledData(range: '10min' | '30min' | '1h' | '2h' | '4h'): { labels: number[]; datasets: any[] } {
+    const intervalMap = { '10min': 1, '30min': 3, '1h': 6, '2h': 12, '4h': 24 };
+    const step = intervalMap[range] ?? 1;
+    const startMs = Date.now() - this.getRangeDurationMs(range);
+
+    let startIndex = this.fullChartData.labels.findIndex(l => l >= startMs);
+    if (startIndex === -1) startIndex = 0;
+
+    const endIndex = this.fullChartData.labels.length;
+
+    const newLabels: number[] = [];
+    const newDatasets = this.fullChartData.datasets.map(ds => ({
+      ...ds,
+      data: []
+    }));
+
+    for (let i = startIndex; i < endIndex; i += step) {
+      newLabels.push(this.fullChartData.labels[i]);
+
+      this.fullChartData.datasets.forEach((ds, idx) => {
+        if (Array.isArray(ds.data)) {
+          newDatasets[idx].data.push(ds.data[i]);
+        }
+      });
+    }
+
+    return { labels: newLabels, datasets: newDatasets };
+  }
+
+  setTimeRange(range: '10min' | '30min' | '1h' | '2h' | '4h'): void {
+    const sampled = this.createSampledData(range);
+    this.chartData = sampled;
+    this.currentRange = range;
+    const sortedIndices: number[] = this.chartData.labels
+      .map((label: number, idx: number) => ({ label, idx }))
+      .sort(
+        (a: { label: number; idx: number }, b: { label: number; idx: number }) =>
+          a.label - b.label
+      )
+      .map((item: { label: number; idx: number }) => item.idx);
+
+    /* Reorder labels and dataset data accordingly */
+    this.chartData.labels = sortedIndices.map(i => this.chartData.labels[i]);
+
+    for (const ds of this.chartData.datasets) {
+      if (Array.isArray(ds.data)) {
+        ds.data = sortedIndices.map(i => ds.data[i]);
+      }
+    }
+    this.visibleItemCount = 600;
+    this.itemPosition = 0;
+    this.enforceVisibleItemBounds();
+    this.setTimeLimits();
   }
 }
 
