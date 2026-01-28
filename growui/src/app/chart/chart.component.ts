@@ -9,6 +9,7 @@ import { LegendItem } from 'chart.js';
 import { ApiService } from '../api.service';
 import { tap } from 'rxjs/operators';
 import { firstValueFrom } from 'rxjs';
+import { chartOptionsBase, colors, csv_yAxisIds, yAxisIds } from './chart-config';
 
 @Component({
   selector: 'app-chart',
@@ -34,30 +35,10 @@ export class ChartComponent {
   private datasetKeyIndexMap: Record<string, number> = {};
   /** Chart configuration – can be set externally if needed */
   chartOptions: any = {
-    animation: false,
-    responsive: true,
-    maintainAspectRatio: false,
-    interaction: { intersect: false, mode: 'index' },
-
+    ...chartOptionsBase,
     plugins: {
       legend: { display: true, onClick: (e: any, legendItem: any, legend: any) => this.onLegendClick(e, legendItem, legend) },
     },
-
-    scales: {
-      x: {
-        display: true,
-        title: { text: 'Time' },
-        type: 'time',
-        time: {
-          unit: 'second',
-          tooltipFormat: 'HH:mm:ss',
-          displayFormats: { second: 'HH:mm:ss', minute: 'HH:mm', hour: 'HH:mm' },
-          /* Tell Chart.js that the expected step is 1 second (1000 ms) */
-          stepSize: 1000,
-        },
-        ticks: { maxTicksLimit: 100 }
-      },
-    }
   };
 
   /** Internal chart data – initialized on first message */
@@ -233,18 +214,7 @@ export class ChartComponent {
 
   private loadHistoricalData(year: string, month: string, day: string, hour: string): Promise<void> {
     const maxGapMs = 10000; // increase allowed gap to 10 seconds (or Infinity)
-    //time,tempE,humE,avgTempE,avgHumE,eco2,aqi,tvoc,vpdAirE,volt0,volt1,lightP,lightMv
-    const yAxisIds: Record<string, string> = {
-      volt0: 'yVoltage0',
-      volt1: 'yVoltage1',
-      tempB: 'yTemperature',
-      humB: 'yHumidity',
-      eco2: 'yCO2',
-      lightP: 'yLightPower',
-      lightMv: 'yLightVoltage',
-      tempE: 'yTempFromEns',
-      humE: 'yHumFromEns'
-    };
+
     return new Promise<void>(async (resolve) => {
       await firstValueFrom(
         this.apiService.downloadCsv(year, month, day, hour).pipe(
@@ -255,7 +225,7 @@ export class ChartComponent {
             /* Build a mapping from CSV column index → dataset index */
             const colIdxToDsIdx: Record<number, number> = {};
             header.forEach((colName, idx) => {
-              const targetYAxisId = yAxisIds[colName];
+              const targetYAxisId = csv_yAxisIds[colName];
               if (!targetYAxisId) return; // skip columns that don't map
               const dsIdx = this.chartData.datasets.findIndex(
                 (ds: any) => ds.yAxisID === targetYAxisId   // explicit type
@@ -294,7 +264,6 @@ export class ChartComponent {
               prevTime = timeLabel;
             }
 
-            /* ---- NEW: sort data by timestamp ---- */
             const sortedIndices: number[] = this.fullChartData.labels
               .map((label: number, idx: number) => ({ label, idx }))
               .sort(
@@ -312,15 +281,7 @@ export class ChartComponent {
               }
             }
 
-            /* ---- NEW: update chartData with full history ---- */
-            this.chartData = { ...this.fullChartData };
-
-            /* ---- NEW: sample based on current range ---- */
             this.setTimeRange(this.currentRange);
-
-            /* No need to set visibleItemCount manually – handled by setTimeRange() */
-
-            this.chart?.chart.update();
           })
         )
       );
@@ -352,12 +313,14 @@ export class ChartComponent {
       lightPower: Number(msg.lightvalP ?? 0),
       lightVoltage: Number(msg.lightvalmv ?? 0),
       tempFromEns: Number(msg.ens160aht21?.temperatur ?? 0),
-      humFromEns: Number(msg.ens160aht21?.humidity ?? 0)
+      humFromEns: Number(msg.ens160aht21?.humidity ?? 0),
+      pressure: Number(msg.bme280?.pressure)
     };
     const prevTotal = this.chartData.labels.length;
     const wasFullView = (this.visibleItemCount === prevTotal) && this.itemPosition === 0;
 
     this.chartData.labels.push(timeLabel);
+    this.fullChartData.labels.push(timeLabel);
     Object.entries(valuesByKey).forEach(([key, val]) => {
       const idx = this.datasetKeyIndexMap[key];
       if (idx !== undefined) {
@@ -365,22 +328,12 @@ export class ChartComponent {
         if (ds && Array.isArray(ds.data)) {
           ds.data.push(val);
         }
-      }
-    });
-
-    this.fullChartData.labels.push(timeLabel);
-    Object.entries(valuesByKey).forEach(([key, val]) => {
-      const idx = this.datasetKeyIndexMap[key];
-      if (idx !== undefined) {
-        const ds = this.fullChartData.datasets[idx];
-        if (ds && Array.isArray(ds.data)) {
-          ds.data.push(val);
+        const ds1 = this.fullChartData.datasets[idx];
+        if (ds1 && Array.isArray(ds1.data)) {
+          ds1.data.push(val);
         }
       }
     });
-
-    // keep only the last 50 points – optional
-    // if (this.chartData.labels.length > 50) { … }
 
     this.enforceVisibleItemBounds();
     if (!wasFullView && this.itemPosition < 0) {
@@ -391,7 +344,6 @@ export class ChartComponent {
       this.itemPosition = Math.max(this.itemPosition, -maxOffset);
     }
     this.setTimeLimits();
-    this.chart?.chart.update();
   }
 
   private loadTime(time: number) {
@@ -419,7 +371,8 @@ export class ChartComponent {
       lightVoltage: msg.lightvalmv,
       // new fields from ens160aht21
       tempFromEns: msg.ens160aht21?.temperatur,
-      humFromEns: msg.ens160aht21?.humidity
+      humFromEns: msg.ens160aht21?.humidity,
+      pressure: msg.bme280?.pressure
     };
 
     const validFields = Object.fromEntries(
@@ -431,29 +384,7 @@ export class ChartComponent {
     }
 
     this.chartData = { labels: [], datasets: [] };
-    const yAxisIds: Record<string, string> = {
-      voltage0: 'yVoltage0',
-      voltage1: 'yVoltage1',
-      temperature: 'yTemperature',
-      humidity: 'yHumidity',
-      co2: 'yCO2',
-      lightPower: 'yLightPower',
-      lightVoltage: 'yLightVoltage',
-      tempFromEns: 'yTempFromEns',
-      humFromEns: 'yHumFromEns'
-    };
 
-    const colors: Record<string, string> = {
-      voltage0: 'rgba(255,99,132,1)',   // red – fan voltage
-      voltage1: 'rgba(54,162,235,1)',   // blue – second fan voltage
-      temperature: 'rgba(75,192,192,1)',    // teal – ambient temp
-      humidity: 'rgba(153,102,255,1)',  // purple – humidity
-      co2: 'rgba(255,159,64,1)',   // orange – CO₂ ppm
-      lightPower: 'rgba(199,199,199,1)',  // gray – light power %
-      lightVoltage: 'rgba(83,102,255,1)',  // indigo – light voltage mV
-      tempFromEns: 'rgba(50,205,50,1)',     // green – ENS temperature
-      humFromEns: 'rgba(218,165,32,1)'    // goldenrod – ENS humidity
-    };
 
     Object.entries(validFields).forEach(([key, _], index) => {
 
@@ -476,23 +407,18 @@ export class ChartComponent {
         // new labels
         case 'tempFromEns': label = 'ENS Temperature (°C)'; break;
         case 'humFromEns': label = 'ENS Humidity (%)'; break;
+        case 'pressure': label = 'Pressure (hpa)';
       }
-      this.fullChartData.datasets.push({
+      const datasetpush = {
         ...commonOpts,
         label,
         display: true,
         backgroundColor: colors[key] + ',0.2',
         borderColor: colors[key],
         yAxisID: yAxisIds[key],
-      });
-      this.chartData.datasets.push({
-        ...commonOpts,
-        label,
-        display: true,
-        backgroundColor: colors[key] + ',0.2',
-        borderColor: colors[key],
-        yAxisID: yAxisIds[key],
-      });
+      };
+      this.fullChartData.datasets.push(datasetpush);
+      this.chartData.datasets.push(datasetpush);
 
       this.datasetKeyIndexMap[key] = this.chartData.datasets.length - 1;
 
@@ -543,16 +469,6 @@ export class ChartComponent {
     }
   }
 
-  private getRangeDurationMs(range: string): number {
-    switch (range) {
-      case '10min': return 10 * 60 * 1000;
-      case '30min': return 30 * 60 * 1000;
-      case '1h': return 1 * 60 * 60 * 1000;
-      case '2h': return 2 * 60 * 60 * 1000;
-      case '4h': return 4 * 60 * 60 * 1000;
-      default: return 0;
-    }
-  }
   private createSampledData(range: '10min' | '30min' | '1h' | '2h' | '4h'): { labels: number[]; datasets: any[] } {
     const intervalMap = { '10min': 1, '30min': 3, '1h': 6, '2h': 12, '4h': 24 };
     const step = intervalMap[range] ?? 1;
@@ -579,26 +495,11 @@ export class ChartComponent {
 
     return { labels: newLabels, datasets: newDatasets };
   }
+
   setTimeRange(range: '10min' | '30min' | '1h' | '2h' | '4h'): void {
     const sampled = this.createSampledData(range);
     this.chartData = sampled;
     this.currentRange = range;
-    const sortedIndices: number[] = this.chartData.labels
-      .map((label: number, idx: number) => ({ label, idx }))
-      .sort(
-        (a: { label: number; idx: number }, b: { label: number; idx: number }) =>
-          a.label - b.label
-      )
-      .map((item: { label: number; idx: number }) => item.idx);
-
-    /* Reorder labels and dataset data accordingly */
-    this.chartData.labels = sortedIndices.map(i => this.chartData.labels[i]);
-
-    for (const ds of this.chartData.datasets) {
-      if (Array.isArray(ds.data)) {
-        ds.data = sortedIndices.map(i => ds.data[i]);
-      }
-    }
     this.visibleItemCount = 600;
     this.itemPosition = 0;
     this.enforceVisibleItemBounds();
