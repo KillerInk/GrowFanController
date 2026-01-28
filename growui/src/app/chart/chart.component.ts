@@ -429,6 +429,8 @@ export class ChartComponent {
           title: { display: false },
           ticks: {
             color: colors[key],
+            callback: (value: number) =>
+            Number.isInteger(value) ? value.toString() : value.toFixed(2) 
           },
           grid: { drawOnChartArea: false },
           display: true,
