@@ -1,3 +1,4 @@
+#ifdef SENSOR_ENS160AHT21
 #include "Ens160Aht2x.h"
 #include <AHT20.h>
 #include "DFRobot_ENS160.h"
@@ -148,3 +149,4 @@ int Ens160Aht2x_getCo2()
 {
     return eCO2;
 }
+#endif
