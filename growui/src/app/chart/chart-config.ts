@@ -27,14 +27,14 @@ export const colors: Record<string, string> = {
 export const csv_yAxisIds: Record<string, string> = {
     volt0: 'yVoltage0',
     volt1: 'yVoltage1',
-    tempB: 'yTemperature',
-    humB: 'yHumidity',
+    avgTempB: 'yTemperature',
+    avgHumB: 'yHumidity',
     eco2: 'yCO2',
     lightP: 'yLightPower',
     lightMv: 'yLightVoltage',
-    tempE: 'yTempFromEns',
-    humE: 'yHumFromEns',
-    presB: 'yPressure'
+    avgTempE: 'yTempFromEns',
+    avgHumE: 'yHumFromEns',
+    avgPresB: 'yPressure'
 };
 
 

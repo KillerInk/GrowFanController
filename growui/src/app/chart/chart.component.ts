@@ -307,14 +307,14 @@ export class ChartComponent {
     const valuesByKey: Record<string, number> = {
       voltage0: Number(msg.voltage0 ?? 0),
       voltage1: Number(msg.voltage1 ?? 0),
-      temperature: Number(msg.bme280?.temperatur ?? 0),
-      humidity: Number(msg.bme280?.humidity ?? 0),
+      temperature: Number(msg.bme280?.atemperatur ?? 0),
+      humidity: Number(msg.bme280?.ahumidity ?? 0),
       co2: Number(msg.ens160aht21?.eco2 ?? 0),
       lightPower: Number(msg.lightvalP ?? 0),
       lightVoltage: Number(msg.lightvalmv ?? 0),
-      tempFromEns: Number(msg.ens160aht21?.temperatur ?? 0),
-      humFromEns: Number(msg.ens160aht21?.humidity ?? 0),
-      pressure: Number(msg.bme280?.pressure)
+      tempFromEns: Number(msg.ens160aht21?.atemperatur ?? 0),
+      humFromEns: Number(msg.ens160aht21?.ahumidity ?? 0),
+      pressure: Number(msg.bme280?.apressure)
     };
     const prevTotal = this.chartData.labels.length;
     const wasFullView = (this.visibleItemCount === prevTotal) && this.itemPosition === 0;
@@ -336,7 +336,10 @@ export class ChartComponent {
     });
 
     this.enforceVisibleItemBounds();
-    if (!wasFullView && this.itemPosition < 0) {
+    if (this.chartData.labels.length <= 600) {
+      this.itemPosition = 0;
+      this.visibleItemCount++;
+    } else if (!wasFullView && this.itemPosition < 0) {
       // Move the offset back one more to keep the same earliest point
       this.itemPosition -= 1;
       // Clamp after adjustment
@@ -430,7 +433,7 @@ export class ChartComponent {
           ticks: {
             color: colors[key],
             callback: (value: number) =>
-            Number.isInteger(value) ? value.toString() : value.toFixed(2) 
+              Number.isInteger(value) ? value.toString() : value.toFixed(2)
           },
           grid: { drawOnChartArea: false },
           display: true,
