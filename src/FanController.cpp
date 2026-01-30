@@ -18,7 +18,7 @@ double (*getAvgHumidity)();
 
 long nextTick;
 double lastTemp;
-double lastHumdidity;
+double lastHumidity;
 const int waitTime = 15000;
 void FanController_processAutoControl()
 {
@@ -35,11 +35,12 @@ void FanController_processAutoControl()
     }
     else if (millis() > nextTick)
     {
-        if (lastTemp > atmp || lastHumdidity > ahm)
+        if (lastTemp > atmp || lastHumidity > ahm)
             fancontrollerValues.autocontrolfanspeed--;
-        else if (lastTemp < atmp || lastHumdidity < ahm)
+        else if (lastTemp < atmp || lastHumidity < ahm)
             fancontrollerValues.autocontrolfanspeed++;
         lastTemp = atmp;
+        lastHumidity = ahm;
         nextTick = millis() + waitTime;
     }
 
