@@ -282,4 +282,16 @@ export class App implements OnInit {
       complete: () => this.firmwareUploadPercent = 0
     });
   }
+
+  getFanPercent(fan: number) {
+    const min = fan === 0 ? this.deviceState?.fan0min : this.deviceState?.fan1min;
+    const max = fan === 0 ? this.deviceState?.fan0max : this.deviceState?.fan1max;
+    const cur = fan === 0 ? this.deviceState?.fan0voltage : this.deviceState?.fan1voltage;
+
+    if (min == null || max == null || cur == null) return null; // handle missing data
+
+    // Calculate percentage
+    const percent = ((cur - min) / (max - min)) * 100;
+    return Math.round(percent); // optional rounding to nearest integer
+  }
 }

@@ -30,27 +30,29 @@
 				<div class="flex-container">
 					<!-- Sensor Data -->
 					<div class="flex-item">
-						<h3 class="section-title">Sensor Readings</h3>
+						
 						<div *ngIf="socketdata?.ens160aht21" class="status-grid">
-							<div><strong>Temp:</strong> {{socketdata?.ens160aht21?.temperatur}}°C</div>
-							<div><strong>Hum:</strong> {{socketdata?.ens160aht21?.humidity}}%</div>
+							<h3 class="section-title">Ens160Aht21</h3>
+							<div><strong>Temp:</strong> {{socketdata?.ens160aht21?.temperatur}}°C/{{socketdata?.ens160aht21?.atemperatur}}°C</div>
+							<div><strong>Hum:</strong> {{socketdata?.ens160aht21?.humidity}}%/{{socketdata?.ens160aht21?.ahumidity}}%</div>
 							<div><strong>eCO₂:</strong> {{socketdata?.ens160aht21?.eco2}}</div>
 							<div><strong>TVOC:</strong> {{socketdata?.ens160aht21?.tvoc}}</div>
 							<div><strong>AQI:</strong> {{socketdata?.ens160aht21?.aqi}}</div>
 						</div>
-
+						
 						<div *ngIf="socketdata?.bme280" class="status-grid">
-							<div><strong>Temp (BME):</strong> {{socketdata?.bme280?.temperatur}}°C</div>
-							<div><strong>Hum (BME):</strong> {{socketdata?.bme280?.humidity}}%</div>
-							<div><strong>Pressure:</strong> {{socketdata?.bme280?.pressure}}hPa</div>
+							<h3 class="section-title">BME280</h3>
+							<div><strong>Temp:</strong> {{socketdata?.bme280?.temperatur}}°C/{{socketdata?.bme280?.atemperatur}}°C</div>
+							<div><strong>Hum:</strong> {{socketdata?.bme280?.humidity}}%/{{socketdata?.bme280?.ahumidity}}%</div>
+							<div><strong>Pressure:</strong> {{socketdata?.bme280?.pressure}}hPa/{{socketdata?.bme280?.apressure}}hPa</div>
 						</div>
 						<h3 class="section-title">Control Status</h3>
 						<div class="status-grid">
 							<div><strong>Light:</strong> {{socketdata?.lightvalP}}%</div>
 							<div><strong>Light Voltage:</strong> {{socketdata?.lightvalmv}}mV</div>
 							<div><strong>Light State:</strong> {{socketdata?.lightstate}}</div>
-							<div><strong>Fan1 Voltage:</strong> {{socketdata?.voltage0}}</div>
-							<div><strong>Fan2 Voltage:</strong> {{socketdata?.voltage1}}</div>
+							<div><strong>Fan1 Voltage:</strong> {{socketdata?.voltage0}}mv/{{getFanPercent(0)}}%</div>
+							<div><strong>Fan2 Voltage:</strong> {{socketdata?.voltage1}}mv/{{getFanPercent(1)}}%</div>
 						</div>
 
 					</div>
