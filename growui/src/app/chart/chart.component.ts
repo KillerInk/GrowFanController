@@ -12,6 +12,8 @@ import { firstValueFrom, range } from 'rxjs';
 import { chartOptionsBase, colors, csv_yAxisIds, yAxisIds } from './chart-config';
 import { createSampledData } from './chart-sampledata';
 import { restoreDatasetVisibility, saveDatasetVisibility } from './chart-visibility';
+import { initializeDatasets } from './chart-initdatasets';
+import { loadHistoricalData } from './chart-historyloading';
 
 @Component({
   selector: 'app-chart',
@@ -218,87 +220,22 @@ export class ChartComponent {
    */
 
 
-  private loadHistoricalData(year: string, month: string, day: string, hour: string): Promise<void> {
-    const maxGapMs = 10000; // increase allowed gap to 10 seconds (or Infinity)
 
-    return new Promise<void>(async (resolve) => {
-      await firstValueFrom(
-        this.apiService.downloadCsv(year, month, day, hour).pipe(
-          tap((csv: string) => {
-            const lines = csv.split('\r\n');
-            const header = lines.shift()?.split(',') || [];
-
-            /* Build a mapping from CSV column index → dataset index */
-            const colIdxToDsIdx: Record<number, number> = {};
-            header.forEach((colName, idx) => {
-              const targetYAxisId = csv_yAxisIds[colName];
-              if (!targetYAxisId) return; // skip columns that don't map
-              const dsIdx = this.chartData.datasets.findIndex(
-                (ds: any) => ds.yAxisID === targetYAxisId   // explicit type
-              );
-              if (dsIdx !== -1) colIdxToDsIdx[idx] = dsIdx;
-            });
-
-            let prevTime: number | null = null;
-
-            for (const line of lines) {
-              if (!line.trim()) continue;
-              const parts = line.split(',');
-              const timeLabel = Number(parts[0]) * 1000; // raw timestamp
-
-              // Skip any zero timestamps
-              if (timeLabel === 0) continue;
-
-              // Filter out large gaps between consecutive timestamps
-              if (prevTime !== null && Math.abs(timeLabel - prevTime) > maxGapMs) {
-                prevTime = timeLabel;
-                continue;
-              }
-
-              const values: number[] = parts.slice(1).map((v: string) => Number(v));
-
-              this.fullChartData.labels.push(timeLabel);
-              values.forEach((v: number, idx: number) => {
-                const dsIdx = colIdxToDsIdx[idx + 1];
-                if (dsIdx === undefined) return; // skip unmapped columns
-                const ds = this.fullChartData.datasets[dsIdx];
-                if (ds && Array.isArray(ds.data)) {
-                  ds.data.push(v);
-                }
-              });
-
-              prevTime = timeLabel;
-            }
-
-            const sortedIndices: number[] = this.fullChartData.labels
-              .map((label: number, idx: number) => ({ label, idx }))
-              .sort(
-                (a: { label: number; idx: number }, b: { label: number; idx: number }) =>
-                  a.label - b.label
-              )
-              .map((item: { label: number; idx: number }) => item.idx);
-
-            /* Reorder labels and dataset data accordingly */
-            this.fullChartData.labels = sortedIndices.map(i => this.fullChartData.labels[i]);
-
-            for (const ds of this.fullChartData.datasets) {
-              if (Array.isArray(ds.data)) {
-                ds.data = sortedIndices.map(i => ds.data[i]);
-              }
-            }
-
-            this.setTimeRange(this.currentRange);
-
-          })
-        )
-      );
-      resolve();  // satisfy Promise<void>
-    });
-  }
 
   addSocketMessage(msg: SocketMsg): void {
     if (!this.initialized) {
-      this.initializeDatasets(msg);
+      const { chartData, fullChartData, datasetKeyIndexMap } = initializeDatasets(
+        msg,
+        this.chartData,
+        this.fullChartData,
+        this.datasetKeyIndexMap,
+        this.chartOptions
+      );
+      // Assign the returned values back to component fields
+      this.chartData = chartData;
+      this.fullChartData = fullChartData;
+      this.datasetKeyIndexMap = datasetKeyIndexMap;
+      this.setTimeRange(this.currentRange);
       this.initialized = true;
     }
     if (!this.chartData.labels.length) {
@@ -365,89 +302,9 @@ export class ChartComponent {
     const day = start.getDate().toString().padStart(2, '0');       // "15"
     const hour = start.getHours().toString().padStart(2, '0');        // "12"
 
-    this.loadHistoricalData(year, month, day, hour);
+    loadHistoricalData(year, month, day, hour, this.apiService, this.chartData, this.fullChartData);
+    this.setTimeRange(this.currentRange);
 
-  }
-
-  /** Build datasets based on available fields in the first message */
-  private initializeDatasets(msg: SocketMsg): void {
-    const availableFields = {
-      voltage0: msg.voltage0,
-      voltage1: msg.voltage1,
-      temperature: msg.bme280?.temperatur,
-      humidity: msg.bme280?.humidity,
-      co2: msg.ens160aht21?.eco2,
-      lightPower: msg.lightvalP,
-      lightVoltage: msg.lightvalmv,
-      // new fields from ens160aht21
-      tempFromEns: msg.ens160aht21?.temperatur,
-      humFromEns: msg.ens160aht21?.humidity,
-      pressure: msg.bme280?.pressure
-    };
-
-    const validFields = Object.fromEntries(
-      Object.entries(availableFields).filter(([_, v]) => v !== undefined && v !== null)
-    );
-
-    if (Object.keys(validFields).length === 0) {
-      return;
-    }
-
-    this.chartData = { labels: [], datasets: [] };
-
-
-    Object.entries(validFields).forEach(([key, _], index) => {
-
-      const commonOpts = {
-        type: 'line', data: [],
-        borderWidth: 1,
-        pointRadius: 0,
-        pointHoverRadius: 0,
-        tension: 0
-      };
-      let label = '';
-      switch (key) {
-        case 'voltage0': label = 'Fan Voltage'; break;
-        case 'voltage1': label = 'Fan2 Voltage'; break;
-        case 'temperature': label = 'Temperature (°C)'; break;
-        case 'humidity': label = 'Humidity (%)'; break;
-        case 'co2': label = 'CO₂ (ppm)'; break;
-        case 'lightPower': label = 'Light Power (%)'; break;
-        case 'lightVoltage': label = 'Light Voltage (mV)'; break;
-        // new labels
-        case 'tempFromEns': label = 'ENS Temperature (°C)'; break;
-        case 'humFromEns': label = 'ENS Humidity (%)'; break;
-        case 'pressure': label = 'Pressure (hpa)';
-      }
-      const datasetpush = {
-        ...commonOpts,
-        label,
-        display: true,
-        backgroundColor: colors[key] + ',0.2',
-        borderColor: colors[key],
-        yAxisID: yAxisIds[key],
-      };
-      this.fullChartData.datasets.push(datasetpush);
-      this.chartData.datasets.push(datasetpush);
-
-      this.datasetKeyIndexMap[key] = this.chartData.datasets.length - 1;
-
-      if (!this.chartOptions.scales[yAxisIds[key]]) {
-        const position = index % 2 === 0 ? 'left' : 'right';
-        this.chartOptions.scales[yAxisIds[key]] = {
-          position,
-          title: { display: false },
-          ticks: {
-            color: colors[key],
-            callback: (value: number) =>
-              Number.isInteger(value) ? value.toString() : value.toFixed(2)
-          },
-          grid: { drawOnChartArea: false },
-          display: true,
-        }
-      }
-      this.setTimeRange(this.currentRange);
-    });
   }
 
   private async checkForPreviousHour(): Promise<void> {
@@ -473,7 +330,18 @@ export class ChartComponent {
 
     this.loadingPreviousHour = true;
     try {
-      await this.loadHistoricalData(year, month, day, hour);
+      const { chartData: updatedChartData, fullChartData: updatedFullChartData } =
+        await loadHistoricalData(
+          year,
+          month,
+          day,
+          hour,
+          this.apiService,
+          this.chartData,
+          this.fullChartData
+        );
+      this.chartData = updatedChartData;
+      this.fullChartData = updatedFullChartData;
       /* Keep the view at the oldest point after adding older data */
       this.itemPosition = -(this.chartData.labels.length - this.visibleItemCount);
       this.enforceVisibleItemBounds();
