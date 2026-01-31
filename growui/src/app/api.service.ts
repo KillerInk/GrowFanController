@@ -147,7 +147,7 @@ export class ApiService {
   }
 
   setLightAutoControl(val: number): Observable<any> {
-    const params = this.buildCmdParams({ var: 'lightautomode', val });
+    const params = this.buildCmdParams({ var: 'lightautomode', enable: val });
 
     // Tell HttpClient to treat the response as text
     const options = { params, responseType: 'text' } as any;
