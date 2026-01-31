@@ -1,7 +1,7 @@
 <ng-container class="mybody">
 	<div class="container">
 		<!-- Fan Controls Section -->
-		<div class="card" style="width: 80%;">
+		<div class="card" style="width: 80%;" *ngIf="!deviceState!.autocontrol || !deviceState!.lightautomode">
 			<h2 class="section-title">Manual Controls</h2>
 
 			<div class="slider-container" *ngIf="!deviceState!.autocontrol">
