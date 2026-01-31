@@ -10,6 +10,7 @@ import { ApiService } from '../api.service';
 import { tap } from 'rxjs/operators';
 import { firstValueFrom } from 'rxjs';
 import { chartOptionsBase, colors, csv_yAxisIds, yAxisIds } from './chart-config';
+import { createSampledData } from './chart-sampledata';
 
 @Component({
   selector: 'app-chart',
@@ -480,35 +481,8 @@ export class ChartComponent {
     }
   }
 
-  private createSampledData(range: '10min' | '30min' | '1h' | '2h' | '4h'): { labels: number[]; datasets: any[] } {
-    const intervalMap = { '10min': 1, '30min': 3, '1h': 6, '2h': 12, '4h': 24 };
-    const step = intervalMap[range] ?? 1;
-
-    // Use the full data set for sampling
-    let startIndex = 0;
-    let endIndex = this.fullChartData.labels.length;
-
-    const newLabels: number[] = [];
-    const newDatasets = this.fullChartData.datasets.map(ds => ({
-      ...ds,
-      data: []
-    }));
-
-    for (let i = startIndex; i < endIndex; i += step) {
-      newLabels.push(this.fullChartData.labels[i]);
-
-      this.fullChartData.datasets.forEach((ds, idx) => {
-        if (Array.isArray(ds.data)) {
-          newDatasets[idx].data.push(ds.data[i]);
-        }
-      });
-    }
-
-    return { labels: newLabels, datasets: newDatasets };
-  }
-
   setTimeRange(range: '10min' | '30min' | '1h' | '2h' | '4h'): void {
-    const sampled = this.createSampledData(range);
+    const sampled = createSampledData(range,this.fullChartData);
     this.chartData.labels = sampled.labels;
     this.chartData.chartData = sampled.datasets;
     this.restoreDatasetVisibility();
@@ -566,6 +540,7 @@ export class ChartComponent {
       const meta = chart.getDatasetMeta(idx);
       // meta.hidden === null means visible; we want it hidden when !visible
       meta.hidden = !this.datasetVisibility[idx];
+      this.chartOptions.scales[meta.yAxisID].display = !this.datasetVisibility[idx];
     });
 
     chart.update();
