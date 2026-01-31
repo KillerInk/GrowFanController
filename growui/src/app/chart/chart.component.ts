@@ -68,6 +68,10 @@ export class ChartComponent {
       meta.hidden = !meta.hidden;
       this.chartOptions.scales[meta.yAxisID].display = !this.chartOptions.scales[meta.yAxisID].display
     }
+    // Keep our local visibility array in sync
+    this.datasetVisibility[datasetIndex] = !meta.hidden;
+
+    this.saveDatasetVisibility();
     ci.update();
 
     return false; // Prevent default legend click handling
@@ -282,6 +286,7 @@ export class ChartComponent {
             }
 
             this.setTimeRange(this.currentRange);
+            
           })
         )
       );
@@ -439,6 +444,7 @@ export class ChartComponent {
           display: true,
         }
       }
+       this.restoreDatasetVisibility();
     });
   }
 
@@ -503,12 +509,66 @@ export class ChartComponent {
 
   setTimeRange(range: '10min' | '30min' | '1h' | '2h' | '4h'): void {
     const sampled = this.createSampledData(range);
-    this.chartData = sampled;
+    this.chartData.labels = sampled.labels;
+    this.chartData.chartData = sampled.datasets;
+    this.restoreDatasetVisibility();
     this.currentRange = range;
     this.visibleItemCount = 600;
     this.itemPosition = 0;
     this.enforceVisibleItemBounds();
     this.setTimeLimits();
+  }
+
+
+  public datasetVisibility: boolean[] = [];
+
+  private saveDatasetVisibility() {
+    localStorage.setItem('datasetVisibility', JSON.stringify(this.datasetVisibility));
+  }
+
+  private loadDatasetVisibility() {
+    const saved = localStorage.getItem('datasetVisibility');
+    if (saved) {
+      try {
+        const arr = JSON.parse(saved);
+        // Ensure that the array length matches the number of datasets
+        this.datasetVisibility = Array.from({ length: this.chartData.datasets.length }, () => true);
+        for (let i = 0; i < arr.length && i < this.chartData.datasets.length; i++) {
+          if (Array.isArray(arr) && typeof arr[i] === 'boolean') {
+            this.datasetVisibility[i] = arr[i];
+          }
+        }
+      } catch { }
+    } else {
+      // Default visibility
+      this.datasetVisibility = Array.from({ length: this.chartData.datasets.length }, () => true);
+    }
+  }
+
+  private restoreDatasetVisibility() {
+    this.loadDatasetVisibility();
+
+    const chart = this.chart?.chart as any;
+    if (!chart || !chart.data.datasets.length) {
+      // Chart not ready yet – try again shortly
+      setTimeout(() => this.restoreDatasetVisibility(), 200);
+      return;
+    }
+
+    // Ensure visibility array matches dataset count
+    const visCount = chart.data.datasets.length;
+    if (this.datasetVisibility.length !== visCount) {
+      this.datasetVisibility = Array.from({ length: visCount }, () => true);
+    }
+
+    // Apply visibility to each meta
+    chart.data.datasets.forEach((_: any, idx: number) => {
+      const meta = chart.getDatasetMeta(idx);
+      // meta.hidden === null means visible; we want it hidden when !visible
+      meta.hidden = !this.datasetVisibility[idx];
+    });
+
+    chart.update();
   }
 }
 
