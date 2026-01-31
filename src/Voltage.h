@@ -12,5 +12,5 @@ struct Voltage
 
 static int getVoltageFromPercent(int maxvoltage, int minvoltage, double val)
 {
-    return (double)minvoltage + (double)(maxvoltage - minvoltage) * ((double)val / 100);
+    return static_cast<int>(minvoltage + (maxvoltage - minvoltage) * val / 100);
 }

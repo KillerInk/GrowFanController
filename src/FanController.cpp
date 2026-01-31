@@ -20,20 +20,23 @@ long nextTick;
 double lastTemp;
 double lastHumidity;
 const int waitTime = 15000;
+
+bool temp_or_hum_above_target(double atmp, double ahm)
+{
+    return atmp > fancontrollerValues.targetTemperature + 1 || ahm > fancontrollerValues.targetHumidity + 2;
+}
+
+bool temp_or_hum_below_target(double atmp, double ahm)
+{
+    return atmp < fancontrollerValues.targetTemperature - 1 || ahm < fancontrollerValues.targetHumidity - 2;
+}
+
 void FanController_processAutoControl()
 {
     double atmp = getAvgTemp();
     double ahm = getAvgHumidity();
     int old_speed = fancontrollerValues.autocontrolfanspeed;
-    if (atmp > fancontrollerValues.targetTemperature || ahm > fancontrollerValues.targetHumidity)
-    {
-        fancontrollerValues.autocontrolfanspeed++;
-    }
-    else if (atmp < fancontrollerValues.targetTemperature - 1 && ahm < fancontrollerValues.targetHumidity - 2)
-    {
-        fancontrollerValues.autocontrolfanspeed--;
-    }
-    else if (millis() > nextTick)
+    if (!temp_or_hum_above_target(atmp,ahm) && !temp_or_hum_below_target(atmp,ahm))
     {
         if (lastTemp > atmp || lastHumidity > ahm)
             fancontrollerValues.autocontrolfanspeed--;
@@ -43,18 +46,26 @@ void FanController_processAutoControl()
         lastHumidity = ahm;
         nextTick = millis() + waitTime;
     }
+    else if (temp_or_hum_above_target(atmp,ahm))
+    {
+        fancontrollerValues.autocontrolfanspeed++;
+    }
+    else if (temp_or_hum_below_target(atmp,ahm))
+    {
+        fancontrollerValues.autocontrolfanspeed--;
+    }
 
     if (fancontrollerValues.autocontrolfanspeed > fancontrollerValues.maxspeed)
-            fancontrollerValues.autocontrolfanspeed = fancontrollerValues.maxspeed;
-        if (fancontrollerValues.nightmodeActive && fancontrollerValues.autocontrolfanspeed > fancontrollerValues.nightmodeMaxSpeed)
-            fancontrollerValues.autocontrolfanspeed = fancontrollerValues.nightmodeMaxSpeed;
+        fancontrollerValues.autocontrolfanspeed = fancontrollerValues.maxspeed;
+    if (fancontrollerValues.nightmodeActive && fancontrollerValues.autocontrolfanspeed > fancontrollerValues.nightmodeMaxSpeed)
+        fancontrollerValues.autocontrolfanspeed = fancontrollerValues.nightmodeMaxSpeed;
 
-        if (fancontrollerValues.autocontrolfanspeed < fancontrollerValues.minspeed)
-            fancontrollerValues.autocontrolfanspeed = fancontrollerValues.minspeed;
+    if (fancontrollerValues.autocontrolfanspeed < fancontrollerValues.minspeed)
+        fancontrollerValues.autocontrolfanspeed = fancontrollerValues.minspeed;
 
     if (fancontrollerValues.autocontrolfanspeed != old_speed)
     {
-        
+
         fancontrollerValues.fan0Voltage.voltage = getVoltageFromPercent(fancontrollerValues.fan0Voltage.max, fancontrollerValues.fan0Voltage.min, fancontrollerValues.autocontrolfanspeed);
 
         int fan2speed = fancontrollerValues.autocontrolfanspeed - fancontrollerValues.filtercompensation;
