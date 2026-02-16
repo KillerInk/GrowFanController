@@ -66,6 +66,9 @@ void sendSocketMsg()
     socketmsg["bme280"]["pressure"] = buf;
     ret = snprintf(buf, sizeof buf, "%.2f", Bme280_getData()->avg_pressure);
     socketmsg["bme280"]["apressure"] = buf;
+    ret = snprintf(buf, sizeof buf, "%.2f", Bme280_getData()->vpdleaf);
+    socketmsg["bme280"]["vpd"] = buf;
+
 #endif
 
 #ifdef SENSOR_ENS160AHT21
@@ -80,6 +83,8 @@ void sendSocketMsg()
     socketmsg["ens160aht21"]["eco2"] = Ens160Aht2x_getCo2();
     socketmsg["ens160aht21"]["aqi"] = Ens160Aht2x_getAqi();
     socketmsg["ens160aht21"]["tvoc"] = Ens160Aht2x_getTvoc();
+    ret = snprintf(buf, sizeof buf, "%.2f", Ens160Aht2x_getVpdLeaf());
+    socketmsg["ens160aht21"]["vpd"] = buf;
 #endif
 
     if (FanController_getValues()->autocontrol)

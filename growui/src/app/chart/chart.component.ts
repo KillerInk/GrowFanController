@@ -258,7 +258,9 @@ export class ChartComponent {
       lightVoltage: Number(msg.lightvalmv ?? 0),
       tempFromEns: Number(msg.ens160aht21?.atemperatur ?? 0),
       humFromEns: Number(msg.ens160aht21?.ahumidity ?? 0),
-      pressure: Number(msg.bme280?.apressure)
+      pressure: Number(msg.bme280?.apressure),
+      vpdFromBme: Number(msg.bme280?.vpd),
+      vpdFromEns: Number(msg.ens160aht21?.vpd),
     };
     const prevTotal = this.chartData.labels.length;
     const wasFullView = (this.visibleItemCount === prevTotal) && this.itemPosition === 0;

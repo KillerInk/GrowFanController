@@ -14,13 +14,15 @@ export function initializeDatasets(
       voltage1: msg.voltage1,
       temperature: msg.bme280?.temperatur,
       humidity: msg.bme280?.humidity,
+      vpdFromBme: msg.bme280?.vpd,
       co2: msg.ens160aht21?.eco2,
       lightPower: msg.lightvalP,
       lightVoltage: msg.lightvalmv,
       // new fields from ens160aht21
       tempFromEns: msg.ens160aht21?.temperatur,
       humFromEns: msg.ens160aht21?.humidity,
-      pressure: msg.bme280?.pressure
+      pressure: msg.bme280?.pressure,
+      vpdFromEns: msg.ens160aht21?.vpd,
     };
 
     const validFields = Object.fromEntries(
@@ -54,7 +56,9 @@ export function initializeDatasets(
         // new labels
         case 'tempFromEns': label = 'ENS Temperature (°C)'; break;
         case 'humFromEns': label = 'ENS Humidity (%)'; break;
-        case 'pressure': label = 'Pressure (hpa)';
+        case 'pressure': label = 'Pressure (hpa)'; break;
+        case 'vpdFromEns': label = 'VPD Ens'; break;
+        case 'vpdFromBme': label = 'VPD Bme'; break;
       }
       const datasetpush = {
         ...commonOpts,

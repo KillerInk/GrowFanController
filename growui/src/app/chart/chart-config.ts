@@ -8,7 +8,9 @@ export const yAxisIds: Record<string, string> = {
     lightVoltage: 'yLightVoltage',
     tempFromEns: 'yTempFromEns',
     humFromEns: 'yHumFromEns',
-    pressure: 'yPressure'
+    pressure: 'yPressure',
+    vpdFromEns: 'yVpdFromEns',
+    vpdFromBme: 'yVpdFromBme',
 };
 
 export const colors: Record<string, string> = {
@@ -21,7 +23,9 @@ export const colors: Record<string, string> = {
     lightVoltage: 'rgba(83,102,255,1)',  // indigo – light voltage mV
     tempFromEns: 'rgba(50,205,50,1)',     // green – ENS temperature
     humFromEns: 'rgba(218,165,32,1)',    // goldenrod – ENS humidity
-    pressure: 'rgb(165, 32, 218)'
+    pressure: 'rgb(165, 32, 218)',
+    vpdFromEns: 'rgb(3, 87, 7)',
+    vpdFromBme: 'rgb(29, 73, 31)',
 };
 //time,tempB,humB,avgTempB,avgHumB,presB,avgPresB,vpdAirB,tempE,humE,avgTempE,avgHumE,eco2,aqi,tvoc,vpdAirE,volt0,volt1,lightP,lightMv
 export const csv_yAxisIds: Record<string, string> = {
@@ -34,7 +38,9 @@ export const csv_yAxisIds: Record<string, string> = {
     lightMv: 'yLightVoltage',
     avgTempE: 'yTempFromEns',
     avgHumE: 'yHumFromEns',
-    avgPresB: 'yPressure'
+    avgPresB: 'yPressure',
+    vpdAirB : 'yVpdFromBme',
+    vpdAirE : 'yVpdFromEns'
 };
 
 

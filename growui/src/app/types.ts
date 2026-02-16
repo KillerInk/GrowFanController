@@ -86,7 +86,7 @@ export interface SocketMsg {
     ahumidity: string;     // average humidity
     pressure: string;
     apressure: string;      // average pressure
-    
+    vpd: string;
   };
 
   /** Optional ENS160AHT21 sensor data */
@@ -98,6 +98,7 @@ export interface SocketMsg {
     eco2: string;   // CO₂ value
     aqi: string;    // Air Quality Index
     tvoc: string;   // Total Volatile Organic Compounds
+    vpd: string;
   };
 
   /** Fan controller values */

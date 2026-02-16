@@ -90,9 +90,6 @@ export class ApiService {
     return this.getCmd({ var: 'voltage', id, min, max });
   }
 
-  // ... add wrappers for all other commands
-  // (autovals, autocontrol, readgovee, etc.)
-
   /* ---------- Error handling ----------
    * You can customize error messages here.
    */

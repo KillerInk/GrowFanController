@@ -75,8 +75,8 @@ Uncomment a flag by removing the leading semicolon (`;`) or pass it directly wit
 | `i2c_pwn_addr=95` | I²C address of the fan PWM controller. |
 | `i2c_light_addr=94` | I²C address of the light PWM controller. |
 | `time_zone_hour_utc_offset=1` | Offset in hours from UTC for sunrise/sunset calculations. |
-| `MYSSID=""` | SSID used by the ESP‑32 when acting as an access point (if configured). |
-| `PW=""` | Password for that AP. |
+| `MYSSID=""` | SSID to connect. |
+| `PW=""` | Password for that SSID. |
 | `http_port=80` | HTTP port on which the web server listens. |
 | `GOVEE_BTH5179=1` | Enable support for a specific device (e.g., GOVEE BTH‑5179). |
 

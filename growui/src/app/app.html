@@ -38,6 +38,7 @@
 							<div><strong>eCO₂:</strong> {{socketdata?.ens160aht21?.eco2}}</div>
 							<div><strong>TVOC:</strong> {{socketdata?.ens160aht21?.tvoc}}</div>
 							<div><strong>AQI:</strong> {{socketdata?.ens160aht21?.aqi}}</div>
+							<div><strong>VPD:</strong> {{socketdata?.ens160aht21?.vpd}}</div>
 						</div>
 						
 						<div *ngIf="socketdata?.bme280" class="status-grid">
@@ -45,6 +46,7 @@
 							<div><strong>Temp:</strong> {{socketdata?.bme280?.temperatur}}°C/{{socketdata?.bme280?.atemperatur}}°C</div>
 							<div><strong>Hum:</strong> {{socketdata?.bme280?.humidity}}%/{{socketdata?.bme280?.ahumidity}}%</div>
 							<div><strong>Pressure:</strong> {{socketdata?.bme280?.pressure}}hPa/{{socketdata?.bme280?.apressure}}hPa</div>
+							<div><strong>VPD:</strong> {{socketdata?.bme280?.vpd}}</div>
 						</div>
 						<h3 class="section-title">Control Status</h3>
 						<div class="status-grid">
