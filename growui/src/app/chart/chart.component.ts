@@ -139,67 +139,34 @@ export class ChartComponent {
     return false;
   }
 
-  private enforceVisibleItemBounds() {
+  enforceVisibleItemBounds() {
+    // Simplify item position adjustment.
     const total = this.chartData.labels.length;
-    if (total === 0) { return; }
+    if (total === 0) return;
 
-    // Ensure we never show more points than available
-    if (this.visibleItemCount > total) {
-      this.visibleItemCount = total;
-    }
-
+    // Ensure visibleItemCount within bounds.
+    if (this.visibleItemCount > total) this.visibleItemCount = total;
     const maxVisible = Math.min(600, total);
-    if (this.visibleItemCount > maxVisible) {
-      this.visibleItemCount = maxVisible;
-    }
-    // Minimum visible items is 5 unless fewer points exist
+    if (this.visibleItemCount > maxVisible) this.visibleItemCount = maxVisible;
     const minVisible = Math.min(5, total);
-    if (this.visibleItemCount < minVisible) {
-      this.visibleItemCount = minVisible;
-    }
+    if (this.visibleItemCount < minVisible) this.visibleItemCount = minVisible;
 
-    // Keep itemPosition within valid bounds – allow negative offsets
+    // Adjust itemPosition.
     const maxOffset = total - this.visibleItemCount;
     if (this.itemPosition < 0) {
-      // Offset back cannot exceed the maximum possible offset
       this.itemPosition = Math.max(this.itemPosition, -maxOffset);
     } else {
-      // Offset forward limited by maxOffset
       this.itemPosition = Math.min(this.itemPosition, maxOffset);
     }
   }
 
-  private setTimeLimits() {
-    // Updated logic to correctly handle limited data points
+  setTimeLimits() {
+    // Correct minIndex calculation.
     const total = this.chartData.labels.length;
-    if (total === 0) { return; }
+    if (total === 0) return;
 
-    /* ---- NEW: special case for a single point ---- */
-    if (total === 1) {
-      const label = this.chartData.labels[0];
-      // give the x‑axis a small window around the timestamp
-      this.chartOptions.scales.x.min = label - 10000;
-      this.chartOptions.scales.x.max = label + 10000;
-      (this.chart?.chart as any)?.update();
-      return;
-    }
-
-    let minIndex = (total - this.visibleItemCount) + this.itemPosition;
-
-    // Clamp minIndex to valid range
-    if (minIndex < 0) {
-      minIndex = 0;
-      this.itemPosition = Math.min(0, this.itemPosition);
-    } else if (minIndex > total - 1) {
-      minIndex = total - 1;
-    }
-
-    // Determine maxIndex based on visibleItemCount
-    let maxIndex = minIndex + this.visibleItemCount;
-
-    if (maxIndex > total) {
-      maxIndex = total;
-    }
+    let minIndex = Math.max(0, Math.min(total - this.visibleItemCount + this.itemPosition, total - 1));
+    let maxIndex = Math.min(minIndex + this.visibleItemCount, total);
 
     const minLabel = this.chartData.labels[minIndex];
     const maxLabel = this.chartData.labels[maxIndex - 1] ?? this.chartData.labels[total - 1];
@@ -209,18 +176,6 @@ export class ChartComponent {
     (this.chart?.chart as any)?.update();
     this.checkForPreviousHour();
   }
-
-  /**
-   * Load historical data from the server and append it to the chart.
-   *
-   * @param year  e.g. "2024"
-   * @param month e.g. "03"
-   * @param day   e.g. "15"
-   * @param hour  e.g. "12" (24‑hour format)
-   */
-
-
-
 
   addSocketMessage(msg: SocketMsg): void {
     if (!this.initialized) {
@@ -235,7 +190,7 @@ export class ChartComponent {
       this.chartData = chartData;
       this.fullChartData = fullChartData;
       this.datasetKeyIndexMap = datasetKeyIndexMap;
-      this.setTimeRange(this.currentRange);
+      //this.setTimeRange(this.currentRange);
       this.initialized = true;
     }
     if (!this.chartData.labels.length) {
@@ -244,9 +199,6 @@ export class ChartComponent {
 
     let timeLabel: number;
     timeLabel = Date.now();
-
-    /* ---- rest of the method stays unchanged ---- */
-    if (timeLabel === 0) return;
 
     const valuesByKey: Record<string, number> = {
       voltage0: Number(msg.voltage0 ?? 0),

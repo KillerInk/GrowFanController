@@ -9,6 +9,7 @@ import { HttpEventType, HttpProgressEvent } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { ChartComponent } from './chart/chart.component';
+import { BehaviorSubject } from 'rxjs/internal/BehaviorSubject';
 
 @Component({
   selector: 'app-root',
@@ -27,6 +28,12 @@ export class App implements OnInit {
 
   deviceState: DeviceState | null = null;
   socketdata: SocketMsg | null = null;
+  private readonly _fan0Percent$ = new BehaviorSubject<number>(50); // or 0, or null-safe default
+  private readonly _fan1Percent$ = new BehaviorSubject<number>(50);
+
+  readonly fan0percent$ = this._fan0Percent$.asObservable();
+  readonly fan1percent$ = this._fan1Percent$.asObservable();
+
 
   selectedFile: File | null = null;
   selectedFileFw: File | null = null;
@@ -59,7 +66,9 @@ export class App implements OnInit {
       const cleaned = (typeof message === 'string'
         ? message.trim().replace(/^\ufeff/, '')          // strip BOM
         : JSON.stringify(message));
-      this.socketdata = JSON.parse(cleaned);   // set plain value
+      this.socketdata = JSON.parse(cleaned);
+      this.getFanPercent(0);
+      this.getFanPercent(1);   // set plain value
       this.cdr.markForCheck();                // notify Angular
       if (this.socketdata)
         this.chart?.addSocketMessage(this.socketdata);
@@ -283,15 +292,21 @@ export class App implements OnInit {
     });
   }
 
-  getFanPercent(fan: number) {
+  getFanPercent(fan: number): void {
     const min = fan === 0 ? this.deviceState?.fan0min : this.deviceState?.fan1min;
     const max = fan === 0 ? this.deviceState?.fan0max : this.deviceState?.fan1max;
-    const cur = fan === 0 ? this.deviceState?.fan0voltage : this.deviceState?.fan1voltage;
 
-    if (min == null || max == null || cur == null) return null; // handle missing data
+    // Use the voltage from the received socket data
+    const cur = fan === 0 ? this.socketdata?.voltage0 : this.socketdata?.voltage1;
+
+    if (min == null || max == null || cur == null) return; // guard against missing data
 
     // Calculate percentage
-    const percent = ((cur - min) / (max - min)) * 100;
-    return Math.round(percent); // optional rounding to nearest integer
+    const percent = Math.round(Math.max(0, Math.min(100, ((cur - min) / (max - min)) * 100)));
+
+    if (fan === 0)
+      this._fan0Percent$.next(percent);
+    else
+      this._fan1Percent$.next(percent);
   }
 }
