@@ -1,18 +1,24 @@
 {
   "/settings": {
-    "target": "http://192.168.178.156/",
+    "target": "http://192.168.178.143/",
+    "changeOrigin": true,
+    "secure": false,
+    "logLevel": "debug"
+  },
+  "/flashspiffs": {
+    "target": "http://192.168.178.143/",
     "changeOrigin": true,
     "secure": false,
     "logLevel": "debug"
   },
     "/2026": {
-    "target": "http://192.168.178.156/",
+    "target": "http://192.168.178.143/",
     "changeOrigin": true,
     "secure": false,
     "logLevel": "debug"
   },
   "/ws": {
-    "target": "http://192.168.178.156/",
+    "target": "http://192.168.178.143/",
     "changeOrigin": true,
     "secure": false,
     "logLevel": "debug",

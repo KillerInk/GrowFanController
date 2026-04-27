@@ -1,0 +1,142 @@
+<!-- src/app/features/lights/lights.component.html -->
+<div class="page">
+  <!-- Light Control -->
+  <div class="card">
+    <h3 class="card-title">Light Control</h3>
+    <div class="control-block">
+      <label>Light Value: {{ deviceState()?.lightvalmv || 0 }} mV</label>
+      <input type="range" class="slider" min="0" max="255" [value]="deviceState()?.lightvalmv || 0"
+             (input)="onLightChange($any($event).target.value)">
+      <div class="row">
+        <span class="slider-value">{{ deviceState()?.lightvalmv || 0 }} mV</span>
+        <button class="btn btn-primary" (click)="api.setLight(deviceState()?.lightvalmv || 0).subscribe()">Set</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Light Voltage Limits -->
+  <div class="card">
+    <h3 class="card-title">Light Voltage Limits</h3>
+    <div class="settings-grid">
+      <div class="input-pair">
+        <label>Min (mV)</label>
+        <input type="number" [(ngModel)]="deviceState()!.lightminvolt" class="input-field">
+      </div>
+      <div class="input-pair">
+        <label>Max (mV)</label>
+        <input type="number" [(ngModel)]="deviceState()!.lightmaxvolt" class="input-field">
+      </div>
+    </div>
+    <button class="btn btn-primary" (click)="submitLightVoltage()">Set Voltage Limits</button>
+  </div>
+
+  <!-- Light Percentage Limits -->
+  <div class="card">
+    <h3 class="card-title">Light Percentage Limits</h3>
+    <div class="settings-grid">
+      <div class="input-pair">
+        <label>Min (%)</label>
+        <input type="number" [(ngModel)]="deviceState()!.lightlimitspmin" class="input-field">
+      </div>
+      <div class="input-pair">
+        <label>Max (%)</label>
+        <input type="number" [(ngModel)]="deviceState()!.lightlimitspmax" class="input-field">
+      </div>
+    </div>
+    <button class="btn btn-primary" (click)="submitLightPercentage()">Set Percentage Limits</button>
+  </div>
+
+  <!-- Cloud Simulation -->
+  <div class="card">
+    <h3 class="card-title">Cloud Simulation</h3>
+    <div class="settings-grid">
+      <div class="input-pair">
+        <label>Duration (s)</label>
+        <input type="number" [(ngModel)]="deviceState()!.cloud.cycleduration" class="input-field">
+      </div>
+      <div class="input-pair">
+        <label>Min</label>
+        <input type="number" [(ngModel)]="deviceState()!.cloud.min" class="input-field">
+      </div>
+      <div class="input-pair">
+        <label>Max</label>
+        <input type="number" [(ngModel)]="deviceState()!.cloud.max" class="input-field">
+      </div>
+    </div>
+    <button class="btn btn-primary" (click)="submitCloud()">Set Cloud Sim</button>
+  </div>
+
+  <!-- Cloud Sim Toggle -->
+  <div class="card">
+    <div class="toggle-row">
+      <span class="toggle-label">Cloud Sim Active</span>
+      <label class="toggle-switch">
+        <input type="checkbox" [checked]="cloudSimActive" (change)="onCloudSimActive($any($event).target.checked)">
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+  </div>
+
+  <!-- Light Schedule -->
+  <div class="card">
+    <h3 class="card-title">Light Schedule</h3>
+    <div class="settings-grid">
+      <div class="input-pair">
+        <label>ON Hour</label>
+        <input type="number" [(ngModel)]="deviceState()!.lightonh" class="input-field">
+      </div>
+      <div class="input-pair">
+        <label>ON Min</label>
+        <input type="number" [(ngModel)]="deviceState()!.lightonmin" class="input-field">
+      </div>
+      <div class="input-pair">
+        <label>OFF Hour</label>
+        <input type="number" [(ngModel)]="deviceState()!.lightoffh" class="input-field">
+      </div>
+      <div class="input-pair">
+        <label>OFF Min</label>
+        <input type="number" [(ngModel)]="deviceState()!.lightoffmin" class="input-field">
+      </div>
+    </div>
+    <div class="settings-grid" style="margin-top: 12px;">
+      <div class="input-pair">
+        <label>Rise Enable</label>
+        <input type="checkbox" [(ngModel)]="deviceState()!.lightriseenable">
+      </div>
+      <div class="input-pair">
+        <label>Rise Hour</label>
+        <input type="number" [(ngModel)]="deviceState()!.lightriseh" class="input-field">
+      </div>
+      <div class="input-pair">
+        <label>Rise Min</label>
+        <input type="number" [(ngModel)]="deviceState()!.lightrisemin" class="input-field">
+      </div>
+    </div>
+    <div class="settings-grid" style="margin-top: 12px;">
+      <div class="input-pair">
+        <label>Set Enable</label>
+        <input type="checkbox" [(ngModel)]="deviceState()!.lightsetenable">
+      </div>
+      <div class="input-pair">
+        <label>Set Hour</label>
+        <input type="number" [(ngModel)]="deviceState()!.lightseth" class="input-field">
+      </div>
+      <div class="input-pair">
+        <label>Set Min</label>
+        <input type="number" [(ngModel)]="deviceState()!.lightsetmin" class="input-field">
+      </div>
+    </div>
+    <button class="btn btn-primary" style="margin-top: 12px;" (click)="submitLightSchedule()">Set Light Schedule</button>
+  </div>
+
+  <!-- Light Auto -->
+  <div class="card">
+    <div class="toggle-row">
+      <span class="toggle-label">Light Auto Mode</span>
+      <label class="toggle-switch">
+        <input type="checkbox" [checked]="!!deviceState()?.lightautomode" (change)="onLightAuto($any($event).target.checked)">
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+  </div>
+</div>

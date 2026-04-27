@@ -1,0 +1,68 @@
+﻿<!-- src/app/features/dashboard/dashboard.component.html -->
+<div class="page">
+  <!-- Live sensor readings -->
+  <div class="card sensor-strip">
+    <div class="sensor-strip-item" *ngIf="socketdata()?.bme280">
+      <span class="sensor-label">Temp</span>
+      <span class="sensor-value">{{ socketdata()!.bme280!.temperatur }}°C</span>
+      <span class="sensor-sub">{{ socketdata()!.bme280!.atemperatur }}° avg</span>
+    </div>
+    <div class="sensor-strip-item" *ngIf="socketdata()?.bme280">
+      <span class="sensor-label">Humidity</span>
+      <span class="sensor-value">{{ socketdata()!.bme280!.humidity }}%</span>
+      <span class="sensor-sub">{{ socketdata()!.bme280!.ahumidity }}% avg</span>
+    </div>
+    <div class="sensor-strip-item" *ngIf="socketdata()?.bme280">
+      <span class="sensor-label">VPD</span>
+      <span class="sensor-value" [class.high]="(parseFloat(socketdata()!.bme280!.vpd) || 0) > 1.6">{{ socketdata()!.bme280!.vpd }}</span>
+    </div>
+    <div class="sensor-strip-item" *ngIf="socketdata()?.bme280">
+      <span class="sensor-label">Pressure</span>
+      <span class="sensor-value">{{ socketdata()!.bme280!.pressure }} hPa</span>
+    </div>
+    <div class="sensor-strip-item" *ngIf="socketdata()?.ens160aht21">
+      <span class="sensor-label">eCO₂</span>
+      <span class="sensor-value">{{ socketdata()!.ens160aht21!.eco2 }}</span>
+    </div>
+    <div class="sensor-strip-item" *ngIf="socketdata()?.ens160aht21">
+      <span class="sensor-label">TVOC</span>
+      <span class="sensor-value">{{ socketdata()!.ens160aht21!.tvoc }}</span>
+    </div>
+    <div class="sensor-strip-item" *ngIf="socketdata()?.govee">
+      <span class="sensor-label">Govee T</span>
+      <span class="sensor-value">{{ socketdata()!.govee!.temperatur }}</span>
+    </div>
+    <div class="sensor-strip-item" *ngIf="socketdata()?.govee">
+      <span class="sensor-label">Govee H</span>
+      <span class="sensor-value">{{ socketdata()!.govee!.humidity }}</span>
+    </div>
+    <div class="sensor-strip-item" *ngIf="socketdata()?.govee">
+      <span class="sensor-label">Govee Bat</span>
+      <span class="sensor-value">{{ socketdata()!.govee!.battery }}%</span>
+    </div>
+  </div>
+
+  <!-- Fan status -->
+  <div class="card" *ngIf="socketdata()">
+    <h3 class="card-title">Fan Status</h3>
+    <div class="status-row">
+      <div class="status-item">
+        <span class="status-label">Speed</span>
+        <span class="status-value">{{ socketdata()!.voltage0 }} mV</span>
+      </div>
+      <div class="status-item">
+        <span class="status-label">Speed 1</span>
+        <span class="status-value">{{ socketdata()!.voltage1 }} mV</span>
+      </div>
+      <div class="status-item">
+        <span class="status-label">Light</span>
+        <span class="status-value">{{ socketdata()!.lightvalmv }} mV</span>
+      </div>
+    </div>
+  </div>
+  <!-- Chart -->
+  <div class="card chart-container">
+    <h3 class="card-title">Live Chart</h3>
+    <app-chart #chart></app-chart>
+  </div>
+</div>

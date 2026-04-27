@@ -1,0 +1,65 @@
+/* src/app/shared/topbar/topbar.component.scss */
+.topbar {
+  display: flex;
+  align-items: center;
+  height: 48px;
+  padding: 0 16px;
+  border-bottom: 1px solid rgba(150, 150, 150, 0.3);
+  background: rgba(20, 20, 20, 0.95);
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.hamburger {
+  display: none;
+  background: none;
+  border: none;
+  color: #E0E0E0;
+  font-size: 1.3rem;
+  cursor: pointer;
+  padding: 4px;
+  line-height: 1;
+}
+
+.topbar-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  flex-wrap: wrap;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #555;
+}
+
+.status-dot.online {
+  background: #4CAF50;
+  box-shadow: 0 0 6px #4CAF50;
+}
+
+.status-text {
+  color: #E0E0E0;
+  opacity: 0.8;
+}
+
+.status-divider {
+  color: rgba(150, 150, 150, 0.3);
+  font-size: 0.7rem;
+}
+
+@media (max-width: 768px) {
+  .hamburger {
+    display: block;
+  }
+  .topbar-status {
+    font-size: 0.72rem;
+    gap: 6px;
+  }
+  .status-divider {
+    display: none;
+  }
+}

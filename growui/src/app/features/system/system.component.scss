@@ -1,0 +1,45 @@
+/* src/app/features/system/system.component.scss */
+.info-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+}
+
+.info-label {
+  font-size: 0.85rem;
+  opacity: 0.7;
+}
+
+.info-value {
+  font-size: 0.9rem;
+  font-weight: 500;
+  font-family: monospace;
+}
+
+.progress-bar {
+  height: 20px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 4px;
+  overflow: hidden;
+  margin: 8px 0;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--primary-color, #4CAF50);
+  transition: width 0.3s ease;
+}
+
+.progress-text {
+  font-size: 0.8rem;
+  opacity: 0.7;
+}

@@ -1,0 +1,18 @@
+<!-- src/app/shared/topbar/topbar.component.html -->
+<div class="topbar">
+  <button class="hamburger" *ngIf="isMobile" (click)="toggleSidebar()" title="Menu">☰</button>
+  <div class="topbar-status">
+    <span class="status-dot" [class.online]="!!socketdata()"></span>
+    <span class="status-text">{{ socketdata()?.time || '—' }}</span>
+    <span class="status-divider">|</span>
+    <span class="status-text">Fan: <strong [style.color]="deviceState()?.autocontrol ? 'var(--primary-color)' : 'var(--accent-color)'">
+      {{ deviceState()?.autocontrol ? 'ON' : 'OFF' }}
+    </strong></span>
+    <span class="status-divider">|</span>
+    <span class="status-text">Light: <strong [style.color]="deviceState()?.lightautomode ? 'var(--primary-color)' : 'var(--accent-color)'">
+      {{ deviceState()?.lightautomode ? 'AUTO' : 'MANUAL' }}
+    </strong></span>
+    <span class="status-divider" *ngIf="deviceState()?.nightmodeactive">|</span>
+    <span class="status-text" *ngIf="deviceState()?.nightmodeactive">🌙 Night</span>
+  </div>
+</div>

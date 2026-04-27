@@ -73,7 +73,7 @@ export class ApiService {
   }
 
   setLight(val: number): Observable<any> {
-    if (val < 0 || val > 100) return throwError('speed out of range');
+    if (val < 0 || val > 255) return throwError('light value out of range');
 
     const params = this.buildCmdParams({ var: 'lightval', val });
 
@@ -239,7 +239,21 @@ export class ApiService {
   }
 
     /**
-   * Download a CSV file containing historical data.
+    * Alias for flashSpiffs (kept for backward compatibility)
+    */
+   uploadSpiffs(file: File): Observable<HttpEvent<string>> {
+     return this.flashSpiffs(file);
+   }
+
+   /**
+    * Alias for flashFirmware (kept for backward compatibility)
+    */
+   uploadFirmware(file: File): Observable<HttpEvent<any>> {
+     return this.flashFirmware(file);
+   }
+
+    /**
+    * Download a CSV file containing historical data.
    *
    * @param year  e.g. "2024"
    * @param month e.g. "03"

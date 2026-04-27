@@ -1,0 +1,145 @@
+/* src/app/shared/sidebar/sidebar.component.scss */
+.sidebar-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 99;
+}
+
+.sidebar {
+  width: 220px;
+  min-width: 220px;
+  background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
+  border-right: 1px solid rgba(150, 150, 150, 0.3);
+  display: flex;
+  flex-direction: column;
+  transition: width 0.25s ease, min-width 0.25s ease, transform 0.25s ease;
+  z-index: 100;
+  position: relative;
+}
+
+.sidebar.minimized {
+  width: 56px;
+  min-width: 56px;
+}
+
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  padding: 12px 8px;
+  border-bottom: 1px solid rgba(150, 150, 150, 0.3);
+  gap: 4px;
+}
+
+.sidebar-logo {
+  flex: 1;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #4CAF50;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.sidebar-toggle,
+.sidebar-close {
+  background: none;
+  border: none;
+  color: #E0E0E0;
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: 4px;
+  line-height: 1;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+
+.sidebar-toggle:hover,
+.sidebar-close:hover {
+  opacity: 1;
+}
+
+.sidebar-nav {
+  flex: 1;
+  padding: 12px 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 10px;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  color: #E0E0E0;
+  cursor: pointer;
+  font-size: 0.9rem;
+  text-align: left;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
+}
+
+.nav-item:hover {
+  background: rgba(76, 175, 80, 0.1);
+}
+
+.nav-item.active {
+  background: rgba(76, 175, 80, 0.2);
+  color: #4CAF50;
+  font-weight: 500;
+}
+
+.nav-icon {
+  font-size: 1.15rem;
+  width: 24px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.nav-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar.minimized .nav-label {
+  display: none;
+}
+
+.sidebar.minimized .nav-item {
+  justify-content: center;
+  padding: 10px;
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    transform: translateX(-100%);
+    width: 260px;
+    min-width: 260px;
+  }
+
+  .sidebar.open {
+    transform: translateX(0);
+  }
+
+  .sidebar.minimized {
+    width: 260px;
+    min-width: 260px;
+  }
+
+  .sidebar.minimized .nav-label {
+    display: inline;
+  }
+
+  .sidebar.minimized .nav-item {
+    justify-content: flex-start;
+    padding: 10px;
+  }
+}

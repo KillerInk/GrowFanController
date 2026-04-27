@@ -52,7 +52,22 @@ export interface LightValues {
   };
 }
 
-export interface DeviceState extends FanValues, LightValues {}
+export interface DeviceState extends FanValues, LightValues {
+  /** Light value in millivolts (also in SocketMsg) */
+  lightvalmv?: number;
+
+  /** System info fields */
+  uptime?: string;
+  freeHeap?: number;
+  minFreeHeap?: number;
+  maxAlloc?: number;
+  chipid?: string;
+  firmwareVersion?: string;
+  chipmodel?: string;
+  spisize?: number;
+  spiflashspeed?: number;
+  spiflsize?: number;
+}
 
 //{"bme280":{
 // "temperatur":"21.72",
@@ -100,6 +115,9 @@ export interface SocketMsg {
     tvoc: string;   // Total Volatile Organic Compounds
     vpd: string;
   };
+
+  /** VPD as number for comparisons */
+  vpdNum?: number;
 
   /** Fan controller values */
   autocontrolspeed: boolean;      // only if auto‑control enabled

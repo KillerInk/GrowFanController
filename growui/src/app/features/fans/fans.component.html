@@ -1,0 +1,129 @@
+<!-- src/app/features/fans/fans.component.html -->
+<div class="page">
+  <!-- Fan Speed -->
+  <div class="card">
+    <h3 class="card-title">Fan Speed</h3>
+    <div class="control-block">
+      <label>Current Speed: {{ deviceState()?.fan0voltage }} mV</label>
+      <input type="range" class="slider" min="0" max="255" [value]="deviceState()?.fan0voltage"
+             (input)="onSpeedChange(0, $any($event).target.value)">
+      <div class="row">
+        <span class="slider-value">{{ deviceState()?.fan0voltage }} mV</span>
+        <button class="btn btn-primary" (click)="api.setSpeed(0, deviceState()?.fan0voltage ?? 0).subscribe()">Set</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3 class="card-title">Fan 1 Speed</h3>
+    <div class="control-block">
+      <label>Current Speed: {{ deviceState()?.fan1voltage }} mV</label>
+      <input type="range" class="slider" min="0" max="255" [value]="deviceState()?.fan1voltage"
+             (input)="onSpeedChange(1, $any($event).target.value)">
+      <div class="row">
+        <span class="slider-value">{{ deviceState()?.fan1voltage }} mV</span>
+        <button class="btn btn-primary" (click)="api.setSpeed(1, deviceState()?.fan1voltage ?? 0).subscribe()">Set</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Target Temperature, Humidity & Speed Difference -->
+  <div class="card">
+    <h3 class="card-title">Target Settings</h3>
+    <div class="settings-grid">
+      <div class="input-pair">
+        <label>Target Temperature (°C)</label>
+        <input type="number" [(ngModel)]="deviceState()!.targetTemperature" class="input-field">
+      </div>
+      <div class="input-pair">
+        <label>Target Humidity (%)</label>
+        <input type="number" [(ngModel)]="deviceState()!.targetHumidity" class="input-field">
+      </div>
+      <div class="input-pair">
+        <label>Fan Speed Difference (speeddif)</label>
+        <input type="number" [(ngModel)]="deviceState()!.speeddif" class="input-field">
+      </div>
+    </div>
+    <button class="btn btn-primary" (click)="submitTargetTempHum()">Set Target</button>
+  </div>
+
+  <!-- Fan Settings -->
+  <div class="card">
+    <h3 class="card-title">Fan Settings</h3>
+    <div class="settings-grid">
+      <div class="input-pair">
+        <label>Fan 0 Min (mV)</label>
+        <input type="number" [(ngModel)]="deviceState()!.fan0min" class="input-field">
+      </div>
+      <div class="input-pair">
+        <label>Fan 0 Max (mV)</label>
+        <input type="number" [(ngModel)]="deviceState()!.fan0max" class="input-field">
+      </div>
+      <div class="input-pair">
+        <label>Fan 1 Min (mV)</label>
+        <input type="number" [(ngModel)]="deviceState()!.fan1min" class="input-field">
+      </div>
+      <div class="input-pair">
+        <label>Fan 1 Max (mV)</label>
+        <input type="number" [(ngModel)]="deviceState()!.fan1max" class="input-field">
+      </div>
+    </div>
+    <div class="row">
+      <button class="btn btn-primary" (click)="submitFan(0)">Set Fan 0</button>
+      <button class="btn btn-primary" (click)="submitFan(1)">Set Fan 1</button>
+    </div>
+  </div>
+
+  <!-- Night Mode -->
+  <div class="card">
+    <h3 class="card-title">Night Mode</h3>
+    <div class="settings-grid">
+      <div class="input-pair">
+        <label>ON Hour</label>
+        <input type="number" [(ngModel)]="deviceState()!.nightmodeonhour" class="input-field">
+      </div>
+      <div class="input-pair">
+        <label>ON Min</label>
+        <input type="number" [(ngModel)]="deviceState()!.nightmodeonmin" class="input-field">
+      </div>
+      <div class="input-pair">
+        <label>OFF Hour</label>
+        <input type="number" [(ngModel)]="deviceState()!.nightmodeoffhour" class="input-field">
+      </div>
+      <div class="input-pair">
+        <label>OFF Min</label>
+        <input type="number" [(ngModel)]="deviceState()!.nightmodeoffmin" class="input-field">
+      </div>
+      <div class="input-pair">
+        <label>Max Speed</label>
+        <input type="number" [(ngModel)]="deviceState()!.nightmodemaxspeed" class="input-field">
+      </div>
+    </div>
+    <button class="btn btn-primary" (click)="submitNightMode()">Set Night Mode</button>
+  </div>
+
+  <!-- Auto Control -->
+  <div class="card">
+    <div class="toggle-row">
+      <span class="toggle-label">Auto Control</span>
+      <label class="toggle-switch">
+        <input type="checkbox" [checked]="!!deviceState()?.autocontrol" (change)="onAutoControl($any($event).target.checked)">
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+    <div class="toggle-row">
+      <span class="toggle-label">Night Mode Active</span>
+      <label class="toggle-switch">
+        <input type="checkbox" [checked]="!!deviceState()?.nightmodeactive" (change)="onNightModeActive($any($event).target.checked)">
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+    <div class="toggle-row">
+      <span class="toggle-label">Read Govee</span>
+      <label class="toggle-switch">
+        <input type="checkbox" [checked]="!!deviceState()?.readgovee" (change)="onReadGovee($any($event).target.checked)">
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+  </div>
+</div>

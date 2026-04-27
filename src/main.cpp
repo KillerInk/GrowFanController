@@ -167,6 +167,23 @@ String getSettings()
     myObject["cloud"]["min"] = LightController_getValues()->min_light_cloudP;
     myObject["cloud"]["max"] = LightController_getValues()->max_light_cloudP;
 
+    // System info
+    unsigned long uptimeMs = millis();
+    unsigned long uptimeDays = uptimeMs / 86400000;
+    unsigned long uptimeHours = (uptimeMs % 86400000) / 3600000;
+    unsigned long uptimeMinutes = (uptimeMs % 3600000) / 60000;
+    unsigned long uptimeSeconds = (uptimeMs % 60000) / 1000;
+    myObject["uptime"] = String(uptimeDays) + "d " + String(uptimeHours) + "h " + String(uptimeMinutes) + "m " + String(uptimeSeconds) + "s";
+    myObject["freeHeap"] = ESP.getFreeHeap();
+    myObject["minFreeHeap"] = ESP.getMinFreeHeap();
+    myObject["maxAlloc"] = ESP.getMaxAllocHeap();
+    myObject["chipid"] = String(ESP.getChipModel());
+    myObject["firmwareVersion"] = String(FIRMWARE_VERSION);
+    myObject["chipmodel"] = ESP.getChipModel();
+    myObject["spisize"] = ESP.getFlashChipSize();
+    myObject["spiflashspeed"] = ESP.getFlashChipSpeed();
+    myObject["spiflsize"] = ESP.getFlashChipSize();
+
     return JSON.stringify(myObject);
 }
 

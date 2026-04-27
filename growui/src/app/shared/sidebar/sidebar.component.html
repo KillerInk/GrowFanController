@@ -1,0 +1,25 @@
+<!-- src/app/shared/sidebar/sidebar.component.html -->
+<div class="sidebar-overlay" *ngIf="mobile() && activeNav() !== 'dashboard'" (click)="closeMobile()"></div>
+
+<aside class="sidebar"
+       [class.open]="mobile() && activeNav() !== 'dashboard'"
+       [class.minimized]="isMinimized">
+  <div class="sidebar-header">
+    <span class="sidebar-logo">🌱 GrowControl</span>
+    <button class="sidebar-toggle" (click)="toggleMinimize()" title="Collapse">
+      <span>{{ isMinimized ? '›' : '«' }}</span>
+    </button>
+    <button class="sidebar-close" *ngIf="mobile()" (click)="closeMobile()" title="Close">✕</button>
+  </div>
+
+  <nav class="sidebar-nav">
+    @for (item of navItems; track item.key) {
+      <button class="nav-item"
+              [class.active]="activeNav() === item.key"
+              (click)="selectPage(item.key)">
+        <span class="nav-icon">{{ item.icon }}</span>
+        <span class="nav-label" *ngIf="!minimized()">{{ item.label }}</span>
+      </button>
+    }
+  </nav>
+</aside>

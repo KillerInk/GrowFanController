@@ -1,0 +1,75 @@
+<!-- src/app/features/sensors/sensors.component.html -->
+<div class="page">
+  <!-- BME280 Sensor -->
+  <div class="card">
+    <h3 class="card-title">🌡️ BME280</h3>
+    <div class="sensor-detail" *ngIf="socketdata()?.bme280">
+      <div class="detail-row">
+        <span class="detail-label">Temperature</span>
+        <span class="detail-value">{{ socketdata()!.bme280!.temperatur }}°C</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Avg Temperature</span>
+        <span class="detail-value">{{ socketdata()!.bme280!.atemperatur }}°C</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Humidity</span>
+        <span class="detail-value">{{ socketdata()!.bme280!.humidity }}%</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Avg Humidity</span>
+        <span class="detail-value">{{ socketdata()!.bme280!.ahumidity }}%</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">VPD</span>
+        <span class="detail-value" [class.high]="$any(socketdata()!.bme280!.vpd) > 1.6">{{ socketdata()!.bme280!.vpd }}</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Pressure</span>
+        <span class="detail-value">{{ socketdata()!.bme280!.pressure }} hPa</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ENS160AHT21 Sensor -->
+  <div class="card">
+    <h3 class="card-title">🔬 ENS160AHT21</h3>
+    <div class="sensor-detail" *ngIf="socketdata()?.ens160aht21">
+      <div class="detail-row">
+        <span class="detail-label">eCO₂</span>
+        <span class="detail-value">{{ socketdata()!.ens160aht21!.eco2 }}</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">TVOC</span>
+        <span class="detail-value">{{ socketdata()!.ens160aht21!.tvoc }}</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Temperature</span>
+        <span class="detail-value">{{ socketdata()!.ens160aht21!.temperatur }}°C</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Humidity</span>
+        <span class="detail-value">{{ socketdata()!.ens160aht21!.humidity }}%</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Govee Sensor -->
+  <div class="card">
+    <h3 class="card-title">🌡️ Govee (via API)</h3>
+    <div class="sensor-detail" *ngIf="socketdata()?.govee">
+      <div class="detail-row">
+        <span class="detail-label">Temperature</span>
+        <span class="detail-value">{{ socketdata()!.govee!.temperatur }}°C</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Humidity</span>
+        <span class="detail-value">{{ socketdata()!.govee!.humidity }}%</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Battery</span>
+        <span class="detail-value">{{ socketdata()!.govee!.battery }}%</span>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,78 @@
+<!-- src/app/features/system/system.component.html -->
+<div class="page">
+  <!-- Device Info -->
+  <div class="card">
+    <h3 class="card-title">Device Info</h3>
+    <div class="info-grid">
+      <div class="info-row">
+        <span class="info-label">Uptime</span>
+        <span class="info-value">{{ deviceState()?.uptime || '—' }}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Free Heap</span>
+        <span class="info-value">{{ deviceState()?.freeHeap || '—' }}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Min Free Heap</span>
+        <span class="info-value">{{ deviceState()?.minFreeHeap || '—' }}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Max Alloc</span>
+        <span class="info-value">{{ deviceState()?.maxAlloc || '—' }}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Chip ID</span>
+        <span class="info-value">{{ deviceState()?.chipid || '—' }}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Firmware Version</span>
+        <span class="info-value">{{ deviceState()?.firmwareVersion || '—' }}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Chip Model</span>
+        <span class="info-value">{{ deviceState()?.chipmodel || '—' }}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">SPI Size</span>
+        <span class="info-value">{{ deviceState()?.spisize || '—' }}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">SPI Flash Speed</span>
+        <span class="info-value">{{ deviceState()?.spiflashspeed || '—' }}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">SPI Flash Size</span>
+        <span class="info-value">{{ deviceState()?.spiflsize || '—' }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- SPIFFS Upload -->
+  <div class="card">
+    <h3 class="card-title">SPIFFS Upload</h3>
+    <input type="file" (change)="onSpiffsFileChange($event)">
+    <div class="progress-bar">
+      <div class="progress-fill" [style.width.%]="ds().spiffsUploadPercent()"></div>
+    </div>
+    <span class="progress-text">{{ ds().spiffsUploadPercent() }}%</span>
+  </div>
+
+  <!-- Firmware Upload -->
+  <div class="card">
+    <h3 class="card-title">Firmware Upload</h3>
+    <input type="file" (change)="onFirmwareFileChange($event)">
+    <div class="progress-bar">
+      <div class="progress-fill" [style.width.%]="ds().firmwareUploadPercent()"></div>
+    </div>
+    <span class="progress-text">{{ ds().firmwareUploadPercent() }}%</span>
+  </div>
+
+  <!-- Reset -->
+  <div class="card">
+    <h3 class="card-title">Reset</h3>
+    <div class="row">
+      <button class="btn btn-warning" (click)="onReset(true)">Soft Reset</button>
+      <button class="btn btn-warning" (click)="onReset(false)">Hard Reset</button>
+    </div>
+  </div>
+</div>
