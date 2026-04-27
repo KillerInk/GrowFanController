@@ -1,398 +1,519 @@
-<ng-container class="mybody">
-	<div class="container">
-		<!-- Fan Controls Section -->
-		<div class="card" style="width: 80%;" *ngIf="!deviceState!.autocontrol || !deviceState!.lightautomode">
-			<h2 class="section-title">Manual Controls</h2>
+<!-- growui/src/app/app.html -->
+<div class="app-layout">
+ 
+  <!-- Sidebar overlay for mobile -->
+  <div class="sidebar-overlay" *ngIf="sidebarOpen" (click)="closeSidebar()"></div>
+ 
+  <!-- Sidebar -->
+  <aside class="sidebar" [class.open]="sidebarOpen" [class.minimized]="sidebarMinimized">
+    <div class="sidebar-header">
+      <span class="sidebar-logo">🌱 GrowControl</span>
+      <button class="sidebar-toggle" (click)="sidebarMinimized = !sidebarMinimized" title="Collapse">
+        <span>{{ sidebarMinimized ? '›' : '«' }}</span>
+      </button>
+      <button class="sidebar-close" *ngIf="isMobile" (click)="closeSidebar()" title="Close">✕</button>
+    </div>
+ 
+    <nav class="sidebar-nav">
+      <button class="nav-item" [class.active]="activeNav === 'dashboard'" (click)="setNav('dashboard')">
+        <span class="nav-icon">📊</span>
+        <span class="nav-label" *ngIf="!sidebarMinimized">Dashboard</span>
+      </button>
+      <button class="nav-item" [class.active]="activeNav === 'fans'" (click)="setNav('fans')">
+        <span class="nav-icon">🌀</span>
+        <span class="nav-label" *ngIf="!sidebarMinimized">Fans</span>
+      </button>
+      <button class="nav-item" [class.active]="activeNav === 'lights'" (click)="setNav('lights')">
+        <span class="nav-icon">💡</span>
+        <span class="nav-label" *ngIf="!sidebarMinimized">Lights</span>
+      </button>
+      <button class="nav-item" [class.active]="activeNav === 'sensors'" (click)="setNav('sensors')">
+        <span class="nav-icon">🌡️</span>
+        <span class="nav-label" *ngIf="!sidebarMinimized">Sensors</span>
+      </button>
+      <button class="nav-item" [class.active]="activeNav === 'system'" (click)="setNav('system')">
+        <span class="nav-icon">⚙️</span>
+        <span class="nav-label" *ngIf="!sidebarMinimized">System</span>
+      </button>
+    </nav>
+  </aside>
+ 
+  <!-- Main content -->
+  <main class="main-content">
+ 
+     <!-- Top bar -->
+     <div class="topbar">
+       <button class="hamburger" *ngIf="isMobile" (click)="toggleSidebar()">☰</button>
+       <div class="topbar-status">
+         <span class="status-dot" [class.online]="!!socketdata()"></span>
+         <span class="status-text">{{ socketdata()?.time || '—' }}</span>
+         <span class="status-divider">|</span>
+         <span class="status-text">Auto: <strong [style.color]="deviceState()?.autocontrol ? 'var(--primary-color)' : 'var(--accent-color)'">
+           {{ deviceState()?.autocontrol ? 'ON' : 'OFF' }}
+         </strong></span>
+         <span class="status-divider">|</span>
+         <span class="status-text">Light: <strong [style.color]="deviceState()?.lightautomode ? 'var(--primary-color)' : 'var(--accent-color)'">
+           {{ deviceState()?.lightautomode ? 'AUTO' : 'MANUAL' }}
+         </strong></span>
+         <span class="status-divider" *ngIf="deviceState()?.nightmodeactive">|</span>
+         <span class="status-text" *ngIf="deviceState()?.nightmodeactive">🌙 Night</span>
+       </div>
+     </div>
+ 
+     <!-- ==================== DASHBOARD ==================== -->
+     <div class="page" *ngIf="activeNav === 'dashboard'">
+ 
+       <!-- Live sensor readings -->
+       <div class="card sensor-strip">
+         <div class="sensor-strip-item" *ngIf="socketdata()?.bme280">
+           <span class="sensor-label">Temp</span>
+           <span class="sensor-value">{{ socketdata()!.bme280!.temperatur }}°C</span>
+           <span class="sensor-sub">{{ socketdata()!.bme280!.atemperatur }}° avg</span>
+         </div>
+         <div class="sensor-strip-item" *ngIf="socketdata()?.bme280">
+           <span class="sensor-label">Humidity</span>
+           <span class="sensor-value">{{ socketdata()!.bme280!.humidity }}%</span>
+           <span class="sensor-sub">{{ socketdata()!.bme280!.ahumidity }}% avg</span>
+         </div>
+         <div class="sensor-strip-item" *ngIf="socketdata()?.bme280">
+           <span class="sensor-label">VPD</span>
+           <span class="sensor-value" [class.high]="$any(socketdata()!.bme280!.vpd) > 1.6">{{ socketdata()!.bme280!.vpd }}</span>
+         </div>
+         <div class="sensor-strip-item" *ngIf="socketdata()?.bme280">
+           <span class="sensor-label">Pressure</span>
+           <span class="sensor-value">{{ socketdata()!.bme280!.pressure }} hPa</span>
+         </div>
+         <div class="sensor-strip-item" *ngIf="socketdata()?.ens160aht21">
+           <span class="sensor-label">eCO₂</span>
+           <span class="sensor-value">{{ socketdata()!.ens160aht21!.eco2 }}</span>
+         </div>
+         <div class="sensor-strip-item" *ngIf="socketdata()?.ens160aht21">
+           <span class="sensor-label">TVOC</span>
+           <span class="sensor-value">{{ socketdata()!.ens160aht21!.tvoc }}</span>
+         </div>
+         <div class="sensor-strip-item" *ngIf="socketdata()?.govee">
+           <span class="sensor-label">Govee T</span>
+           <span class="sensor-value">{{ socketdata()!.govee!.temperatur }}</span>
+         </div>
+         <div class="sensor-strip-item" *ngIf="socketdata()?.govee">
+           <span class="sensor-label">Govee H</span>
+           <span class="sensor-value">{{ socketdata()!.govee!.humidity }}</span>
+         </div>
+         <div class="sensor-strip-item" *ngIf="socketdata()?.govee">
+           <span class="sensor-label">Govee Bat</span>
+           <span class="sensor-value">{{ socketdata()!.govee!.battery }}%</span>
+         </div>
+       </div>
+ 
+       <!-- Fan status -->
+       <div class="card" *ngIf="deviceState()">
+         <h3 class="card-title">Fan Status</h3>
+         <div class="status-row">
+           <div class="status-item">
+             <span class="status-label">Speed</span>
+             <span class="status-value">{{ deviceState()!.fan0voltage }} mV</span>
+           </div>
+           <div class="status-item">
+             <span class="status-label">Speed 1</span>
+             <span class="status-value">{{ deviceState()!.fan1voltage }} mV</span>
+           </div>
+           <div class="status-item">
+             <span class="status-label">Light</span>
+             <span class="status-value">{{ socketdata()?.lightvalmv ?? 0 }} mV</span>
+           </div>
+           <div class="status-item">
+             <span class="status-label">Fan 0</span>
+             <span class="status-value">{{ deviceState()!.fan0min }}-{{ deviceState()!.fan0max }} mV</span>
+           </div>
+           <div class="status-item">
+             <span class="status-label">Fan 1</span>
+             <span class="status-value">{{ deviceState()!.fan1min }}-{{ deviceState()!.fan1max }} mV</span>
+           </div>
+         </div>
+       </div>
+ 
+       <!-- Chart -->
+       <div class="card chart-container">
+         <h3 class="card-title">Live Chart</h3>
+         <app-chart #chart></app-chart>
+       </div>
+     </div>
+ 
+     <!-- ==================== FANS ==================== -->
+     <div class="page" *ngIf="activeNav === 'fans'">
+ 
+       <!-- Fan Speed -->
+       <div class="card">
+         <h3 class="card-title">Fan Speed</h3>
+         <div class="control-block">
+           <label>Current Speed: {{ deviceState()?.fan0voltage }} mV</label>
+           <input type="range" class="slider" min="0" max="255" [value]="deviceState()?.fan0voltage" (input)="onSpeedChange($any($event).target.value)">
+           <div class="row">
+             <span class="slider-value">{{ deviceState()?.fan0voltage }} mV</span>
+             <button class="btn btn-primary" (click)="api.setSpeed(0, deviceState()?.fan0voltage ?? 0).subscribe()">Set</button>
+           </div>
+         </div>
+       </div>
+ 
+       <div class="card">
+         <h3 class="card-title">Fan 1 Speed</h3>
+         <div class="control-block">
+           <label>Current Speed: {{ deviceState()?.fan1voltage }} mV</label>
+           <input type="range" class="slider" min="0" max="255" [value]="deviceState()?.fan1voltage" (input)="onSpeed1Change($any($event).target.value)">
+           <div class="row">
+             <span class="slider-value">{{ deviceState()?.fan1voltage }} mV</span>
+             <button class="btn btn-primary" (click)="api.setSpeed(1, deviceState()?.fan1voltage ?? 0).subscribe()">Set</button>
+           </div>
+         </div>
+       </div>
 
-			<div class="slider-container" *ngIf="!deviceState!.autocontrol">
-				<label for="speed" class="label">Fan1 Speed:</label>
-				<input type="range" min="0" max="100" value="50" class="slider" id="speed"
-					(input)="onSpeedChange($event.target.value)">
-			</div>
+       <!-- Fan Settings -->
+       <div class="card">
+         <h3 class="card-title">Fan Settings</h3>
+         <div class="settings-grid">
+           <div class="input-pair">
+             <label>Fan 0 Min (mV)</label>
+             <input type="number" [(ngModel)]="deviceState()!.fan0min" class="input-field">
+           </div>
+           <div class="input-pair">
+             <label>Fan 0 Max (mV)</label>
+             <input type="number" [(ngModel)]="deviceState()!.fan0max" class="input-field">
+           </div>
+           <div class="input-pair">
+             <label>Fan 1 Min (mV)</label>
+             <input type="number" [(ngModel)]="deviceState()!.fan1min" class="input-field">
+           </div>
+           <div class="input-pair">
+             <label>Fan 1 Max (mV)</label>
+             <input type="number" [(ngModel)]="deviceState()!.fan1max" class="input-field">
+           </div>
+         </div>
+         <div class="row">
+           <button class="btn btn-primary" (click)="submitFan0()">Set Fan 0</button>
+           <button class="btn btn-primary" (click)="submitFan1()">Set Fan 1</button>
+         </div>
+       </div>
+ 
+       <!-- Night Mode -->
+       <div class="card">
+         <h3 class="card-title">Night Mode</h3>
+         <div class="settings-grid">
+           <div class="input-pair">
+             <label>ON Hour</label>
+             <input type="number" [(ngModel)]="deviceState()!.nightmodeonhour" class="input-field">
+           </div>
+           <div class="input-pair">
+             <label>ON Min</label>
+             <input type="number" [(ngModel)]="deviceState()!.nightmodeonmin" class="input-field">
+           </div>
+           <div class="input-pair">
+             <label>OFF Hour</label>
+             <input type="number" [(ngModel)]="deviceState()!.nightmodeoffhour" class="input-field">
+           </div>
+           <div class="input-pair">
+             <label>OFF Min</label>
+             <input type="number" [(ngModel)]="deviceState()!.nightmodeoffmin" class="input-field">
+           </div>
+           <div class="input-pair">
+             <label>Max Speed</label>
+             <input type="number" [(ngModel)]="deviceState()!.nightmodemaxspeed" class="input-field">
+           </div>
+         </div>
+         <button class="btn btn-primary" (click)="submitNightMode()">Set Night Mode</button>
+       </div>
+ 
+       <!-- Auto Control -->
+       <div class="card">
+         <div class="toggle-row">
+           <span class="toggle-label">Auto Control</span>
+           <label class="toggle-switch">
+             <input type="checkbox" [checked]="!!deviceState()?.autocontrol" (change)="onAutoControlChange($any($event).target.checked)">
+             <span class="toggle-slider"></span>
+           </label>
+         </div>
+         <div class="toggle-row">
+           <span class="toggle-label">Night Mode Active</span>
+           <label class="toggle-switch">
+             <input type="checkbox" [checked]="!!deviceState()?.nightmodeactive" (change)="onNightModeActiveChange($any($event).target.checked)">
+             <span class="toggle-slider"></span>
+           </label>
+         </div>
+         <div class="toggle-row">
+           <span class="toggle-label">Read Govee</span>
+           <label class="toggle-switch">
+             <input type="checkbox" [checked]="!!deviceState()?.readgovee" (change)="onReadGoveeChange($any($event).target.checked)">
+             <span class="toggle-slider"></span>
+           </label>
+         </div>
+       </div>
+     </div>
+ 
+     <!-- ==================== LIGHTS ==================== -->
+     <div class="page" *ngIf="activeNav === 'lights'">
 
-			<div class="slider-container" *ngIf="!deviceState!.autocontrol">
-				<label for="speed1" class="label">Fan2 Speed:</label>
-				<input type="range" min="0" max="100" value="50" class="slider" id="speed1"
-					(input)="onSpeed1Change($event.target.value)">
-			</div>
+       <!-- Light Control Slider -->
+       <div class="card">
+         <h3 class="card-title">Light Control</h3>
+         <div class="control-block">
+           <label>Light: {{ deviceState()?.lightminvolt }} mV</label>
+           <input type="range" class="slider" min="0" max="100" [value]="deviceState()?.lightminvolt" (input)="onLightChange($any($event).target.value)">
+           <div class="row">
+             <span class="slider-value">{{ deviceState()?.lightminvolt }} mV</span>
+             <button class="btn btn-primary" (click)="api.setLight(deviceState()?.lightminvolt ?? 0).subscribe()">Set</button>
+           </div>
+         </div>
+       </div>
 
-			<div class="slider-container" *ngIf="!deviceState!.lightautomode">
-				<label for="lightstrength" class="label">Light Strength:</label>
-				<input type="range" min="0" max="100" value="80" class="slider" id="lightstrength"
-					(input)="onLightChange($event.target.value)">
-			</div>
-		</div>
-		<div class="flex-container" style="width: 80%;">
-
-			<div class="card">
-				<h2 class="section-title">Current Status</h2>
-				<div id="time">{{socketdata?.time}}</div>
-				<div class="flex-container">
-					<!-- Sensor Data -->
-					<div class="flex-item">
-
-						<div *ngIf="socketdata?.ens160aht21" class="status-grid">
-							<h3 class="section-title">Ens160Aht21</h3>
-							<div><strong>Temp:</strong>
-								{{socketdata?.ens160aht21?.temperatur}}°C/{{socketdata?.ens160aht21?.atemperatur}}°C
-							</div>
-							<div><strong>Hum:</strong>
-								{{socketdata?.ens160aht21?.humidity}}%/{{socketdata?.ens160aht21?.ahumidity}}%</div>
-							<div><strong>eCO₂:</strong> {{socketdata?.ens160aht21?.eco2}}</div>
-							<div><strong>TVOC:</strong> {{socketdata?.ens160aht21?.tvoc}}</div>
-							<div><strong>AQI:</strong> {{socketdata?.ens160aht21?.aqi}}</div>
-							<div><strong>VPD:</strong> {{socketdata?.ens160aht21?.vpd}}</div>
-						</div>
-
-						<div *ngIf="socketdata?.bme280" class="status-grid">
-							<h3 class="section-title">BME280</h3>
-							<div><strong>Temp:</strong>
-								{{socketdata?.bme280?.temperatur}}°C/{{socketdata?.bme280?.atemperatur}}°C</div>
-							<div><strong>Hum:</strong>
-								{{socketdata?.bme280?.humidity}}%/{{socketdata?.bme280?.ahumidity}}%</div>
-							<div><strong>Pressure:</strong>
-								{{socketdata?.bme280?.pressure}}hPa/{{socketdata?.bme280?.apressure}}hPa</div>
-							<div><strong>VPD:</strong> {{socketdata?.bme280?.vpd}}</div>
-						</div>
-						<h3 class="section-title">Control Status</h3>
-						<div class="status-grid">
-							<div><strong>Light:</strong> {{socketdata?.lightvalP}}%</div>
-							<div><strong>Light Voltage:</strong> {{socketdata?.lightvalmv}}mV</div>
-							<div><strong>Light State:</strong> {{socketdata?.lightstate}}</div>
-							<div *ngIf="fan0percent$ | async as fan0Percentage;"><strong>Fan1 Voltage:</strong>
-								{{socketdata?.voltage0}}mv/{{fan0Percentage}}%</div>
-							<div *ngIf="fan1percent$ | async as fan1Percentage;"><strong>Fan2 Voltage:</strong>
-								{{socketdata?.voltage1}}mv/{{fan1Percentage}}%</div>
-						</div>
-
-					</div>
-				</div>
-			</div>
-
-			<!-- Automatic Control Section -->
-			<div class="card">
-				<h2 class="section-title">Fan Automatic Control</h2>
-
-				<div class="checkbox-container">
-					<input type="checkbox" id="enableauto" [(ngModel)]="deviceState!.autocontrol"
-						(change)="onAutoControlChange($event.target.checked)" class="checkbox">
-					<label for="enableauto">Enable Automatic Control</label>
-				</div>
-
-				<div class="flex-container">
-					<div class="flex-item">
-						<h2 class="section-title">Fan 1 Voltage</h2>
-						<div class="pair">
-							<label for="fan0min" class="left-label">Min Voltage (mv):</label>
-							<input type="number" id="fan0min" [(ngModel)]="deviceState!.fan0min"
-								class="right-input input-field">
-						</div>
-						<div class="pair">
-							<label for="fan0max" class="left-label">Max Voltage (mv):</label>
-							<input type="number" id="fan0max" [(ngModel)]="deviceState!.fan0max"
-								class="right-input input-field">
-						</div>
-						<button class="button" id="fan0sub" (click)="submitFan0()">Submit</button>
-						<h3 class="section-title">Fan 2 Voltage</h3>
-						<div class="pair">
-							<label for="fan1min" class="left-label">Min Voltage (mv):</label>
-							<input type="number" id="fan1min" [(ngModel)]="deviceState!.fan1min"
-								class="right-input input-field">
-						</div>
-						<div class="pair">
-							<label for="fan1max" class="left-label">Max Voltage (mv):</label>
-							<input type="number" id="fan1max" [(ngModel)]="deviceState!.fan1max"
-								class="right-input input-field">
-						</div>
-						<button class="button" id="fan1sub" (click)="submitFan1()">Submit</button>
-					</div>
-					<!-- Target Settings -->
-					<div class="flex-item">
-						<h3 class="section-title">Target Values</h3>
-						<div class="pair">
-							<label for="targettemp" class="left-label">Temperature (°C):</label>
-							<input type="number" id="targettemp" [(ngModel)]="deviceState!.targetTemperature"
-								class="right-input input-field">
-						</div>
-						<div class="pair">
-							<label for="targethum" class="left-label">Humidity (%):</label>
-							<input type="number" id="targethum" [(ngModel)]="deviceState!.targetHumidity"
-								class="right-input input-field">
-						</div>
-						<!-- Additional Settings -->
-
-						<div class="pair">
-							<label for="speeddif" class="left-label">Speed Difference (%):</label>
-							<input type="number" id="speeddif" [(ngModel)]="deviceState!.speeddif"
-								class="right-input input-field">
-						</div>
-
-						<button class="button" id="targetTempHumSub" (click)="submitTargetTempHum()">Submit</button>
-						<h3 class="section-title">Speed Limits</h3>
-						<div class="pair">
-							<label for="minspeed" class="left-label">Min Speed:</label>
-							<input type="number" id="minspeed" [(ngModel)]="deviceState!.minspeed"
-								class="right-input input-field">
-						</div>
-						<div class="pair">
-							<label for="maxspeed" class="left-label">Max Speed:</label>
-							<input type="number" id="maxspeed" [(ngModel)]="deviceState!.maxspeed"
-								class="right-input input-field">
-						</div>
-						<button class="button" id="minmaxspeedsub" (click)="submitMinMaxSpeed()">Submit</button>
-					</div>
-				</div>
-			</div>
-
-			<!-- Night Mode Section -->
-			<div class="card">
-				<h2 class="section-title">Fan Night Mode</h2>
-
-				<div class="checkbox-container">
-					<input type="checkbox" id="enablenightmode" [(ngModel)]="deviceState!.nightmodeactive"
-						(change)="onNightModeActiveChange($event.target.checked)" class="checkbox">
-					<label for="enablenightmode">Enable Night Mode</label>
-				</div>
-
-				<div class="flex-container">
-					<!-- Time Settings -->
-					<div class="flex-item">
-						<h3 class="section-title">Time Settings</h3>
-						<div class="pair">
-							<label for="onhour" class="left-label">On (Hour):</label>
-							<input type="number" id="onhour" [(ngModel)]="deviceState!.nightmodeonhour"
-								class="right-input input-field">
-						</div>
-						<div class="pair">
-							<label for="onmin" class="left-label">On (Min):</label>
-							<input type="number" id="onmin" [(ngModel)]="deviceState!.nightmodeonmin"
-								class="right-input input-field">
-						</div>
-						<h3 class="section-title">Off Settings</h3>
-						<div class="pair">
-							<label for="offhour" class="left-label">Off (Hour):</label>
-							<input type="number" id="offhour" [(ngModel)]="deviceState!.nightmodeoffhour"
-								class="right-input input-field">
-						</div>
-						<div class="pair">
-							<label for="offmin" class="left-label">Off (Min):</label>
-							<input type="number" id="offmin" [(ngModel)]="deviceState!.nightmodeoffmin"
-								class="right-input input-field">
-						</div>
-						<h3 class="section-title">Max Speed at Night</h3>
-						<div class="pair">
-							<label for="nightmodemaxspeed" class="left-label">Max Speed:</label>
-							<input type="number" id="nightmodemaxspeed" [(ngModel)]="deviceState!.nightmodemaxspeed"
-								class="right-input input-field">
-						</div>
-						<button class="button" id="nightmodesub" (click)="submitNightMode()">Submit</button>
-					</div>
-				</div>
-			</div>
-
-			<!-- Light Control Section -->
-			<div class="card">
-				<h2 class="section-title">Light Control</h2>
-
-				<div class="checkbox-container">
-					<input type="checkbox" id="enablelightcontrol" [(ngModel)]="deviceState!.lightautomode"
-						(change)="onLightAutoChange($event.target.checked)" class="checkbox">
-					<label for="enablelightcontrol">Enable Automatic Control</label>
-				</div>
-
-				<div class="flex-container">
-					<!-- Voltage Settings -->
-					<div class="flex-item">
-						<h3 class="section-title">Voltage Limits (mv)</h3>
-						<div class="pair">
-							<label for="lightminv" class="left-label">Min:</label>
-							<input type="number" id="lightminv" [(ngModel)]="deviceState!.lightminvolt"
-								class="right-input input-field">
-						</div>
-						<div class="pair">
-							<label for="lightmaxv" class="left-label">Max:</label>
-							<input type="number" id="lightmaxv" [(ngModel)]="deviceState!.lightmaxvolt"
-								class="right-input input-field">
-						</div>
-						<button class="button" id="lightcontrolvoltagesub"
-							(click)="submitLightControlVoltage()">Submit</button>
-						<h3 class="section-title">Percentage Limits (%)</h3>
-						<div class="pair">
-							<label for="lightminp" class="left-label">Min:</label>
-							<input type="number" id="lightminp" [(ngModel)]="deviceState!.lightlimitspmin"
-								class="right-input input-field">
-						</div>
-						<div class="pair">
-							<label for="lightmaxp" class="left-label">Max:</label>
-							<input type="number" id="lightmaxp" [(ngModel)]="deviceState!.lightlimitspmax"
-								class="right-input input-field">
-						</div>
-						<button class="button" id="lightcontrolvoltagepsub"
-							(click)="submitLightControlPercentage()">Submit</button>
-					</div>
-
-					<!-- Schedule Settings -->
-					<div class="flex-item">
-						<h3 class="section-title">Schedule</h3>
-						<div class="pair">
-							<label for="turnlightonhour" class="left-label">Light On Hour:</label>
-							<input type="number" id="turnlightonhour" [(ngModel)]="deviceState!.lightonh"
-								class="right-input input-field">
-						</div>
-						<div class="pair">
-							<label for="turnlightonmin" class="left-label">Light On Min:</label>
-							<input type="number" id="turnlightonmin" [(ngModel)]="deviceState!.lightonmin"
-								class="right-input input-field">
-						</div>
-						<div class="pair">
-							<label for="turnlightoffhour" class="left-label">Light Off Hour:</label>
-							<input type="number" id="turnlightoffhour" [(ngModel)]="deviceState!.lightoffh"
-								class="right-input input-field">
-						</div>
-						<div class="pair">
-							<label for="turnlightoffmin" class="left-label">Light Off Min:</label>
-							<input type="number" id="turnlightoffmin" [(ngModel)]="deviceState!.lightoffmin"
-								class="right-input input-field">
-						</div>
-
-						<!-- Sunrise/Sunset Settings -->
-						<div class="pair">
-							<label for="enablesunrise" class="left-label">Enable Sunrise:</label>
-							<input type="checkbox" id="enablesunrise" [(ngModel)]="deviceState!.lightriseenable"
-								class="checkbox">
-						</div>
-						<div class="pair">
-							<label for="sunrisehour" class="left-label">Sunrise End Hour:</label>
-							<input type="number" id="sunrisehour" [(ngModel)]="deviceState!.lightriseh"
-								class="right-input input-field">
-						</div>
-						<div class="pair">
-							<label for="sunrisemin" class="left-label">Sunrise End Min:</label>
-							<input type="number" id="sunrisemin" [(ngModel)]="deviceState!.lightrisemin"
-								class="right-input input-field">
-						</div>
-						<div class="pair">
-							<label for="enablesunset" class="left-label">Enable Sunset:</label>
-							<input type="checkbox" id="enablesunset" [(ngModel)]="deviceState!.lightsetenable"
-								class="checkbox">
-						</div>
-						<div class="pair">
-							<label for="sunsethour" class="left-label">Sunset Start Hour:</label>
-							<input type="number" id="sunsethour" [(ngModel)]="deviceState!.lightseth"
-								class="right-input input-field">
-						</div>
-						<div class="pair">
-							<label for="sunsetmin" class="left-label">Sunset Start Min:</label>
-							<input type="number" id="sunsetmin" [(ngModel)]="deviceState!.lightsetmin"
-								class="right-input input-field">
-						</div>
-
-						<button class="button" id="lightcontrolsub" (click)="submitLightSchedule()">Submit</button>
-					</div>
-				</div>
-			</div>
-
-			<div class="card">
-				<h2 class="section-title">Light Cloud Simulation</h2>
-
-				<div class="checkbox-container">
-					<input type="checkbox" id="enablelightcloud" [(ngModel)]="deviceState!.cloud.active"
-						class="checkbox">
-					<label for="enablelightcloud">Enable Cloud Simulation</label>
-					<!-- Cloud Simulation Section (continued) -->
-				</div>
-				<div class="flex-container">
-					<!-- Cloud Settings -->
-					<div class="flex-item">
-						<h3 class="section-title">Cloud Parameters</h3>
-						<div class="pair">
-							<label for="cloudcycle" class="left-label">Cycle Duration (min):</label>
-							<input type="number" id="cloudcycle" [(ngModel)]="deviceState!.cloud.cycleduration"
-								class="right-input input-field">
-						</div>
-						<div class="pair">
-							<label for="cloudmin" class="left-label">Min Intensity (%):</label>
-							<input type="number" id="cloudmin" [(ngModel)]="deviceState!.cloud.min"
-								class="right-input input-field">
-						</div>
-						<div class="pair">
-							<label for="cloudmax" class="left-label">Max Intensity (%):</label>
-							<input type="number" id="cloudmax" [(ngModel)]="deviceState!.cloud.max"
-								class="right-input input-field">
-						</div>
-						<button class="button" id="cloudsubmit" (click)="submitCloud()">Submit</button>
-					</div>
-				</div>
-			</div>
-			<div class="card" *ngIf="deviceState!.readgovee">
-				<div class="flex-container">
-					<div class="flex-item">
-						<!-- Govee Data -->
-						<div class="status-grid">
-							<div>
-								<input type="checkbox" id="enablereadgovee" [(ngModel)]="deviceState!.readgovee"
-									(change)="onReadGoveeChange($event.target.checked)" class="checkbox">
-								<label for="enablereadgovee">Use Govee H5179</label>
-							</div>
-							<div id="temperatur_govee">{{socketdata?.govee?.temp}}</div>
-							<div id="humidity_govee">{{socketdata?.govee?.hum}}</div>
-							<div id="battery">{{socketdata?.govee?.bat}}</div>
-						</div>
-					</div>
-				</div>
-			</div>
-			<div class="card">
-				<div class="flex-container">
-					<div class="flex-item" *ngIf="socketdata?.ens160aht21">
-						<div>
-							<h4 class="section-title">ENS Calibration</h4>
-							<div class="pair">
-								<label for="tempdif" class="left-label">Temp Offset (°C):</label>
-								<input type="number" id="tempdif" [(ngModel)]="deviceState!.tempdif"
-									class="right-input input-field">
-							</div>
-							<div class="pair">
-								<label for="humdif" class="left-label">Hum Offset (%):</label>
-								<input type="number" id="humdif" [(ngModel)]="deviceState!.humdif"
-									class="right-input input-field">
-							</div>
-							<button class="button" id="targetTempHumDiffSub"
-								(click)="submitTargetTempHumDiff()">Submit</button>
-						</div>
-					</div>
-					<div class="flex-item">
-						<h4 class="section-title">Firmware Updates</h4>
-						<div class="file-upload">
-							<label class="left-label">SPIFFS Image:</label>
-							<input type="file" id="spiffsFile" accept=".bin" (change)="onSpiffsFileSelected($event)">
-							<button class="button" (click)="uploadSpiffs()">Upload</button>
-
-							<div *ngIf="spiffsUploadPercent > 0" class="progress-container">
-								<progress [value]="spiffsUploadPercent" max="100"></progress>
-								{{ spiffsUploadPercent }}%
-							</div>
-						</div>
-						<div class="file-upload" style="margin-top: 10px;">
-							<label class="left-label">Firmware Image:</label>
-							<input type="file" id="firmwareFile" accept=".bin"
-								(change)="onFirmwareFileSelected($event)">
-							<br>
-							<button class="button" (click)="uploadFirmware()">Upload</button>
-
-							<div *ngIf="firmwareUploadPercent > 0" class="progress-container">
-								<progress [value]="firmwareUploadPercent" max="100"></progress>
-								{{ firmwareUploadPercent }}%
-							</div>
-						</div>
-					</div>
-				</div>
-			</div>
-			<!-- Data Display Section -->
-
-		</div>
-	</div>
-	<!-- Chart Section -->
-	<div class="card chart-container" style="align-items: center; width: 80%; margin-left: 10%">
-		<app-chart #chart></app-chart>
-	</div>
-</ng-container>
+       <!-- Light Control Voltage -->
+       <div class="card">
+         <h3 class="card-title">Light Control Voltage</h3>
+         <div class="settings-grid">
+           <div class="input-pair">
+             <label>Min Voltage</label>
+             <input type="number" [(ngModel)]="deviceState()!.lightminvolt" class="input-field">
+           </div>
+           <div class="input-pair">
+             <label>Max Voltage</label>
+             <input type="number" [(ngModel)]="deviceState()!.lightmaxvolt" class="input-field">
+           </div>
+         </div>
+         <button class="btn btn-primary" (click)="submitLightControlVoltage()">Set</button>
+       </div>
+ 
+       <!-- Light Control Percentage -->
+       <div class="card">
+         <h3 class="card-title">Light Control Percentage</h3>
+         <div class="settings-grid">
+           <div class="input-pair">
+             <label>Min %</label>
+             <input type="number" [(ngModel)]="deviceState()!.lightlimitspmin" class="input-field">
+           </div>
+           <div class="input-pair">
+             <label>Max %</label>
+             <input type="number" [(ngModel)]="deviceState()!.lightlimitspmax" class="input-field">
+           </div>
+         </div>
+         <button class="btn btn-primary" (click)="submitLightControlPercentage()">Set</button>
+       </div>
+ 
+       <!-- Cloud Simulation -->
+       <div class="card">
+         <h3 class="card-title">Cloud Simulation</h3>
+         <div class="settings-grid">
+           <div class="input-pair">
+             <label>Cycle Duration</label>
+             <input type="number" [(ngModel)]="deviceState()!.cloud.cycleduration" class="input-field">
+           </div>
+           <div class="input-pair">
+             <label>Min %</label>
+             <input type="number" [(ngModel)]="deviceState()!.cloud.min" class="input-field">
+           </div>
+           <div class="input-pair">
+             <label>Max %</label>
+             <input type="number" [(ngModel)]="deviceState()!.cloud.max" class="input-field">
+           </div>
+         </div>
+         <button class="btn btn-primary" (click)="submitCloud()">Set</button>
+       </div>
+ 
+       <!-- Cloud Simulator Active Toggle -->
+       <div class="card">
+         <div class="toggle-row">
+           <span class="toggle-label">Cloud Simulator Active</span>
+           <label class="toggle-switch">
+             <input type="checkbox" [checked]="cloudSimActive()" (change)="onCloudSimChange($any($event).target.checked)">
+             <span class="toggle-slider"></span>
+           </label>
+         </div>
+       </div>
+ 
+       <!-- Light Schedule -->
+       <div class="card">
+         <h3 class="card-title">Light Schedule</h3>
+         <div class="settings-grid">
+           <div class="input-pair">
+             <label>ON Hour</label>
+             <input type="number" [(ngModel)]="deviceState()!.lightonh" class="input-field">
+           </div>
+           <div class="input-pair">
+             <label>ON Min</label>
+             <input type="number" [(ngModel)]="deviceState()!.lightonmin" class="input-field">
+           </div>
+           <div class="input-pair">
+             <label>OFF Hour</label>
+             <input type="number" [(ngModel)]="deviceState()!.lightoffh" class="input-field">
+           </div>
+           <div class="input-pair">
+             <label>OFF Min</label>
+             <input type="number" [(ngModel)]="deviceState()!.lightoffmin" class="input-field">
+           </div>
+         </div>
+         <div class="row" style="margin-top:8px">
+           <label class="toggle-switch">
+             <input type="checkbox" [checked]="!!deviceState()?.lightriseenable">
+             <span class="toggle-slider"></span>
+           </label>
+           <span class="toggle-label">Rise Enable</span>
+           <label class="toggle-switch">
+             <input type="checkbox" [checked]="!!deviceState()?.lightsetenable">
+             <span class="toggle-slider"></span>
+           </label>
+           <span class="toggle-label">Set Enable</span>
+         </div>
+         <div class="settings-grid" style="margin-top:8px">
+           <div class="input-pair">
+             <label>Rise Hour</label>
+             <input type="number" [(ngModel)]="deviceState()!.lightriseh" class="input-field">
+           </div>
+           <div class="input-pair">
+             <label>Rise Min</label>
+             <input type="number" [(ngModel)]="deviceState()!.lightrisemin" class="input-field">
+           </div>
+           <div class="input-pair">
+             <label>Set Hour</label>
+             <input type="number" [(ngModel)]="deviceState()!.lightseth" class="input-field">
+           </div>
+           <div class="input-pair">
+             <label>Set Min</label>
+             <input type="number" [(ngModel)]="deviceState()!.lightsetmin" class="input-field">
+           </div>
+         </div>
+         <button class="btn btn-primary" style="margin-top:8px" (click)="submitLightSchedule()">Set Light Schedule</button>
+       </div>
+ 
+       <!-- Light Auto Mode -->
+       <div class="card">
+         <div class="toggle-row">
+           <span class="toggle-label">Light Auto Mode</span>
+           <label class="toggle-switch">
+             <input type="checkbox" [checked]="!!deviceState()?.lightautomode" (change)="onLightAutoChange($any($event).target.checked)">
+             <span class="toggle-slider"></span>
+           </label>
+         </div>
+       </div>
+     </div>
+ 
+     <!-- ==================== SENSORS ==================== -->
+     <div class="page" *ngIf="activeNav === 'sensors'">
+ 
+       <!-- BME280 sensor data detail -->
+       <div class="card" *ngIf="socketdata()?.bme280">
+         <h3 class="card-title">BME280 Readings</h3>
+         <div class="sensor-strip">
+           <div class="sensor-strip-item">
+             <span class="sensor-label">Temp</span>
+             <span class="sensor-value">{{ socketdata()!.bme280!.temperatur }}°C</span>
+             <span class="sensor-sub">{{ socketdata()!.bme280!.atemperatur }}° avg</span>
+           </div>
+           <div class="sensor-strip-item">
+             <span class="sensor-label">Humidity</span>
+             <span class="sensor-value">{{ socketdata()!.bme280!.humidity }}%</span>
+             <span class="sensor-sub">{{ socketdata()!.bme280!.ahumidity }}% avg</span>
+           </div>
+           <div class="sensor-strip-item">
+             <span class="sensor-label">Pressure</span>
+             <span class="sensor-value">{{ socketdata()!.bme280!.pressure }} hPa</span>
+             <span class="sensor-sub">{{ socketdata()!.bme280!.apressure }} hPa avg</span>
+           </div>
+           <div class="sensor-strip-item">
+             <span class="sensor-label">VPD</span>
+             <span class="sensor-value">{{ socketdata()!.bme280!.vpd }}</span>
+           </div>
+         </div>
+       </div>
+ 
+       <!-- ENS160AHT21 sensor data detail -->
+       <div class="card" *ngIf="socketdata()?.ens160aht21">
+         <h3 class="card-title">ENS160AHT21 Readings</h3>
+         <div class="sensor-strip">
+           <div class="sensor-strip-item">
+             <span class="sensor-label">Temp</span>
+             <span class="sensor-value">{{ socketdata()!.ens160aht21!.temperatur }}°C</span>
+             <span class="sensor-sub">{{ socketdata()!.ens160aht21!.atemperatur }}° avg</span>
+           </div>
+           <div class="sensor-strip-item">
+             <span class="sensor-label">Humidity</span>
+             <span class="sensor-value">{{ socketdata()!.ens160aht21!.humidity }}%</span>
+             <span class="sensor-sub">{{ socketdata()!.ens160aht21!.ahumidity }}% avg</span>
+           </div>
+           <div class="sensor-strip-item">
+             <span class="sensor-label">eCO₂</span>
+             <span class="sensor-value">{{ socketdata()!.ens160aht21!.eco2 }}</span>
+           </div>
+           <div class="sensor-strip-item">
+             <span class="sensor-label">AQI</span>
+             <span class="sensor-value">{{ socketdata()!.ens160aht21!.aqi }}</span>
+           </div>
+           <div class="sensor-strip-item">
+             <span class="sensor-label">TVOC</span>
+             <span class="sensor-value">{{ socketdata()!.ens160aht21!.tvoc }}</span>
+           </div>
+           <div class="sensor-strip-item">
+             <span class="sensor-label">VPD</span>
+             <span class="sensor-value">{{ socketdata()!.ens160aht21!.vpd }}</span>
+           </div>
+         </div>
+       </div>
+     </div>
+ 
+     <!-- ==================== SYSTEM ==================== -->
+     <div class="page" *ngIf="activeNav === 'system'">
+ 
+       <!-- Device info -->
+       <div class="card">
+         <h3 class="card-title">Device Info</h3>
+         <div class="settings-grid">
+           <div class="input-pair">
+             <label>Device Name</label>
+             <input type="text" [(ngModel)]="deviceState()!.fan0voltage" placeholder="Device name" class="input-field" disabled>
+           </div>
+           <div class="input-pair">
+             <label>Fan 1 Min (mV)</label>
+             <input type="number" [(ngModel)]="deviceState()!.fan0min" class="input-field" readonly>
+           </div>
+           <div class="input-pair">
+             <label>Fan 1 Max (mV)</label>
+             <input type="number" [(ngModel)]="deviceState()!.fan0max" class="input-field" readonly>
+           </div>
+           <div class="input-pair">
+             <label>Fan 2 Min (mV)</label>
+             <input type="number" [(ngModel)]="deviceState()!.fan1min" class="input-field" readonly>
+           </div>
+           <div class="input-pair">
+             <label>Fan 2 Max (mV)</label>
+             <input type="number" [(ngModel)]="deviceState()!.fan1max" class="input-field" readonly>
+           </div>
+         </div>
+       </div>
+ 
+       <!-- SPIFFS Upload -->
+       <div class="card">
+         <h3 class="card-title">SPIFFS Firmware Update</h3>
+         <div class="file-upload">
+           <label class="left-label">Select Image:</label>
+           <input type="file" accept=".bin" (change)="onSpiffsFileSelected($event)">
+           <button class="btn btn-primary" (click)="uploadSpiffs()">Upload</button>
+         </div>
+         <div *ngIf="spiffsUploadPercent() > 0" class="progress-container">
+           <progress [value]="spiffsUploadPercent()" max="100"></progress>
+           <span class="progress-text">{{ spiffsUploadPercent() }}%</span>
+         </div>
+       </div>
+ 
+       <!-- Firmware Upload -->
+       <div class="card">
+         <h3 class="card-title">Firmware Update</h3>
+         <div class="file-upload">
+           <label class="left-label">Select Image:</label>
+           <input type="file" accept=".bin" (change)="onFirmwareFileSelected($event)">
+           <button class="btn btn-primary" (click)="uploadFirmware()">Upload</button>
+         </div>
+         <div *ngIf="firmwareUploadPercent() > 0" class="progress-container">
+           <progress [value]="firmwareUploadPercent()" max="100"></progress>
+           <span class="progress-text">{{ firmwareUploadPercent() }}%</span>
+         </div>
+       </div>
+     </div>
+ 
+   </main>
+ </div>

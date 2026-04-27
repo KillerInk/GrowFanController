@@ -1,39 +1,55 @@
-// growui/src/app/app.ts
-import { Component, Signal, signal, ChangeDetectorRef, ViewChild, AfterViewInit } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
+/* growui/src/app/app.ts */
+import { Component, HostListener, ViewChild, ChangeDetectorRef } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { signal } from '@angular/core';
 import { ApiService } from './api.service';
 import { WebsocketService } from './websocket.service';
-import { DeviceState, SocketMsg } from './types';
-import { OnInit } from '@angular/core';
-import { HttpEventType, HttpProgressEvent } from '@angular/common/http';
-import { FormsModule } from '@angular/forms';
-import { CommonModule } from '@angular/common';
 import { ChartComponent } from './chart/chart.component';
-import { BehaviorSubject } from 'rxjs/internal/BehaviorSubject';
+import { DeviceState, SocketMsg } from './types';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, FormsModule, CommonModule, ChartComponent],
+  imports: [FormsModule, CommonModule, ChartComponent],
   templateUrl: './app.html',
   styleUrl: './app.scss'
 })
-export class App implements OnInit {
+export class App {
 
-  /* ---------- Dependency Injection ---------- */
-  constructor(private api: ApiService,
-    private ws: WebsocketService,
-    private cdr: ChangeDetectorRef) {
+  readonly deviceState = signal<DeviceState | null>(null);
+  readonly socketdata = signal<SocketMsg | null>(null);
 
+  /* ---------- Sidebar state ---------- */
+  sidebarOpen = false;
+  sidebarMinimized = false;
+  activeNav = 'dashboard';
+  isMobile = false;
+
+  @HostListener('window:resize')
+  onResize() {
+    this.isMobile = window.innerWidth < 768;
+    if (!this.isMobile) {
+      this.sidebarOpen = false;
+    }
   }
 
-  deviceState: DeviceState | null = null;
-  socketdata: SocketMsg | null = null;
-  private readonly _fan0Percent$ = new BehaviorSubject<number>(50); // or 0, or null-safe default
-  private readonly _fan1Percent$ = new BehaviorSubject<number>(50);
+  toggleSidebar() {
+    this.sidebarOpen = !this.sidebarOpen;
+  }
 
-  readonly fan0percent$ = this._fan0Percent$.asObservable();
-  readonly fan1percent$ = this._fan1Percent$.asObservable();
+  closeSidebar() {
+    this.sidebarOpen = false;
+  }
 
+  setNav(page: string) {
+    this.activeNav = page;
+    if (this.isMobile) this.sidebarOpen = false;
+  }
+
+  /* ---------- Fan percent signals ---------- */
+  readonly fan0percent$ = signal(50);
+  readonly fan1percent$ = signal(50);
+  readonly cloudSimActive = signal(false);
 
   selectedFile: File | null = null;
   selectedFileFw: File | null = null;
@@ -41,11 +57,17 @@ export class App implements OnInit {
 
   private wsSubscription?: any;
 
-  ngOnInit(): void {
+  /* ---------- Upload progress signals ---------- */
+  readonly spiffsUploadPercent = signal(0);
+  readonly firmwareUploadPercent = signal(0);
+
+  constructor(protected readonly api: ApiService,
+    private ws: WebsocketService,
+    private cdr: ChangeDetectorRef) {
     this.api.getFanControllerSettings().subscribe(
       (data) => {
-        this.deviceState = data;
-        console.log('Fan controller settings loaded:', this.deviceState);
+        this.deviceState.set(data);
+        this.cloudSimActive.set(data.cloud?.active ?? false);
         this.cdr.markForCheck();
       },
       (err) => {
@@ -53,260 +75,217 @@ export class App implements OnInit {
       }
     );
     this.wsSubscription = this.ws.onMessage().subscribe(msg => this.handleWsMsg(msg));
+    this.isMobile = window.innerWidth < 768;
   }
 
   ngOnDestroy(): void {
-    if (this.wsSubscription) {
-      this.wsSubscription.unsubscribe();
-    }
+    if (this.wsSubscription) this.wsSubscription.unsubscribe();
   }
 
   private handleWsMsg(message: string): void {
     try {
       const cleaned = (typeof message === 'string'
-        ? message.trim().replace(/^\ufeff/, '')          // strip BOM
+        ? message.trim().replace(/^\ufeff/, '')
         : JSON.stringify(message));
-      this.socketdata = JSON.parse(cleaned);
-      this.getFanPercent(0);
-      this.getFanPercent(1);   // set plain value
-      this.cdr.markForCheck();                // notify Angular
-      if (this.socketdata)
-        this.chart?.addSocketMessage(this.socketdata);
+      this.socketdata.set(JSON.parse(cleaned));
+      this.updateFanPercents();
+      this.cdr.markForCheck();
+      const sd = this.socketdata();
+      if (sd) this.chart?.addSocketMessage(sd);
     } catch (e) {
       console.warn('Invalid websocket message', e);
     }
   }
-  /* ---------- Slider change handlers ---------- */
+
+  /* ---------- Slider change handlers (immediate) ---------- */
   onSpeedChange(value: string) {
-    const num = Number(value);
-    this.api.setSpeed(0, num).subscribe();
+    this.api.setSpeed(0, Number(value)).subscribe();
   }
   onSpeed1Change(value: string) {
-    const num = Number(value);
-    this.api.setSpeed(1, num).subscribe();
+    this.api.setSpeed(1, Number(value)).subscribe();
   }
-
   onLightChange(value: string) {
-    const num = Number(value);
-    this.api.setLight(num).subscribe();
+    this.api.setLight(Number(value)).subscribe();
   }
 
+  /* ---------- Submit handlers (use signal values) ---------- */
   submitFan0() {
-    const min = Number((document.getElementById('fan0min') as HTMLInputElement)?.value);
-    const max = Number((document.getElementById('fan0max') as HTMLInputElement)?.value);
-    this.api.setVoltageLimits(0, min, max).subscribe();
+    const state = this.deviceState();
+    if (!state) return;
+    this.api.setVoltageLimits(0, state.fan0min, state.fan0max).subscribe();
   }
   submitFan1() {
-    const min = Number((document.getElementById('fan1min') as HTMLInputElement)?.value);
-    const max = Number((document.getElementById('fan1max') as HTMLInputElement)?.value);
-    this.api.setVoltageLimits(1, min, max).subscribe();
+    const state = this.deviceState();
+    if (!state) return;
+    this.api.setVoltageLimits(1, state.fan1min, state.fan1max).subscribe();
   }
 
   submitNightMode() {
-    const onh = Number((document.getElementById('onhour') as HTMLInputElement)?.value);
-    const onm = Number((document.getElementById('onmin') as HTMLInputElement)?.value);
-    const offh = Number((document.getElementById('offhour') as HTMLInputElement)?.value);
-    const offm = Number((document.getElementById('offmin') as HTMLInputElement)?.value);
-    const mspeed = Number((document.getElementById('nightmodemaxspeed') as HTMLInputElement)?.value);
-
+    const state = this.deviceState();
+    if (!state) return;
     this.api.getCmd({
       var: 'fannightmode',
-      onh,
-      onm,
-      offh,
-      offm,
-      mspeed
+      onh: state.nightmodeonhour,
+      onm: state.nightmodeonmin,
+      offh: state.nightmodeoffhour,
+      offm: state.nightmodeoffmin,
+      mspeed: state.nightmodemaxspeed
     }).subscribe();
   }
 
   submitLightControlVoltage() {
-    const min = Number((document.getElementById('lightminv') as HTMLInputElement)?.value);
-    const max = Number((document.getElementById('lightmaxv') as HTMLInputElement)?.value);
-
+    const state = this.deviceState();
+    if (!state) return;
     this.api.getCmd({
       var: 'lightvoltage',
-      min,
-      max
+      min: state.lightminvolt,
+      max: state.lightmaxvolt
     }).subscribe();
   }
 
   submitLightControlPercentage() {
-    const min = Number((document.getElementById('lightminp') as HTMLInputElement)?.value);
-    const max = Number((document.getElementById('lightmaxp') as HTMLInputElement)?.value);
-
+    const state = this.deviceState();
+    if (!state) return;
     this.api.getCmd({
       var: 'lightlimitsp',
-      min,
-      max
+      min: state.lightlimitspmin,
+      max: state.lightlimitspmax
     }).subscribe();
   }
 
   submitCloud() {
-    const cloudduration = Number((document.getElementById('cloudcycle') as HTMLInputElement)?.value);
-    const min = Number((document.getElementById('cloudmin') as HTMLInputElement)?.value);
-    const max = Number((document.getElementById('cloudmax') as HTMLInputElement)?.value);
-
+    const state = this.deviceState();
+    if (!state) return;
     this.api.getCmd({
       var: 'cloudsim',
-      cloudduration,
-      min,
-      max
+      cloudduration: state.cloud.cycleduration,
+      min: state.cloud.min,
+      max: state.cloud.max
+    }).subscribe();
+  }
+
+  submitCloudActive() {
+    const state = this.deviceState();
+    if (!state) return;
+    this.api.getCmd({
+      var: 'cloudsimactive',
+      val: state.cloud.active ? 1 : 0
     }).subscribe();
   }
 
   submitMinMaxSpeed() {
-    const min = Number((document.getElementById('minspeed') as HTMLInputElement)?.value);
-    const max = Number((document.getElementById('maxspeed') as HTMLInputElement)?.value);
-
-    this.api.setMinMaxSpeed(min, max).subscribe();
+    const state = this.deviceState();
+    if (!state) return;
+    this.api.setMinMaxSpeed(state.minspeed, state.maxspeed).subscribe();
   }
 
   submitTargetTempHum() {
-    const temp = Number((document.getElementById('targettemp') as HTMLInputElement)?.value);
-    const hum = Number((document.getElementById('targethum') as HTMLInputElement)?.value);
-    const speeddif = Number((document.getElementById('speeddif') as HTMLInputElement)?.value);
-
-    this.api.setTargetTempHum(temp, hum, speeddif).subscribe();
-  }
-
-  onLightAutoChange(checked: boolean) {
-    this.api.setLightAutoControl(checked ? 1 : 0).subscribe();
-  }
-
-  onNightModeActiveChange(checked: boolean) {
-    this.api.setNightModeActive(checked ? 1 : 0).subscribe();
-  }
-
-  onAutoControlChange(checked: boolean) {
-    this.api.setFanAutoControl(checked ? 1 : 0).subscribe();
-  }
-
-  submitLightSchedule() {
-    const onh = Number((document.getElementById('turnlightonhour') as HTMLInputElement)?.value);
-    const onmin = Number((document.getElementById('turnlightonmin') as HTMLInputElement)?.value);
-    const offh = Number((document.getElementById('turnlightoffhour') as HTMLInputElement)?.value);
-    const offmin = Number((document.getElementById('turnlightoffmin') as HTMLInputElement)?.value);
-
-    const riseenable = (document.getElementById('enablesunrise') as HTMLInputElement).checked ? 1 : 0;
-    const riseh = Number((document.getElementById('sunrisehour') as HTMLInputElement)?.value);
-    const risemin = Number((document.getElementById('sunrisemin') as HTMLInputElement)?.value);
-
-    const setenable = (document.getElementById('enablesunset') as HTMLInputElement).checked ? 1 : 0;
-    const seth = Number((document.getElementById('sunsethour') as HTMLInputElement)?.value);
-    const setmin = Number((document.getElementById('sunsetmin') as HTMLInputElement)?.value);
-
-    this.api.setLightSchedule({
-      var: 'lightsettime',
-      onh,
-      onmin,
-      offh,
-      offmin,
-      riseenable,
-      riseh,
-      risemin,
-      setenable,
-      seth,
-      setmin
-    }).subscribe();
+    const state = this.deviceState();
+    if (!state) return;
+    this.api.setTargetTempHum(
+      state.targetTemperature,
+      state.targetHumidity,
+      state.speeddif
+    ).subscribe();
   }
 
   submitTargetTempHumDiff() {
-    const temp = Number((document.getElementById('tempdif') as HTMLInputElement)?.value);
-    const hum = Number((document.getElementById('humdif') as HTMLInputElement)?.value);
-
-    this.api.setTargetTempHumDiff(temp, hum).subscribe();
+    const state = this.deviceState();
+    if (!state) return;
+    this.api.setTargetTempHumDiff(state.tempdif ?? 0, state.humdif ?? 0).subscribe();
   }
 
-  onReadGoveeChange(checked: boolean): void {
-    this.api.setReadGovee(checked).subscribe(
-      () => console.log('ReadGovee setting updated', checked),
-      err => console.error('Failed to update ReadGovee:', err)
-    );
+  submitLightSchedule() {
+    const state = this.deviceState();
+    if (!state) return;
+    this.api.setLightSchedule({
+      var: 'lightsettime',
+      onh: state.lightonh,
+      onmin: state.lightonmin,
+      offh: state.lightoffh,
+      offmin: state.lightoffmin,
+      riseenable: state.lightriseenable ? 1 : 0,
+      riseh: state.lightriseh,
+      risemin: state.lightrisemin,
+      setenable: state.lightsetenable ? 1 : 0,
+      seth: state.lightseth,
+      setmin: state.lightsetmin
+    }).subscribe();
   }
 
+  /* ---------- Toggle handlers ---------- */
+  onAutoControlChange(checked: boolean) {
+    this.api.setFanAutoControl(checked ? 1 : 0).subscribe();
+  }
+  onLightAutoChange(checked: boolean) {
+    this.api.setLightAutoControl(checked ? 1 : 0).subscribe();
+  }
+  onNightModeActiveChange(checked: boolean) {
+    this.api.setNightModeActive(checked ? 1 : 0).subscribe();
+  }
+  onReadGoveeChange(checked: boolean) {
+    this.api.setReadGovee(checked).subscribe();
+  }
+
+  onCloudSimChange(checked: boolean) {
+    this.cloudSimActive.set(checked);
+    this.api.setCloudSimActive(checked ? 1 : 0).subscribe();
+  }
+
+  /* ---------- File upload ---------- */
   onSpiffsFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
-    if (input.files && input.files.length) {
-      this.selectedFile = input.files[0];
-      console.log('Chosen file:', this.selectedFile.name);
-    }
+    if (input.files?.length) this.selectedFile = input.files[0];
   }
-
   onFirmwareFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
-    if (input.files && input.files.length) {
-      this.selectedFileFw = input.files[0];
-      console.log('Chosen file:', this.selectedFileFw.name);
-    }
+    if (input.files?.length) this.selectedFileFw = input.files[0];
   }
 
-  /** Progress percentage for SPIFFS upload (0‑100) */
-  spiffsUploadPercent: number = 0;
-  /** Progress percentage for firmware upload (0‑100) */
-  firmwareUploadPercent: number = 0;
-
-  /* ---------- Upload method ----------
-   * Sends the selected file to `/flashspiffs`
-   */
   uploadSpiffs(): void {
-    if (!this.selectedFile) {
-      alert('Please choose a file first.');
-      return;
-    }
-
-    // Call ApiService.flashSpiffs
-    this.api.flashSpiffs(this.selectedFile).subscribe({
-      next: (event) => {
-        /* Handle progress events */
-        if (event.type === HttpEventType.UploadProgress && event.total) {
-          this.spiffsUploadPercent = Math.round(100 * event.loaded / event.total);
-          return; // don't treat as a final response
+    const file = this.selectedFile;
+    if (!file) { alert('Please choose a file first.'); return; }
+    this.api.flashSpiffs(file).subscribe({
+      next: (event: any) => {
+        if (event.type === 1 && event.total) {
+          this.spiffsUploadPercent.set(Math.round(100 * event.loaded / event.total));
         }
-        /* Final response when upload completes */
-        //console.log('Upload succeeded:', event.body);
       },
-      error: err => {
-        console.error('Upload failed', err);
-        alert(`Error: ${err}`);
-      },
-      complete: () => this.spiffsUploadPercent = 0 // reset after finish
+      error: err => { console.error('Upload failed', err); alert(`Error: ${err}`); },
+      complete: () => this.spiffsUploadPercent.set(0)
     });
   }
 
   uploadFirmware(): void {
-    if (!this.selectedFileFw) {
-      alert('Please choose a file first.');
-      return;
-    }
-
-    this.api.flashFirmware(this.selectedFileFw).subscribe({
-      next: (event) => {
-        if (event.type === HttpEventType.UploadProgress && event.total) {
-          this.firmwareUploadPercent = Math.round(100 * event.loaded / event.total);
-          return;
+    const file = this.selectedFileFw;
+    if (!file) { alert('Please choose a file first.'); return; }
+    this.api.flashFirmware(file).subscribe({
+      next: (event: any) => {
+        if (event.type === 1 && event.total) {
+          this.firmwareUploadPercent.set(Math.round(100 * event.loaded / event.total));
         }
-        //console.log('Firmware upload succeeded:', event.body);
       },
       error: err => { console.error(err); alert(`Error: ${err}`); },
-      complete: () => this.firmwareUploadPercent = 0
+      complete: () => this.firmwareUploadPercent.set(0)
     });
   }
 
-  getFanPercent(fan: number): void {
-    const min = fan === 0 ? this.deviceState?.fan0min : this.deviceState?.fan1min;
-    const max = fan === 0 ? this.deviceState?.fan0max : this.deviceState?.fan1max;
+  /* ---------- Fan percent calc ---------- */
+  private updateFanPercents(): void {
+    const state = this.deviceState();
+    const sd = this.socketdata();
+    if (!state || !sd) return;
 
-    // Use the voltage from the received socket data
-    const cur = fan === 0 ? this.socketdata?.voltage0 : this.socketdata?.voltage1;
+    const min0 = state.fan0min, max0 = state.fan0max, cur0 = sd.voltage0;
+    if (min0 != null && max0 != null && cur0 != null) {
+      const pct0 = Math.round(Math.max(0, Math.min(100, ((cur0 - min0) / (max0 - min0)) * 100)));
+      this.fan0percent$.set(pct0);
+    }
 
-    if (min == null || max == null || cur == null) return; // guard against missing data
-
-    // Calculate percentage
-    const percent = Math.round(Math.max(0, Math.min(100, ((cur - min) / (max - min)) * 100)));
-
-    if (fan === 0)
-      this._fan0Percent$.next(percent);
-    else
-      this._fan1Percent$.next(percent);
+    const min1 = state.fan1min, max1 = state.fan1max, cur1 = sd.voltage1;
+    if (min1 != null && max1 != null && cur1 != null) {
+      const pct1 = Math.round(Math.max(0, Math.min(100, ((cur1 - min1) / (max1 - min1)) * 100)));
+      this.fan1percent$.set(pct1);
+    }
   }
 }

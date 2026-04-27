@@ -192,6 +192,18 @@ export class ApiService {
     );
   }
 
+  setCloudSimActive(val: number): Observable<any> {
+    const params = this.buildCmdParams({
+      var: 'cloudsimactive',
+      val
+    });
+
+    const options = { params, responseType: 'text' } as any;
+    return this.http.get<string>(`/cmd`, options).pipe(
+      catchError(this.handleError)
+    );
+  }
+
   flashSpiffs(file: File): Observable<HttpEvent<string>> {   // <-- return HttpEvent
     const formData = new FormData();
     formData.append('file', file, file.name);

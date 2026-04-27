@@ -1,6 +1,7 @@
-/* You can add global styles to this file, and also import other style files */
+/* growui/src/styles.scss */
 @import './app/app.scss';
-/*.body
-{
-  background-color: rgb(70, 70, 70);
-}*/
+
+body {
+  margin: 0;
+  padding: 0;
+}

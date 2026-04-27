@@ -74,9 +74,9 @@ export interface SocketMsg {
 
   govee?:
   {
-    temp: string;
-    hum: string;
-    bat: string;
+    temperatur: string;
+    humidity: string;
+    battery: string;
   }
   /** Optional BME280 sensor data */
   bme280?: {

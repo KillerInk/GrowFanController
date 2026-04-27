@@ -1,8 +1,9 @@
+#!/usr/bin/env python
 import subprocess
 import shutil
 from pathlib import Path
 import time
-
+print("[PIO] ngbuild is being executed")
 # 1. Go to the growui directory (adjust path if needed)
 growui_dir = Path("growui")          # <-- relative to project root
 if not growui_dir.is_dir():
@@ -10,7 +11,7 @@ if not growui_dir.is_dir():
 
 print(f"=== Running ng build in {growui_dir} ===")
 result = subprocess.run(
-    ["npm.cmd", "run", "build"],
+    ["npm.cmd", "run", "build","--production"],
     cwd=str(growui_dir),
     capture_output=True,          # returns bytes for stdout/stderr
 )

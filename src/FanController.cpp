@@ -19,65 +19,79 @@ double (*getAvgHumidity)();
 long nextTick;
 double lastTemp;
 double lastHumidity;
-const int waitTime = 15000;
-
-bool temp_or_hum_above_target(double atmp, double ahm)
-{
-    return atmp > fancontrollerValues.targetTemperature + 1 || ahm > fancontrollerValues.targetHumidity + 2;
-}
-
-bool temp_or_hum_below_target(double atmp, double ahm)
-{
-    return atmp < fancontrollerValues.targetTemperature - 1 || ahm < fancontrollerValues.targetHumidity - 2;
-}
+const int waitTime = 10000;
 
 void FanController_processAutoControl()
 {
+    static bool lastInDeadzone = false;
     double atmp = getAvgTemp();
     double ahm = getAvgHumidity();
+
     int old_speed = fancontrollerValues.autocontrolfanspeed;
-    if (!temp_or_hum_above_target(atmp,ahm) && !temp_or_hum_below_target(atmp,ahm))
-    {
-        if (lastTemp > atmp || lastHumidity > ahm)
-            fancontrollerValues.autocontrolfanspeed--;
-        else if (lastTemp < atmp || lastHumidity < ahm)
-            fancontrollerValues.autocontrolfanspeed++;
-        lastTemp = atmp;
-        lastHumidity = ahm;
+
+    // Are we currently in the deadzone (stable zone)?
+    bool temp_in_deadband = atmp >= fancontrollerValues.targetTemperature - 1 && 
+                            atmp <= fancontrollerValues.targetTemperature;
+    bool hum_in_deadband = ahm >= fancontrollerValues.targetHumidity - 2 && 
+                           ahm <= fancontrollerValues.targetHumidity;
+    bool in_deadzone = temp_in_deadband && hum_in_deadband;
+
+    // Don't adjust too often — allow only every 10s max (rate limit)
+    if (millis() > nextTick) {
+        if (!in_deadzone) {
+            // Outside deadzone: move toward setpoint
+            if (atmp > fancontrollerValues.targetTemperature || 
+                ahm > fancontrollerValues.targetHumidity) {
+                // Too warm/wet → increase speed
+                fancontrollerValues.autocontrolfanspeed++;
+            } else if (atmp < fancontrollerValues.targetTemperature - 1 || 
+                       ahm < fancontrollerValues.targetHumidity - 2) {
+                // Too dry/cool → decrease speed
+                fancontrollerValues.autocontrolfanspeed--;
+            }
+        } else {
+            // Inside deadzone: make tiny adjustments based on recent trend
+            if (lastInDeadzone && lastTemp > atmp) 
+                fancontrollerValues.autocontrolfanspeed--;
+            else if (lastInDeadzone && lastTemp < atmp) 
+                fancontrollerValues.autocontrolfanspeed++;
+        }
+
         nextTick = millis() + waitTime;
     }
-    else if (temp_or_hum_above_target(atmp,ahm))
-    {
-        fancontrollerValues.autocontrolfanspeed++;
-    }
-    else if (temp_or_hum_below_target(atmp,ahm))
-    {
-        fancontrollerValues.autocontrolfanspeed--;
-    }
 
+    lastInDeadzone = in_deadzone;
+
+    // Clamp values
     if (fancontrollerValues.autocontrolfanspeed > fancontrollerValues.maxspeed)
         fancontrollerValues.autocontrolfanspeed = fancontrollerValues.maxspeed;
-    if (fancontrollerValues.nightmodeActive && fancontrollerValues.autocontrolfanspeed > fancontrollerValues.nightmodeMaxSpeed)
+    if (fancontrollerValues.nightmodeActive && 
+        fancontrollerValues.autocontrolfanspeed > fancontrollerValues.nightmodeMaxSpeed)
         fancontrollerValues.autocontrolfanspeed = fancontrollerValues.nightmodeMaxSpeed;
-
     if (fancontrollerValues.autocontrolfanspeed < fancontrollerValues.minspeed)
         fancontrollerValues.autocontrolfanspeed = fancontrollerValues.minspeed;
 
-    if (fancontrollerValues.autocontrolfanspeed != old_speed)
-    {
+    // Update outputs only if speed changed
+    if (fancontrollerValues.autocontrolfanspeed != old_speed) {
+        int f0 = (fancontrollerValues.autocontrolfanspeed == 0) ? 
+                 0 : getVoltageFromPercent(fancontrollerValues.fan0Voltage.max, fancontrollerValues.fan0Voltage.min, fancontrollerValues.autocontrolfanspeed);
+        int f2speed = fancontrollerValues.autocontrolfanspeed - fancontrollerValues.filtercompensation;
+        if (f2speed < 0) f2speed = 0;
+        if (f2speed > 100) f2speed = 100;
+        int f1 = (f2speed == 0) ? 
+                 0 : getVoltageFromPercent(fancontrollerValues.fan1Voltage.max, fancontrollerValues.fan1Voltage.min, f2speed);
 
-        fancontrollerValues.fan0Voltage.voltage = getVoltageFromPercent(fancontrollerValues.fan0Voltage.max, fancontrollerValues.fan0Voltage.min, fancontrollerValues.autocontrolfanspeed);
+        fancontrollerValues.fan0Voltage.voltage = f0;
+        fancontrollerValues.fan1Voltage.voltage = f1;
 
-        int fan2speed = fancontrollerValues.autocontrolfanspeed - fancontrollerValues.filtercompensation;
-        if (fan2speed < 0)
-            fan2speed = 0;
-        if (fan2speed > 100)
-            fan2speed = 100;
-        fancontrollerValues.fan1Voltage.voltage = getVoltageFromPercent(fancontrollerValues.fan1Voltage.max, fancontrollerValues.fan1Voltage.min, fan2speed);
-        dac.setDACOutVoltage(fancontrollerValues.fan0Voltage.voltage, 0);
-        dac.setDACOutVoltage(fancontrollerValues.fan1Voltage.voltage, 1);
-        log_i("autocontrol set speed to: %i fan0 mv:%i fan1 mv:%i", fancontrollerValues.autocontrolfanspeed, fancontrollerValues.fan0Voltage.voltage, fancontrollerValues.fan1Voltage.voltage);
+        dac.setDACOutVoltage((uint16_t)f0, 0);
+        dac.setDACOutVoltage((uint16_t)f1, 1);
+        log_i("autocontrol set speed to: %i fan0 mv:%u fan1 mv:%u", fancontrollerValues.autocontrolfanspeed, f0, f1);
     }
+
+    // Save for next iteration
+    lastTemp = atmp;
+    lastHumidity = ahm;
 }
 
 void FanController_setVoltage(int id, int min, int max)
