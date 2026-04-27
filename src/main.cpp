@@ -21,6 +21,7 @@
 #include "Bme280.h"
 #endif
 #include <nvs_flash.h>
+#include "WiFiManager.h"
 
 #ifdef GOVEE_BTH5179
 typedef struct
@@ -184,6 +185,15 @@ String getSettings()
     myObject["spiflashspeed"] = ESP.getFlashChipSpeed();
     myObject["spiflsize"] = ESP.getFlashChipSize();
 
+    // WiFi status
+    WifiStatus wifiStatus = wifiManager.getStatus();
+    myObject["wifi_connected"] = wifiStatus.connected;
+    myObject["wifi_rssi"] = wifiStatus.rssi;
+    myObject["wifi_ssid"] = wifiStatus.ssid[0] ? String(wifiStatus.ssid) : "";
+    myObject["ap_active"] = wifiStatus.apActive;
+    myObject["ap_ssid"] = wifiStatus.apActive ? String(wifiStatus.apSsid) : "";
+    myObject["ap_ip"] = wifiStatus.apActive ? String(wifiStatus.apIp) : "";
+
     return JSON.stringify(myObject);
 }
 
@@ -211,14 +221,10 @@ void setup()
 #endif
     log_i("connect wifi");
     WiFi.setHostname("Esp32FanController");
-    WiFi.mode(WIFI_STA);
-    WiFi.begin(MYSSID, PW);
-
-    while (WiFi.status() != WL_CONNECTED)
-    {
-        vTaskDelay(500);
-    }
-    log_i("connect wifi done");
+    
+    // Initialize WiFiManager (handles NVS, connection, AP fallback)
+    wifiManager.setup();
+    log_i("WiFiManager initialized");
     log_i("init mdns");
     mdns_init();
     mdns_hostname_set("Esp32FanController");
@@ -253,6 +259,12 @@ void setup()
     MyWebServer_getCallbacksStruct()->lightController_setPercentLimits = LightController_setPercentLimits;
     MyWebServer_getCallbacksStruct()->lightController_setCloudActive = LightController_setCloudActive;
     MyWebServer_getCallbacksStruct()->lightController_setCloudValues = LightController_setCloudValues;
+    MyWebServer_getCallbacksStruct()->wifiConfigGet = []() {
+        return wifiManager.getWifiConfigPage();
+    };
+    MyWebServer_getCallbacksStruct()->wifiConfigPost = [](AsyncWebServerRequest *request) {
+        wifiManager.handleWifiConfigPost(request);
+    };
 #ifdef USE_SDCARD
     MyWebServer_getCallbacksStruct()->fileController_read = FileController_read;
 #endif
@@ -304,6 +316,9 @@ void loop()
     FanController_loop();
 
     LightController_loop();
+    
+    // WiFi manager loop (handles connection timeout, AP fallback, periodic retry)
+    wifiManager.loop();
 #ifdef USE_SDCARD
     FileController_write();
 #endif

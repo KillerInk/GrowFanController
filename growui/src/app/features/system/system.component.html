@@ -75,4 +75,87 @@
       <button class="btn btn-warning" (click)="onReset(false)">Hard Reset</button>
     </div>
   </div>
+
+  <!-- WiFi Configuration -->
+  <div class="card wifi-card">
+    <h3 class="card-title">WiFi Configuration</h3>
+
+    <!-- Connection Status -->
+    <div class="wifi-status" [class.connected]="wifiConnected()" [class.disconnected]="!wifiConnected() && !apActive()">
+      <span class="status-dot"></span>
+      <span class="status-text">
+        {{ wifiConnected() ? 'Connected to ' + wifiSsid() : (apActive() ? 'AP Mode — ' + apSsid() : 'Not connected') }}
+      </span>
+      <span class="status-rssi" *ngIf="wifiConnected()">
+        ({{ wifiRssi() }} dBm)
+      </span>
+    </div>
+
+    <!-- AP Info -->
+    <div class="wifi-info" *ngIf="apActive()">
+      <div class="info-row">
+        <span class="info-label">AP SSID:</span>
+        <span class="info-value">{{ apSsid() }}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">AP IP:</span>
+        <span class="info-value">{{ apIp() }}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Access:</span>
+        <span class="info-value">Open (no password)</span>
+      </div>
+    </div>
+
+    <!-- Credential Form -->
+    <form class="wifi-form" (ngSubmit)="onSaveWifiCredentials()">
+      <div class="form-group">
+        <label for="wifi-ssid">WiFi SSID</label>
+        <input
+          type="text"
+          id="wifi-ssid"
+          [(ngModel)]="newSsid"
+          name="ssid"
+          placeholder="Enter WiFi network name"
+          required
+        >
+      </div>
+      <div class="form-group">
+        <label for="wifi-password">Password</label>
+        <input
+          type="password"
+          id="wifi-password"
+          [(ngModel)]="newPassword"
+          name="password"
+          placeholder="Enter WiFi password"
+        >
+      </div>
+      <div class="form-row">
+        <label class="toggle-label">
+          <input
+            type="checkbox"
+            [checked]="apFallbackEnabled()"
+            (change)="onToggleApFallback()"
+          >
+          <span>AP Fallback Enabled</span>
+        </label>
+        <div class="timeout-group">
+          <label for="wifi-timeout">Timeout (s)</label>
+          <input
+            type="number"
+            id="wifi-timeout"
+            [(ngModel)]="connectTimeout"
+            name="timeout"
+            min="1"
+            max="60"
+            (blur)="onTimeoutChange()"
+          >
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary" [disabled]="!newSsid()">
+        Save &amp; Reboot
+      </button>
+      <p class="wifi-note">Device will reboot to apply new WiFi settings</p>
+    </form>
+  </div>
 </div>

@@ -1,5 +1,6 @@
 #pragma once
 #include "Arduino.h"
+#include "ESPAsyncWebServer.h"
 
 struct MyWebServerMethodCallbacks
 {
@@ -25,6 +26,9 @@ struct MyWebServerMethodCallbacks
 #ifdef USE_SDCARD
     String (*fileController_read)(String name);
 #endif
+    // WiFi config
+    String (*wifiConfigGet)();
+    void (*wifiConfigPost)(AsyncWebServerRequest *request);
 };
 
 MyWebServerMethodCallbacks *MyWebServer_getCallbacksStruct();

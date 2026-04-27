@@ -67,6 +67,14 @@ export interface DeviceState extends FanValues, LightValues {
   spisize?: number;
   spiflashspeed?: number;
   spiflsize?: number;
+
+  /** WiFi status fields */
+  wifi_connected?: boolean;
+  wifi_rssi?: number;
+  wifi_ssid?: string;
+  ap_active?: boolean;
+  ap_ssid?: string;
+  ap_ip?: string;
 }
 
 //{"bme280":{

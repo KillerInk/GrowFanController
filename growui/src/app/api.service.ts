@@ -266,4 +266,13 @@ export class ApiService {
       catchError(this.handleError)
     );
   }
+
+  /* ---------- WiFi configuration ---------- */
+
+  setWifiCredentials(ssid: string, password: string, apFallback?: boolean, timeout?: number): Observable<any> {
+    const params: Record<string, any> = { var: 'wificonfig', ssid, password };
+    if (apFallback !== undefined) params.ap_fallback = apFallback ? 'on' : 'off';
+    if (timeout !== undefined) params.timeout = timeout;
+    return this.getCmd(params);
+  }
 }

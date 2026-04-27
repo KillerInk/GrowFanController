@@ -396,6 +396,18 @@ void MyWebServer_setup()
 
 	server->on("/cmd", HTTP_GET, onCmd);
 	server->on("/settings", HTTP_GET, onGetSettings);
+	server->on("/wifi-config", HTTP_POST, [](AsyncWebServerRequest *request) {
+		if (methcallbacks.wifiConfigPost != nullptr)
+			methcallbacks.wifiConfigPost(request);
+	});
+	server->on("/wifi-config-page", HTTP_GET, [](AsyncWebServerRequest *request) {
+		if (methcallbacks.wifiConfigGet != nullptr) {
+			String html = methcallbacks.wifiConfigGet();
+			request->send(200, "text/html", html);
+		} else {
+			request->send(501, "text/plain", "Not Implemented");
+		}
+	});
 #ifdef USE_SDCARD
 	server->on("/data", HTTP_GET, getFile);
 #endif
