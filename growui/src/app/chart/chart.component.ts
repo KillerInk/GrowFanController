@@ -236,7 +236,7 @@ export class ChartComponent {
     this.enforceVisibleItemBounds();
     if (this.chartData.labels.length <= 600) {
       this.itemPosition = 0;
-      this.visibleItemCount++;
+      this.visibleItemCount = Math.min(this.chartData.labels.length, 600);
     } else if (!wasFullView && this.itemPosition < 0) {
       // Move the offset back one more to keep the same earliest point
       this.itemPosition -= 1;
@@ -307,7 +307,7 @@ export class ChartComponent {
   setTimeRange(range: '10min' | '30min' | '1h' | '2h' | '4h'): void {
     const sampled = createSampledData(range, this.fullChartData);
     this.chartData.labels = sampled.labels;
-    this.chartData.chartData = sampled.datasets;
+    this.chartData.datasets = sampled.datasets;
     this.datasetVisibility = restoreDatasetVisibility(this.datasetVisibility, this.chartData, this.chart, this.chartOptions);
     this.currentRange = range;
     this.visibleItemCount = 600;

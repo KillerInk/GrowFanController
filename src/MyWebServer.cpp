@@ -388,6 +388,12 @@ void MyWebServer_setup()
 		log_i("SPIFFS mounted successfully");
 	}
 	server = new AsyncWebServer(http_port);
+
+		// Catch-all handler for SPA routing – return index.html for unknown paths
+	server->onNotFound([](AsyncWebServerRequest *request) {
+		request->send(SPIFFS, "/angular-www/index.html", "text/html");
+	});
+
 	server->on("/cmd", HTTP_GET, onCmd);
 	server->on("/settings", HTTP_GET, onGetSettings);
 #ifdef USE_SDCARD
@@ -420,6 +426,9 @@ void MyWebServer_setup()
 	server->serveStatic("/", SPIFFS, "/angular-www/").setDefaultFile("index.html");
 	server->serveStatic("/", SD, "/");
 	// server->serveStatic("/", SPIFFS, "/www/");
+	
+
+	
 	ws = new AsyncWebSocket("/ws");
 	ws->onEvent(onWsEvent);
 	server->addHandler(ws);

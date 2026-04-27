@@ -2,9 +2,11 @@ export function createSampledData(range: '10min' | '30min' | '1h' | '2h' | '4h',
     const intervalMap = { '10min': 1, '30min': 3, '1h': 6, '2h': 12, '4h': 24 };
     const step = intervalMap[range] ?? 1;
 
-    // Use the full data set for sampling
-    let startIndex = 0;
-    let endIndex = fullChartData.labels.length;
+    // Sample from the END of the dataset (latest data)
+    const totalPoints = fullChartData.labels.length;
+    const endIndex = totalPoints;
+    const targetPoints = Math.min(600, totalPoints);
+    const startIndex = Math.max(0, endIndex - targetPoints);
 
     const newLabels: number[] = [];
     const newDatasets = fullChartData.datasets.map((ds: any) => ({
