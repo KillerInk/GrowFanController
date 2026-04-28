@@ -23,27 +23,65 @@ export function loadDatasetVisibility(datasetVisibility: boolean[], chartData: a
 }
 
 export function restoreDatasetVisibility(datasetVisibility: boolean[], chartData: any, charti:any, chartOptions:any) {
-    datasetVisibility = loadDatasetVisibility(datasetVisibility,chartData);
+    let loadedVisibility = loadDatasetVisibility(datasetVisibility, chartData);
 
     const chart = charti?.chart as any;
     if (!chart || !chart.data.datasets.length) {
         // Chart not ready yet – try again shortly
-        setTimeout(() => datasetVisibility = restoreDatasetVisibility(datasetVisibility,chartData,charti,chartOptions), 200);
+        setTimeout(() => restoreDatasetVisibility(loadedVisibility, chartData, charti, chartOptions), 200);
         return datasetVisibility;
     }
 
     // Ensure visibility array matches dataset count
     const visCount = chart.data.datasets.length;
-    if (datasetVisibility.length !== visCount) {
-        datasetVisibility = Array.from({ length: visCount }, () => true);
+    if (loadedVisibility.length !== visCount) {
+        loadedVisibility = Array.from({ length: visCount }, () => true);
     }
 
-    // Apply visibility to each meta
+    // Mutate the original array so references stay valid
+    datasetVisibility.length = 0;
+    for (let i = 0; i < loadedVisibility.length; i++) {
+        datasetVisibility[i] = loadedVisibility[i];
+    }
+
+    // Apply visibility to each meta and collect which axes should be visible
+    const metaHidden: Record<number, boolean> = {};
+    const axisShouldDisplay: Record<string, boolean> = {};
+    
     chart.data.datasets.forEach((_: any, idx: number) => {
         const meta = chart.getDatasetMeta(idx);
-        // meta.hidden === null means visible; we want it hidden when !visible
-        meta.hidden = !datasetVisibility[idx];
-        chartOptions.scales[meta.yAxisID].display = datasetVisibility[idx];
+        // loadedVisibility[idx] true means visible, false means hidden
+        // meta.hidden = null/false means visible, true means hidden
+        if (loadedVisibility[idx]) {
+            meta.hidden = null;  // Show the dataset
+        } else {
+            meta.hidden = true;  // Hide the dataset
+        }
+        metaHidden[idx] = meta.hidden === true;
+        
+        // Track which yAxisIDs have visible datasets
+        const yAxisId = meta.yAxisID;
+        if (!axisShouldDisplay[yAxisId]) {
+            axisShouldDisplay[yAxisId] = false;
+        }
+        // If dataset is visible, mark axis as should display
+        if (loadedVisibility[idx]) {
+            axisShouldDisplay[yAxisId] = true;
+        }
+    });
+
+    // Now apply axis display based on whether any visible dataset uses it
+    chart.data.datasets.forEach((_: any, idx: number) => {
+        const yAxisId = chart.getDatasetMeta(idx).yAxisID;
+        const shouldDisplay = axisShouldDisplay[yAxisId] || false;
+        
+        if (chartOptions.scales && chartOptions.scales[yAxisId]) {
+            chartOptions.scales[yAxisId].display = shouldDisplay;
+        }
+        
+        if (chart.options && chart.options.scales && chart.options.scales[yAxisId]) {
+            chart.options.scales[yAxisId].display = shouldDisplay;
+        }
     });
 
     chart.update();

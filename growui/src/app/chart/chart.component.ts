@@ -60,20 +60,36 @@ export class ChartComponent {
     const ci = legend.chart;
     const datasetIndex = legendItem.datasetIndex;
 
-
     // Toggle visibility
     const meta = ci.getDatasetMeta(datasetIndex);
-    if (meta.hidden === null) {
-      // First time clicking – hide the dataset
-      meta.hidden = true;
-      this.chartOptions.scales[meta.yAxisID].display = false;
-    } else {
-      // Subsequent clicks toggle the hidden flag
-      meta.hidden = !meta.hidden;
-      this.chartOptions.scales[meta.yAxisID].display = !this.chartOptions.scales[meta.yAxisID].display
+    
+    // Determine the new visibility state
+    const newHidden = meta.hidden === true ? false : true;
+    meta.hidden = newHidden;
+    
+    // Update the dataset visibility array
+    this.datasetVisibility[datasetIndex] = newHidden === false;
+
+    // Update the axis display - only hide if this dataset is the last visible one
+    const yAxisId = meta.yAxisID;
+    if (this.chartOptions?.scales?.[yAxisId]) {
+        // Check if any other visible dataset uses this axis
+        let hasOtherVisible = false;
+        for (let i = 0; i < ci.data.datasets.length; i++) {
+            if (i === datasetIndex) continue;
+            const otherMeta = ci.getDatasetMeta(i);
+            if (otherMeta.yAxisID === yAxisId && otherMeta.hidden !== true) {
+                hasOtherVisible = true;
+                break;
+            }
+        }
+        this.chartOptions.scales[yAxisId].display = hasOtherVisible || !newHidden;
     }
-    // Keep our local visibility array in sync
-    this.datasetVisibility[datasetIndex] = !meta.hidden;
+    
+    // Also update chart.options.scales
+    if (ci.options?.scales?.[yAxisId]) {
+        ci.options.scales[yAxisId].display = this.chartOptions.scales[yAxisId].display;
+    }
 
     saveDatasetVisibility(this.datasetVisibility);
     ci.update();
