@@ -168,12 +168,22 @@ export class ChartComponent {
     let minIndex = Math.max(0, Math.min(total - this.visibleItemCount + this.itemPosition, total - 1));
     let maxIndex = Math.min(minIndex + this.visibleItemCount, total);
 
-    const minLabel = this.chartData.labels[minIndex];
-    const maxLabel = this.chartData.labels[maxIndex - 1] ?? this.chartData.labels[total - 1];
+    // Ensure maxIndex is valid
+    if (maxIndex <= minIndex) maxIndex = minIndex + 1;
+    if (maxIndex > total) maxIndex = total;
 
-    this.chartOptions.scales.x.min = minLabel;
-    this.chartOptions.scales.x.max = maxLabel;
-    (this.chart?.chart as any)?.update();
+    const minLabel = this.chartData.labels[minIndex];
+    const maxLabel = this.chartData.labels[maxIndex - 1];
+
+    // Ensure valid time range
+    if (minLabel !== undefined && maxLabel !== undefined && minLabel <= maxLabel) {
+      this.chartOptions.scales.x.min = minLabel;
+      this.chartOptions.scales.x.max = maxLabel;
+    }
+    
+    if (this.chart?.chart) {
+      (this.chart.chart as any).update('none');
+    }
     this.checkForPreviousHour();
   }
 
@@ -190,12 +200,18 @@ export class ChartComponent {
       this.chartData = chartData;
       this.fullChartData = fullChartData;
       this.datasetKeyIndexMap = datasetKeyIndexMap;
-      //this.setTimeRange(this.currentRange);
       this.initialized = true;
     }
     if (!this.chartData.labels.length) {
       this.loadTime(0);
     }
+    
+    // Allow async loadTime to complete before updating
+    setTimeout(() => {
+      if (this.chart?.chart) {
+        (this.chart.chart as any).update('none');
+      }
+    }, 100);
 
     let timeLabel: number;
     timeLabel = Date.now();
@@ -232,6 +248,9 @@ export class ChartComponent {
         }
       }
     });
+    
+    // Create a new reference for chartData to trigger PrimeNG change detection
+    this.chartData = { ...this.chartData, datasets: [...this.chartData.datasets] };
 
     this.enforceVisibleItemBounds();
     if (this.chartData.labels.length <= 600) {
@@ -245,20 +264,40 @@ export class ChartComponent {
       this.itemPosition = Math.max(this.itemPosition, -maxOffset);
     }
     this.setTimeLimits();
+    
+    // Trigger PrimeNG chart update by marking datasets as changed
+    if (this.chart?.chart) {
+      (this.chart.chart as any).update('none');
+    }
   }
 
-  private loadTime(time: number) {
+  private async loadTime(time: number) {
     const now = new Date();
-    const start = new Date(now.getTime() - time * 60 * 60 * 1000);   // 4 h ago
+    const start = new Date(now.getTime() - time * 60 * 60 * 1000);   // 4 h ago
 
     const year = start.getFullYear().toString();          // e.g. "2024"
     const month = (start.getMonth() + 1).toString().padStart(2, '0'); // "03"
     const day = start.getDate().toString().padStart(2, '0');       // "15"
     const hour = start.getHours().toString().padStart(2, '0');        // "12"
+    
+    const hourKey = `${year}-${month}-${day}-${hour}`;
+    
+    // Check if we've already loaded this hour
+    if (this.loadedHours.has(hourKey)) {
+      this.setTimeRange(this.currentRange);
+      return;
+    }
 
-    loadHistoricalData(year, month, day, hour, this.apiService, this.chartData, this.fullChartData);
-    this.setTimeRange(this.currentRange);
-
+    try {
+      const result = await loadHistoricalData(year, month, day, hour, this.apiService, this.chartData, this.fullChartData);
+      this.chartData = result.chartData;
+      this.fullChartData = result.fullChartData;
+      this.loadedHours.add(hourKey);
+      this.setTimeRange(this.currentRange);
+    } catch (error) {
+      console.error('[Chart] Failed to load initial historical data:', error);
+      this.loadedHours.add(hourKey);
+    }
   }
 
   private async checkForPreviousHour(): Promise<void> {
@@ -278,12 +317,15 @@ export class ChartComponent {
     const month = (firstDate.getMonth() + 1).toString().padStart(2, '0');
     const day = firstDate.getDate().toString().padStart(2, '0');
     const hour = firstDate.getHours().toString().padStart(2, '0');
-
-    // **Remove the guard that prevents repeated loading**
-    // this.loadedHours.add(key);
+    
+    const hourKey = `${year}-${month}-${day}-${hour}`;
+    
+    // Check if we've already tried loading this hour
+    if (this.loadedHours.has(hourKey)) return;
 
     this.loadingPreviousHour = true;
     try {
+      const oldLabelCount = this.chartData.labels.length;
       const { chartData: updatedChartData, fullChartData: updatedFullChartData } =
         await loadHistoricalData(
           year,
@@ -294,11 +336,24 @@ export class ChartComponent {
           this.chartData,
           this.fullChartData
         );
-      this.chartData = updatedChartData;
-      this.fullChartData = updatedFullChartData;
-      /* Keep the view at the oldest point after adding older data */
-      this.itemPosition = -(this.chartData.labels.length - this.visibleItemCount);
-      this.enforceVisibleItemBounds();
+      
+      // Check if any new data was loaded
+      const newDataLoaded = updatedChartData.labels.length > oldLabelCount;
+      if (newDataLoaded) {
+        this.chartData = updatedChartData;
+        this.fullChartData = updatedFullChartData;
+        this.loadedHours.add(hourKey);
+        /* Keep the view at the oldest point after adding older data */
+        this.itemPosition = -(this.chartData.labels.length - this.visibleItemCount);
+        this.enforceVisibleItemBounds();
+      } else {
+        // No new data loaded - mark this hour as loaded to prevent retrying
+        this.loadedHours.add(hourKey);
+      }
+    } catch (error) {
+      console.error('[Chart] Failed to load historical data:', error);
+      // Mark as loaded even on error to prevent retrying the same hour
+      this.loadedHours.add(hourKey);
     } finally {
       this.loadingPreviousHour = false;
     }

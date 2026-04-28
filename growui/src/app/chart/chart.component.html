@@ -6,7 +6,7 @@
     <button (click)="setTimeRange('2h')">2 h</button>
     <button (click)="setTimeRange('4h')">4 h</button>
 </div>
-<div #chartContainer (wheel)="onMouseWheel($event)" (mousedown)="onMouseDown($event)" (mouseup)="onMouseUp($event)"
+<div #chartContainer class="chart-inner" (wheel)="onMouseWheel($event)" (mousedown)="onMouseDown($event)" (mouseup)="onMouseUp($event)"
     (mousemove)="onMouseMove($event)" (mouseenter)="isMouseOverChart = true" (mouseleave)="isMouseOverChart = false">
     <p-chart #chart [data]="chartData" [options]="chartOptions"></p-chart>
 </div>

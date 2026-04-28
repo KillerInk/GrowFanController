@@ -39,10 +39,11 @@ export function initializeDatasets(
 
       const commonOpts = {
         type: 'line', data: [],
-        borderWidth: 1,
-        pointRadius: 0,
-        pointHoverRadius: 0,
-        tension: 0
+        borderWidth: 2,
+        pointRadius: 1,
+        pointHoverRadius: 4,
+        tension: 0.3,
+        fill: false
       };
       let label = '';
       switch (key) {
@@ -76,7 +77,10 @@ export function initializeDatasets(
       if (!chartOptions.scales[yAxisIds[key]]) {
         const position = index % 2 === 0 ? 'left' : 'right';
         chartOptions.scales[yAxisIds[key]] = {
+          type: 'linear',
           position,
+          min: undefined,
+          max: undefined,
           title: { display: false },
           ticks: {
             color: colors[key],

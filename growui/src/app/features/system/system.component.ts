@@ -2,6 +2,7 @@
 import { Component, inject, signal, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { HttpEventType } from '@angular/common/http';
 import { DashboardService } from '../../services/dashboard.service';
 import { ApiService } from '../../api.service';
 
@@ -76,7 +77,10 @@ export class SystemComponent implements OnInit, OnDestroy {
     if (!file) return;
     this.api.uploadSpiffs(file).subscribe({
       next: (evt: any) => {
-        if (evt?.progress) this.dashboard.spiffsUploadPercent.set(evt.progress);
+        if (evt.type === HttpEventType.UploadProgress) {
+          const percent = Math.round((evt.loaded / evt.total) * 100);
+          this.dashboard.spiffsUploadPercent.set(percent);
+        }
       },
     });
   }
@@ -86,7 +90,10 @@ export class SystemComponent implements OnInit, OnDestroy {
     if (!file) return;
     this.api.uploadFirmware(file).subscribe({
       next: (evt: any) => {
-        if (evt?.progress) this.dashboard.firmwareUploadPercent.set(evt.progress);
+        if (evt.type === HttpEventType.UploadProgress) {
+          const percent = Math.round((evt.loaded / evt.total) * 100);
+          this.dashboard.firmwareUploadPercent.set(percent);
+        }
       },
     });
   }

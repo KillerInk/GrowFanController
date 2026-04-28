@@ -216,8 +216,6 @@ export class ApiService {
         observe: 'events',          // emit progress events
         reportProgress: true       // enable progress reporting
       }
-    ).pipe(
-      catchError(this.handleError)
     );
   }
 
@@ -233,8 +231,6 @@ export class ApiService {
         observe: 'events',
         reportProgress: true
       }
-    ).pipe(
-      catchError(this.handleError)
     );
   }
 
