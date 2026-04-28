@@ -248,9 +248,6 @@ export class ChartComponent {
         }
       }
     });
-    
-    // Create a new reference for chartData to trigger PrimeNG change detection
-    this.chartData = { ...this.chartData, datasets: [...this.chartData.datasets] };
 
     this.enforceVisibleItemBounds();
     if (this.chartData.labels.length <= 600) {

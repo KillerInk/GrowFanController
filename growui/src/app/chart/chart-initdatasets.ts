@@ -39,11 +39,10 @@ export function initializeDatasets(
 
       const commonOpts = {
         type: 'line', data: [],
-        borderWidth: 2,
-        pointRadius: 1,
-        pointHoverRadius: 4,
-        tension: 0.3,
-        fill: false
+        borderWidth: 1,
+        pointRadius: 0,
+        pointHoverRadius: 0,
+        tension: 0
       };
       let label = '';
       switch (key) {
