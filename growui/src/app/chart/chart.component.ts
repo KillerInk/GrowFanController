@@ -217,6 +217,9 @@ export class ChartComponent {
       this.fullChartData = fullChartData;
       this.datasetKeyIndexMap = datasetKeyIndexMap;
       this.initialized = true;
+      
+      // Restore visibility state on first load
+      this.datasetVisibility = restoreDatasetVisibility(this.datasetVisibility, this.chartData, this.chart, this.chartOptions);
     }
     if (!this.chartData.labels.length) {
       this.loadTime(0);

@@ -134,9 +134,9 @@ void onCmd(AsyncWebServerRequest *request)
 	}
 	else if (variable == "fannightmodeactive")
 	{
-		String on = request->arg("nighton");
+		String val = request->arg("val");
 		if (methcallbacks.fancoltroller_nightmodeactivcecallback != nullptr)
-			methcallbacks.fancoltroller_nightmodeactivcecallback(on.toInt());
+			methcallbacks.fancoltroller_nightmodeactivcecallback(val.toInt());
 		request->send(200);
 	}
 	else if (variable == "lightvoltage")
