@@ -4,6 +4,8 @@ import { WebsocketService } from '../websocket.service';
 import { ApiService } from '../api.service';
 import { DeviceState, SocketMsg } from '../types';
 
+import { BehaviorSubject } from 'rxjs';
+
 @Injectable({ providedIn: 'root' })
 export class DashboardService {
   readonly deviceState = signal<DeviceState | null>(null);
@@ -13,6 +15,7 @@ export class DashboardService {
   readonly fan1percent$ = signal(50);
   readonly spiffsUploadPercent = signal(0);
   readonly firmwareUploadPercent = signal(0);
+  readonly settings$ = new BehaviorSubject<DeviceState | null>(null);
 
   private _wsSubscription?: any;
 
@@ -25,6 +28,7 @@ export class DashboardService {
     this.api.getFanControllerSettings().subscribe({
       next: (data: DeviceState) => {
         this.deviceState.set(data);
+        this.settings$.next(data);
         this.cloudSimActive.set(data.cloud?.active ?? false);
       },
       error: (err: unknown) => console.error('Failed to load fan settings', err),

@@ -5,6 +5,8 @@
   <app-sidebar
     [mobile]="isMobile()"
     [activeNav]="activePage()"
+    [mobileOpen]="sidebarOpen()"
+    (mobileOpenChange)="sidebarOpen()"
     (navChange)="onNavChange($event)">
   </app-sidebar>
 

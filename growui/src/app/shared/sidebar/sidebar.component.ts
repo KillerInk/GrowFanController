@@ -24,6 +24,8 @@ export class SidebarComponent {
   readonly minimized = input(false);
   readonly minimizedChange = output<boolean>();
   readonly navChange = output<NavPage>();
+  readonly mobileOpen = input(false);
+  readonly mobileOpenChange = output<boolean>();
 
   readonly navItems = navItems;
 
@@ -35,6 +37,7 @@ export class SidebarComponent {
 
   closeMobile(): void {
     this.navChange.emit('dashboard');
+    this.mobileOpenChange.emit(false);
   }
 
   toggleMinimize(): void {

@@ -270,9 +270,26 @@ export class ApiService {
   /* ---------- WiFi configuration ---------- */
 
   setWifiCredentials(ssid: string, password: string, apFallback?: boolean, timeout?: number): Observable<any> {
-    const params: Record<string, any> = { var: 'wificonfig', ssid, password };
-    if (apFallback !== undefined) params.ap_fallback = apFallback ? 'on' : 'off';
-    if (timeout !== undefined) params.timeout = timeout;
-    return this.getCmd(params);
+    const url = `/wifi-config`;
+    const formData = new FormData();
+    formData.append('ssid', ssid);
+    formData.append('password', password);
+    if (apFallback !== undefined) formData.append('ap_fallback', apFallback ? 'on' : 'off');
+    if (timeout !== undefined && timeout > 0) formData.append('timeout', String(timeout));
+    return this.http.post(url, formData, { responseType: 'text' }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  /* ---------- Timezone configuration ---------- */
+
+  /** GET /cmd?action=timezone&get */
+  getTimeZone(): Observable<{ offset: number }> {
+    return this.getCmd<{ offset: number }>({ var: 'timezone', action: 'get' });
+  }
+
+  /** POST /cmd?action=timezone&set&offset=N */
+  setTimeZone(offset: number): Observable<{ status: string }> {
+    return this.getCmd<{ status: string }>({ var: 'timezone', action: 'set', offset });
   }
 }

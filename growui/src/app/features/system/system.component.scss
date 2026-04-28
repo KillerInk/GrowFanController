@@ -204,3 +204,36 @@
     margin-bottom: 0;
   }
 }
+
+/* ---------- Timezone Configuration ---------- */
+
+.timezone-card {
+  border: 1px solid rgba(156, 39, 176, 0.2);
+}
+
+.timezone-editor {
+  margin-top: 12px;
+  padding: 12px;
+  background: rgba(156, 39, 176, 0.08);
+  border-radius: 8px;
+
+  .info-row {
+    margin-bottom: 8px;
+  }
+
+  .timezone-input {
+    width: 100px;
+    padding: 6px 10px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 6px;
+    font-size: 0.9rem;
+    background: rgba(255, 255, 255, 0.05);
+    color: inherit;
+
+    &:focus {
+      outline: none;
+      border-color: #9c27b0;
+      box-shadow: 0 0 0 3px rgba(156, 39, 176, 0.15);
+    }
+  }
+}

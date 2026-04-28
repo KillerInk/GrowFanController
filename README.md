@@ -111,6 +111,10 @@ If your firmware uses a filesystem and you want to upload it separately:
 pio run --target uploadfs -e esp32dev
 ```
 
+```bash
+curl.exe -X POST http://192.168.178.143/flashspiffs -F "file=@spiffs.bin"
+```
+
 ### Notes
 
 - The **platformio.ini** file contains the board definition (`esp32dev`) and library dependencies.

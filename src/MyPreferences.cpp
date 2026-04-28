@@ -42,20 +42,20 @@ void MyPreferences_setDouble(const char *preferencename, const char *key, double
 
 void MyPreferences_setWifiCredentials(const char* ssid, const char* pass)
 {
-    Preferences prefs;
-    prefs.begin(NVS_WIFI_NS, false);
-    prefs.putString("ssid", ssid);
-    prefs.putString("pass", pass);
-    prefs.end();
+
+    preferences.begin(NVS_WIFI_NS, false);
+    preferences.putString("ssid", ssid);
+    preferences.putString("pass", pass);
+    preferences.end();
 }
 
 bool MyPreferences_getWifiCredentials(char* ssid, int ssidMax, char* pass, int passMax)
 {
-    Preferences prefs;
-    prefs.begin(NVS_WIFI_NS, true); // read-only
-    String s = prefs.getString("ssid", "");
-    String p = prefs.getString("pass", "");
-    prefs.end();
+
+    preferences.begin(NVS_WIFI_NS, true); // read-only
+    String s = preferences.getString("ssid", "");
+    String p = preferences.getString("pass", "");
+    preferences.end();
     
     if (s.length() == 0) return false;
     
@@ -66,34 +66,53 @@ bool MyPreferences_getWifiCredentials(char* ssid, int ssidMax, char* pass, int p
 
 bool MyPreferences_getBool(const char* ns, const char* key, bool def)
 {
-    Preferences prefs;
-    prefs.begin(ns, true);
-    bool val = prefs.getBool(key, def);
-    prefs.end();
+    preferences.begin(ns, true);
+    bool val = preferences.getBool(key, def);
+    preferences.end();
     return val;
 }
 
 void MyPreferences_setBool(const char* ns, const char* key, bool val)
 {
-    Preferences prefs;
-    prefs.begin(ns, false);
-    prefs.putBool(key, val);
-    prefs.end();
+
+    preferences.begin(ns, false);
+    preferences.putBool(key, val);
+    preferences.end();
 }
 
 uint8_t MyPreferences_getUChar(const char* ns, const char* key, uint8_t def)
 {
-    Preferences prefs;
-    prefs.begin(ns, true);
-    uint8_t val = prefs.getUChar(key, def);
-    prefs.end();
+
+    preferences.begin(ns, true);
+    uint8_t val = preferences.getUChar(key, def);
+    preferences.end();
     return val;
 }
 
 void MyPreferences_setUChar(const char* ns, const char* key, uint8_t val)
 {
-    Preferences prefs;
-    prefs.begin(ns, false);
-    prefs.putUChar(key, val);
-    prefs.end();
+
+    preferences.begin(ns, false);
+    preferences.putUChar(key, val);
+    preferences.end();
+}
+
+// Timezone offset helpers (stored as uint8_t, actual value = val - 64, range -64..+63 -> maps to -12..+13 hours)
+static const int8_t TZ_DEFAULT_OFFSET = time_zone_hour_utc_offset;
+static const uint8_t TZ_NVS_BASE = 64; // offset for NVS storage: 0 maps to -64, 64 maps to 0, 79 maps to +15
+
+int8_t MyPreferences_getTimeZoneOffset()
+{
+
+    preferences.begin("TimeZone", true);
+    uint8_t val = preferences.getUChar("offset", TZ_NVS_BASE + TZ_DEFAULT_OFFSET);
+    preferences.end();
+    return (int8_t)(val - TZ_NVS_BASE);
+}
+
+void MyPreferences_setTimeZoneOffset(int8_t offset)
+{
+    preferences.begin("TimeZone", false);
+    preferences.putUChar("offset", TZ_NVS_BASE + (uint8_t)offset);
+    preferences.end();
 }

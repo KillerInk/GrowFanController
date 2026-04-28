@@ -75,6 +75,9 @@ export interface DeviceState extends FanValues, LightValues {
   ap_active?: boolean;
   ap_ssid?: string;
   ap_ip?: string;
+
+  /** Timezone offset in hours from UTC */
+  timezoneOffset?: number;
 }
 
 //{"bme280":{

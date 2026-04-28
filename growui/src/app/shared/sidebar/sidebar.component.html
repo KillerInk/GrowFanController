@@ -1,8 +1,8 @@
 <!-- src/app/shared/sidebar/sidebar.component.html -->
-<div class="sidebar-overlay" *ngIf="mobile() && activeNav() !== 'dashboard'" (click)="closeMobile()"></div>
+<div class="sidebar-overlay" *ngIf="mobile() && mobileOpen()" (click)="closeMobile()"></div>
 
 <aside class="sidebar"
-       [class.open]="mobile() && activeNav() !== 'dashboard'"
+       [class.open]="mobile() && mobileOpen()"
        [class.minimized]="isMinimized">
   <div class="sidebar-header">
     <span class="sidebar-logo">🌱 GrowControl</span>

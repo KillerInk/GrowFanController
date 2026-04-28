@@ -22,6 +22,10 @@
 #endif
 #include <nvs_flash.h>
 #include "WiFiManager.h"
+#include "MyPreferences.h"
+
+// Runtime timezone offset (hours from UTC, default compile-time value)
+static int g_timeZoneOffset = time_zone_hour_utc_offset;
 
 #ifdef GOVEE_BTH5179
 typedef struct
@@ -194,7 +198,20 @@ String getSettings()
     myObject["ap_ssid"] = wifiStatus.apActive ? String(wifiStatus.apSsid) : "";
     myObject["ap_ip"] = wifiStatus.apActive ? String(wifiStatus.apIp) : "";
 
+    // Timezone offset
+    myObject["timezoneOffset"] = g_timeZoneOffset;
+
     return JSON.stringify(myObject);
+}
+
+String wificonfig()
+{
+    return wifiManager.getWifiConfigPage();
+}
+
+void wifipost(AsyncWebServerRequest *request)
+{
+    wifiManager.handleWifiConfigPost(request);
 }
 
 void setup()
@@ -214,6 +231,8 @@ void setup()
     }
     ESP_ERROR_CHECK(ret);
     log_i("init flash done");
+    // Load timezone offset from NVS (falls back to compile-time default)
+    g_timeZoneOffset = MyPreferences_getTimeZoneOffset();
 #ifdef USE_SDCARD
     log_i("init filecontroller");
     FileController_setup();
@@ -230,7 +249,8 @@ void setup()
     mdns_hostname_set("Esp32FanController");
     mdns_instance_name_set("Esp32FanController");
     mdns_service_add("Esp32FanController", "_http", "_tcp", 80, NULL, 0);
-    configTime(time_zone_hour_utc_offset * 60 * 60, 0, "pool.ntp.org");
+    configTime(g_timeZoneOffset * 60 * 60, 0, "pool.ntp.org");
+    log_i("Timezone offset: %d hours", g_timeZoneOffset);
     log_i("init mdns done");
 
     MyWebServer_getCallbacksStruct()->applyspeed_listner = FanController_applyspeed;
@@ -259,11 +279,16 @@ void setup()
     MyWebServer_getCallbacksStruct()->lightController_setPercentLimits = LightController_setPercentLimits;
     MyWebServer_getCallbacksStruct()->lightController_setCloudActive = LightController_setCloudActive;
     MyWebServer_getCallbacksStruct()->lightController_setCloudValues = LightController_setCloudValues;
-    MyWebServer_getCallbacksStruct()->wifiConfigGet = []() {
-        return wifiManager.getWifiConfigPage();
+    MyWebServer_getCallbacksStruct()->wifiConfigGet = wificonfig;
+
+    MyWebServer_getCallbacksStruct()->wifiConfigPost = wifipost;
+    MyWebServer_getCallbacksStruct()->getTimeZoneOffset = []() {
+        return g_timeZoneOffset;
     };
-    MyWebServer_getCallbacksStruct()->wifiConfigPost = [](AsyncWebServerRequest *request) {
-        wifiManager.handleWifiConfigPost(request);
+    MyWebServer_getCallbacksStruct()->setTimeZoneOffset = [](int offset) {
+        g_timeZoneOffset = offset;
+        configTime(g_timeZoneOffset * 60 * 60, 0, "pool.ntp.org");
+        MyPreferences_setTimeZoneOffset((int8_t)offset);
     };
 #ifdef USE_SDCARD
     MyWebServer_getCallbacksStruct()->fileController_read = FileController_read;

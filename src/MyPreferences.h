@@ -16,3 +16,7 @@ bool MyPreferences_getBool(const char* ns, const char* key, bool def);
 void MyPreferences_setBool(const char* ns, const char* key, bool val);
 uint8_t MyPreferences_getUChar(const char* ns, const char* key, uint8_t def);
 void MyPreferences_setUChar(const char* ns, const char* key, uint8_t val);
+
+// Timezone offset helpers (stored as int8_t, range -12 to +13)
+int8_t MyPreferences_getTimeZoneOffset();
+void MyPreferences_setTimeZoneOffset(int8_t offset);

@@ -4,11 +4,12 @@
   <div class="card">
     <h3 class="card-title">Fan Speed</h3>
     <div class="control-block">
-      <label>Current Speed: {{ deviceState()?.fan0voltage }} mV</label>
-      <input type="range" class="slider" min="0" max="255" [value]="deviceState()?.fan0voltage"
+      <label>Current Speed: {{ getFanPercent(0) }}%</label>
+      <input type="range" class="slider" min="0" max="100" [value]="getFanPercent(0)"
              (input)="onSpeedChange(0, $any($event).target.value)">
       <div class="row">
-        <span class="slider-value">{{ deviceState()?.fan0voltage }} mV</span>
+        <span class="slider-value">{{ getFanPercent(0) }}%</span>
+        <span class="slider-value">{{ deviceState()?.fan0min ?? 0 }}mV - {{ deviceState()?.fan0max ?? 255 }}mV</span>
         <button class="btn btn-primary" (click)="api.setSpeed(0, deviceState()?.fan0voltage ?? 0).subscribe()">Set</button>
       </div>
     </div>
@@ -17,11 +18,12 @@
   <div class="card">
     <h3 class="card-title">Fan 1 Speed</h3>
     <div class="control-block">
-      <label>Current Speed: {{ deviceState()?.fan1voltage }} mV</label>
-      <input type="range" class="slider" min="0" max="255" [value]="deviceState()?.fan1voltage"
+      <label>Current Speed: {{ getFanPercent(1) }}%</label>
+      <input type="range" class="slider" min="0" max="100" [value]="getFanPercent(1)"
              (input)="onSpeedChange(1, $any($event).target.value)">
       <div class="row">
-        <span class="slider-value">{{ deviceState()?.fan1voltage }} mV</span>
+        <span class="slider-value">{{ getFanPercent(1) }}%</span>
+        <span class="slider-value">{{ deviceState()?.fan1min ?? 0 }}mV - {{ deviceState()?.fan1max ?? 255 }}mV</span>
         <button class="btn btn-primary" (click)="api.setSpeed(1, deviceState()?.fan1voltage ?? 0).subscribe()">Set</button>
       </div>
     </div>
@@ -72,6 +74,22 @@
       <button class="btn btn-primary" (click)="submitFan(0)">Set Fan 0</button>
       <button class="btn btn-primary" (click)="submitFan(1)">Set Fan 1</button>
     </div>
+  </div>
+
+  <!-- Min/Max Speed (Auto Mode Range) -->
+  <div class="card">
+    <h3 class="card-title">Min/Max Speed (Auto Mode)</h3>
+    <div class="settings-grid">
+      <div class="input-pair">
+        <label>Min Speed (%)</label>
+        <input type="number" [(ngModel)]="deviceState()!.minspeed" class="input-field">
+      </div>
+      <div class="input-pair">
+        <label>Max Speed (%)</label>
+        <input type="number" [(ngModel)]="deviceState()!.maxspeed" class="input-field">
+      </div>
+    </div>
+    <button class="btn btn-primary" (click)="submitMinMaxSpeed()">Set Min/Max Speed</button>
   </div>
 
   <!-- Night Mode -->

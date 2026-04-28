@@ -73,6 +73,12 @@ void WiFiManager::loop() {
 }
 
 void WiFiManager::tryStaConnection() {
+    // Validate SSID before attempting connection
+    if (_status.ssid[0] == '\0' || strlen(_status.ssid) > 32) {
+        log_w("Cannot start STA: invalid SSID");
+        return;
+    }
+    
     WiFi.mode(WIFI_STA);
     WiFi.disconnect(false);
     WiFi.begin(_status.ssid, _status.password);
@@ -84,12 +90,18 @@ void WiFiManager::tryStaConnection() {
 void WiFiManager::retryWifiConnection() {
     if (_wifiConnected || _waitingForConnect) return;
     
+    // Validate SSID before attempting connection
+    if (_status.ssid[0] == '\0' || strlen(_status.ssid) > 32) {
+        log_w("Skipping WiFi retry: invalid SSID");
+        return;
+    }
+    
     // Try to connect in the background while keeping AP active
     WiFi.mode(WIFI_AP_STA);
     WiFi.begin(_status.ssid, _status.password);
     _waitingForConnect = true;
     _lastConnectAttempt = millis();
-    log_i("Retrying WiFi connection in background...");
+    log_i("Retrying WiFi connection to '%s' in background...", _status.ssid);
 }
 
 void WiFiManager::startApMode() {
@@ -135,6 +147,9 @@ void WiFiManager::loadSavedCredentials() {
     
     _status.savedCredsExist = MyPreferences_getWifiCredentials(ssid, sizeof(ssid), pass, sizeof(pass));
     
+    log_i("loadSavedCredentials: saved=%d, ssid='%s' (len=%d), pass_len=%d",
+          _status.savedCredsExist, ssid, strlen(ssid), strlen(pass));
+    
     if (_status.savedCredsExist) {
         strncpy(_status.ssid, ssid, sizeof(_status.ssid) - 1);
         _status.ssid[sizeof(_status.ssid) - 1] = '\0';
@@ -147,9 +162,22 @@ void WiFiManager::loadSavedCredentials() {
 }
 
 void WiFiManager::saveConfigToNvs() {
-    MyPreferences_setWifiCredentials(_status.ssid, _status.password);
-    MyPreferences_setBool(NVS_WIFI_NS, "ap_en", _status.apFallbackEnabled);
-    MyPreferences_setUChar(NVS_WIFI_NS, "to", _status.connectTimeout);
+    Preferences prefs;
+    prefs.begin(NVS_WIFI_NS, false); // read-write
+    log_i("NVS: writing ssid='%s' (%d chars), pass='%s' (%d chars), ap_en=%d, to=%d",
+          _status.ssid, (int)strlen(_status.ssid), _status.password, (int)strlen(_status.password),
+          _status.apFallbackEnabled, _status.connectTimeout);
+    prefs.putString("ssid", _status.ssid);
+    prefs.putString("pass", _status.password);
+    prefs.putBool("ap_en", _status.apFallbackEnabled);
+    prefs.putUChar("to", _status.connectTimeout);
+    
+    // Verify write by reading back
+    String verifySsid = prefs.getString("ssid", "VERIFY_FAIL");
+    log_i("NVS: verify read ssid='%s'", verifySsid.c_str());
+    
+    prefs.end();
+    log_i("NVS: write complete");
 }
 
 void WiFiManager::saveCredentials(const char* ssid, const char* password) {
@@ -161,7 +189,8 @@ void WiFiManager::saveCredentials(const char* ssid, const char* password) {
     
     saveConfigToNvs();
     
-    log_i("Credentials saved. Rebooting to connect...");
+    log_i("Credentials saved (ssid='%s'). Rebooting to connect...", _status.ssid);
+    delay(100);
     ESP.restart();
 }
 
@@ -276,6 +305,8 @@ void WiFiManager::handleWifiConfigPost(AsyncWebServerRequest *request) {
     String password = request->arg("password");
     String apFallback = request->arg("ap_fallback");
     String timeout = request->arg("timeout");
+    
+    log_i("WiFi config received: ssid='%s' (len=%d), ap_fallback=%s, timeout=%s", ssid.c_str(), ssid.length(), apFallback.c_str(), timeout.c_str());
     
     // Validate SSID length
     if (ssid.length() < 1 || ssid.length() > 32) {

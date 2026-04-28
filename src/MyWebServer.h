@@ -29,6 +29,10 @@ struct MyWebServerMethodCallbacks
     // WiFi config
     String (*wifiConfigGet)();
     void (*wifiConfigPost)(AsyncWebServerRequest *request);
+    
+    // Timezone config
+    int (*getTimeZoneOffset)();
+    void (*setTimeZoneOffset)(int offset);
 };
 
 MyWebServerMethodCallbacks *MyWebServer_getCallbacksStruct();

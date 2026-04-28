@@ -21,6 +21,19 @@ export class FansComponent {
 
   deviceState() { return this.dashboard.deviceState(); }
 
+  getFanPercent(id: number): number {
+    const state = this.deviceState();
+    if (!state) return 0;
+    
+    const voltage = id === 0 ? state.fan0voltage : state.fan1voltage;
+    const min = id === 0 ? state.fan0min : state.fan1min;
+    const max = id === 0 ? state.fan0max : state.fan1max;
+    
+    if (max === min || voltage == null || min == null || max == null) return 0;
+    
+    return Math.round(Math.max(0, Math.min(100, ((voltage - min) / (max - min)) * 100)));
+  }
+
   onSpeedChange(id: number, value: string): void {
     this.api.setSpeed(id, Number(value)).subscribe();
   }
@@ -33,6 +46,12 @@ export class FansComponent {
     } else {
       this.api.setVoltageLimits(1, state.fan1min, state.fan1max).subscribe();
     }
+  }
+
+  submitMinMaxSpeed(): void {
+    const state = this.dashboard.deviceState();
+    if (!state) return;
+    this.api.setMinMaxSpeed(state.minspeed, state.maxspeed).subscribe();
   }
 
   submitNightMode(): void {

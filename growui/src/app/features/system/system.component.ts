@@ -31,6 +31,11 @@ export class SystemComponent implements OnInit, OnDestroy {
   apFallbackEnabled = signal(true);
   connectTimeout = signal(15);
 
+  // Timezone state
+  timezoneOffset = signal(0);
+  editingTimezone = signal(false);
+  timezoneInput = signal(0);
+
   // Local form state
   newSsid = signal('');
   newPassword = signal('');
@@ -47,6 +52,16 @@ export class SystemComponent implements OnInit, OnDestroy {
       this.apActive.set(!!state.ap_active);
       this.apSsid.set(state.ap_ssid || '');
       this.apIp.set(state.ap_ip || '');
+      this.timezoneOffset.set(state.timezoneOffset ?? 0);
+    });
+    // Load timezone from device
+    this.api.getTimeZone().subscribe({
+      next: (res: any) => {
+        if (res?.offset != null) this.timezoneOffset.set(res.offset);
+      },
+      error: () => {
+        // fallback to device state value
+      },
     });
   }
 
@@ -85,12 +100,18 @@ export class SystemComponent implements OnInit, OnDestroy {
     const password = this.newPassword().trim();
     if (!ssid) return;
     
+    console.log('Saving WiFi credentials:', { ssid, password, apFallback: this.apFallbackEnabled(), timeout: this.connectTimeout() });
+    
     this.api.setWifiCredentials(ssid, password, this.apFallbackEnabled(), this.connectTimeout()).subscribe({
-      complete: () => {
+      next: (res: any) => {
+        console.log('WiFi config response:', res);
         // Device will reboot, no response expected
       },
       error: (err: any) => {
         console.error('WiFi config failed:', err);
+      },
+      complete: () => {
+        console.log('WiFi config complete');
       },
     });
   }
@@ -104,5 +125,33 @@ export class SystemComponent implements OnInit, OnDestroy {
     if (val < 1 || val > 60) {
       this.connectTimeout.set(15);
     }
+  }
+
+  /* ---------- Timezone ---------- */
+
+  onEditTimezone(): void {
+    this.timezoneInput.set(this.timezoneOffset());
+    this.editingTimezone.set(true);
+  }
+
+  onSaveTimezone(): void {
+    const offset = this.timezoneInput();
+    this.api.setTimeZone(offset).subscribe({
+      next: () => {
+        this.timezoneOffset.set(offset);
+        this.editingTimezone.set(false);
+      },
+      error: (err: any) => {
+        console.error('Timezone save failed:', err);
+      },
+    });
+  }
+
+  onCancelTimezone(): void {
+    this.editingTimezone.set(false);
+  }
+
+  onToggleTimezoneEdit(): void {
+    this.editingTimezone.set(!this.editingTimezone());
   }
 }

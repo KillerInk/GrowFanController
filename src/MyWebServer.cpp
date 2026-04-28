@@ -201,6 +201,33 @@ void onCmd(AsyncWebServerRequest *request)
 			methcallbacks.lightController_setCloudActive(on.toInt());
 		request->send(200);
 	}
+	else if (variable == "timezone")
+	{
+		String action = request->arg("action");
+		if (action == "get")
+		{
+			if (methcallbacks.getTimeZoneOffset != nullptr)
+			{
+				int offset = methcallbacks.getTimeZoneOffset();
+				request->send(200, "application/json", String("{\"offset\":" + String(offset) + "}").c_str());
+			}
+			else
+				request->send(501);
+		}
+		else if (action == "set")
+		{
+			int offset = request->arg("offset").toInt();
+			if (methcallbacks.setTimeZoneOffset != nullptr)
+			{
+				methcallbacks.setTimeZoneOffset(offset);
+				request->send(200, "application/json", "{\"status\":\"ok\"}");
+			}
+			else
+				request->send(501);
+		}
+		else
+			request->send(400);
+	}
 	else
 		request->send(404);
 }
@@ -232,70 +259,70 @@ static const esp_partition_t *spi_part = nullptr;
 // Keep track of the current byte offset
 static size_t offset = 0;
 static void handleSpiFlashUpload(AsyncWebServerRequest *request,
-                                 const String &filename,
-                                 size_t index, uint8_t *data,
-                                 size_t len, bool final)
+								 const String &filename,
+								 size_t index, uint8_t *data,
+								 size_t len, bool final)
 {
-    // Find the SPIFFS partition once per upload
-    if (index == 0)
-    {
-        // Initialise the Update session – the second argument must be a command,
-        // not a partition handle.
-        if (!Update.begin(UPDATE_SIZE_UNKNOWN, U_SPIFFS, -1, LOW, NULL))
-        {
-            log_e("Update.begin failed!");
-            request->send(500, "text/plain", "Update begin failed");
-            return;
-        }
+	// Find the SPIFFS partition once per upload
+	if (index == 0)
+	{
+		// Initialise the Update session – the second argument must be a command,
+		// not a partition handle.
+		if (!Update.begin(UPDATE_SIZE_UNKNOWN, U_SPIFFS, -1, LOW, NULL))
+		{
+			log_e("Update.begin failed!");
+			request->send(500, "text/plain", "Update begin failed");
+			return;
+		}
 
-        spi_part = esp_partition_find_first(
-            ESP_PARTITION_TYPE_DATA,
-            ESP_PARTITION_SUBTYPE_DATA_SPIFFS,
-            NULL);
-        if (!spi_part)
-        {
-            log_e("SPIFFS partition not found!");
-            request->send(500, "text/plain", "SPIFFS partition not found");
-            Update.end();
-            return;
-        }
-        log_i("SPIFFS partition at 0x%08X with size %u bytes", spi_part->address, spi_part->size);
-        offset = 0;
-    }
+		spi_part = esp_partition_find_first(
+			ESP_PARTITION_TYPE_DATA,
+			ESP_PARTITION_SUBTYPE_DATA_SPIFFS,
+			NULL);
+		if (!spi_part)
+		{
+			log_e("SPIFFS partition not found!");
+			request->send(500, "text/plain", "SPIFFS partition not found");
+			Update.end();
+			return;
+		}
+		log_i("SPIFFS partition at 0x%08X with size %u bytes", spi_part->address, spi_part->size);
+		offset = 0;
+	}
 
-    // Write the current chunk using the Update API
-    if (!Update.write(data, len))
-    {
-        log_e("Update.write failed");
-        request->send(500, "text/plain", "Update write failed");
-        Update.end();
-        return;
-    }
+	// Write the current chunk using the Update API
+	if (!Update.write(data, len))
+	{
+		log_e("Update.write failed");
+		request->send(500, "text/plain", "Update write failed");
+		Update.end();
+		return;
+	}
 
-    // Update the offset for the next chunk (only for bookkeeping)
-    offset += len;
+	// Update the offset for the next chunk (only for bookkeeping)
+	offset += len;
 
-    // When the final chunk arrives we finish the upload
-    if (final)
-    {
-        // Finalise the update – writes size metadata and validates CRC
-        if (Update.end())
-        {
-            log_i("File %s uploaded (%zu bytes)", filename.c_str(), offset);
-            request->send(200, "text/plain",
-                          "File uploaded successfully. Rebooting in 3 seconds...");
-            delay(3000);
-            ESP.restart();
-        }
-        else
-        {
-            log_e("Update.end failed");
-            request->send(500, "text/plain", "Update end failed");
-            // No manual partition cleanup needed; the partition was only
-            // queried with esp_partition_find_first and will remain valid
-            // for the lifetime of the device.
-        }
-    }
+	// When the final chunk arrives we finish the upload
+	if (final)
+	{
+		// Finalise the update – writes size metadata and validates CRC
+		if (Update.end())
+		{
+			log_i("File %s uploaded (%zu bytes)", filename.c_str(), offset);
+			request->send(200, "text/plain",
+						  "File uploaded successfully. Rebooting in 3 seconds...");
+			delay(3000);
+			ESP.restart();
+		}
+		else
+		{
+			log_e("Update.end failed");
+			request->send(500, "text/plain", "Update end failed");
+			// No manual partition cleanup needed; the partition was only
+			// queried with esp_partition_find_first and will remain valid
+			// for the lifetime of the device.
+		}
+	}
 }
 
 static const esp_partition_t *fw_part = nullptr;
@@ -377,6 +404,25 @@ void handlefirmwareupload(AsyncWebServerRequest *request, const String &filename
 	}
 }
 
+void onWifiConfigPost(AsyncWebServerRequest *request)
+{
+	if (methcallbacks.wifiConfigPost != nullptr)
+		methcallbacks.wifiConfigPost(request);
+}
+
+void onWifiConfigGet(AsyncWebServerRequest *request)
+{
+	if (methcallbacks.wifiConfigGet != nullptr)
+	{
+		String html = methcallbacks.wifiConfigGet();
+		request->send(200, "text/html", html);
+	}
+	else
+	{
+		request->send(501, "text/plain", "Not Implemented");
+	}
+}
+
 void MyWebServer_setup()
 {
 	if (!SPIFFS.begin(true))
@@ -389,25 +435,14 @@ void MyWebServer_setup()
 	}
 	server = new AsyncWebServer(http_port);
 
-		// Catch-all handler for SPA routing – return index.html for unknown paths
-	server->onNotFound([](AsyncWebServerRequest *request) {
-		request->send(SPIFFS, "/angular-www/index.html", "text/html");
-	});
+	// Catch-all handler for SPA routing – return index.html for unknown paths
+	server->onNotFound([](AsyncWebServerRequest *request)
+					   { request->send(SPIFFS, "/angular-www/index.html", "text/html"); });
 
 	server->on("/cmd", HTTP_GET, onCmd);
 	server->on("/settings", HTTP_GET, onGetSettings);
-	server->on("/wifi-config", HTTP_POST, [](AsyncWebServerRequest *request) {
-		if (methcallbacks.wifiConfigPost != nullptr)
-			methcallbacks.wifiConfigPost(request);
-	});
-	server->on("/wifi-config-page", HTTP_GET, [](AsyncWebServerRequest *request) {
-		if (methcallbacks.wifiConfigGet != nullptr) {
-			String html = methcallbacks.wifiConfigGet();
-			request->send(200, "text/html", html);
-		} else {
-			request->send(501, "text/plain", "Not Implemented");
-		}
-	});
+	server->on("/wifi-config", HTTP_POST, onWifiConfigPost);
+	server->on("/wifi-config-page", HTTP_GET, onWifiConfigGet);
 #ifdef USE_SDCARD
 	server->on("/data", HTTP_GET, getFile);
 #endif
@@ -438,9 +473,7 @@ void MyWebServer_setup()
 	server->serveStatic("/", SPIFFS, "/angular-www/").setDefaultFile("index.html");
 	server->serveStatic("/", SD, "/");
 	// server->serveStatic("/", SPIFFS, "/www/");
-	
 
-	
 	ws = new AsyncWebSocket("/ws");
 	ws->onEvent(onWsEvent);
 	server->addHandler(ws);
