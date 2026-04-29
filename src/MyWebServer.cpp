@@ -254,7 +254,6 @@ void getFile(AsyncWebServerRequest *request)
 		request->send(200, "text/csv", methcallbacks.fileController_read(ret));
 }
 #endif
-static const esp_partition_t *spi_part = nullptr;
 #include <Update.h>
 // Keep track of the current byte offset
 static size_t offset = 0;
@@ -263,30 +262,29 @@ static void handleSpiFlashUpload(AsyncWebServerRequest *request,
 								 size_t index, uint8_t *data,
 								 size_t len, bool final)
 {
-	// Find the SPIFFS partition once per upload
+	// Find the SPIFFS partition FIRST, then begin update with the partition
 	if (index == 0)
 	{
-		// Initialise the Update session – the second argument must be a command,
-		// not a partition handle.
-		if (!Update.begin(UPDATE_SIZE_UNKNOWN, U_SPIFFS, -1, LOW, NULL))
+		// Find SPIFFS partition for logging purposes
+		const esp_partition_t* spiffs_part = esp_partition_find_first(
+			ESP_PARTITION_TYPE_DATA,
+			ESP_PARTITION_SUBTYPE_DATA_SPIFFS,
+			NULL);
+		if (!spiffs_part)
+		{
+			log_e("SPIFFS partition not found!");
+			request->send(500, "text/plain", "SPIFFS partition not found");
+			return;
+		}
+		log_i("SPIFFS partition at 0x%08X with size %u bytes", spiffs_part->address, spiffs_part->size);
+
+		// Begin update using U_SPIFFS command (Arduino ESP32 Update library API)
+		if (!Update.begin(UPDATE_SIZE_UNKNOWN, U_SPIFFS))
 		{
 			log_e("Update.begin failed!");
 			request->send(500, "text/plain", "Update begin failed");
 			return;
 		}
-
-		spi_part = esp_partition_find_first(
-			ESP_PARTITION_TYPE_DATA,
-			ESP_PARTITION_SUBTYPE_DATA_SPIFFS,
-			NULL);
-		if (!spi_part)
-		{
-			log_e("SPIFFS partition not found!");
-			request->send(500, "text/plain", "SPIFFS partition not found");
-			Update.end();
-			return;
-		}
-		log_i("SPIFFS partition at 0x%08X with size %u bytes", spi_part->address, spi_part->size);
 		offset = 0;
 	}
 
@@ -324,9 +322,6 @@ static void handleSpiFlashUpload(AsyncWebServerRequest *request,
 		}
 	}
 }
-
-static const esp_partition_t *fw_part = nullptr;
-static esp_ota_handle_t ota_handle = 0;
 
 void handlefirmwareupload(AsyncWebServerRequest *request, const String &filename, size_t index, uint8_t *data, size_t len, bool final)
 {

@@ -217,8 +217,7 @@ void wifipost(AsyncWebServerRequest *request)
 void setup()
 {
     // put your setup code here, to run once:
-    if (Serial.available())
-        Serial.begin(115200);
+    Serial.begin(115200);
 
     vTaskDelay(500);
     log_i("init flash");

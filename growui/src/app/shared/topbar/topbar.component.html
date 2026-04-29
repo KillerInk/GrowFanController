@@ -5,7 +5,7 @@
     <span class="status-dot" [class.online]="!!socketdata()"></span>
     <span class="status-text">{{ socketdata()?.time || '—' }}</span>
     <span class="status-divider">|</span>
-    <span class="status-text">Fan: <strong [style.color]="deviceState()?.autocontrol ? 'var(--primary-color)' : 'var(--accent-color)'">
+    <span class="status-text">Fan Auto: <strong [style.color]="deviceState()?.autocontrol ? 'var(--primary-color)' : 'var(--accent-color)'">
       {{ deviceState()?.autocontrol ? 'ON' : 'OFF' }}
     </strong></span>
     <span class="status-divider">|</span>
