@@ -1,6 +1,6 @@
 <!-- src/app/shared/topbar/topbar.component.html -->
 <div class="topbar">
-  <button class="hamburger" *ngIf="isMobile" (click)="toggleSidebar()" title="Menu">☰</button>
+  <button class="hamburger" (click)="onMenuClick()" title="Menu">☰</button>
   <div class="topbar-status">
     <span class="status-dot" [class.online]="!!socketdata()"></span>
     <span class="status-text">{{ socketdata()?.time || '—' }}</span>

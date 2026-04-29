@@ -1,4 +1,7 @@
 <!-- src/app/app.html -->
+<!-- Sidebar overlay for mobile (outside layout flow) -->
+<div class="sidebar-overlay" *ngIf="isMobile() && sidebarOpen()" (click)="closeSidebar()"></div>
+
 <div class="app-layout">
 
   <!-- Sidebar -->
@@ -6,12 +9,9 @@
     [mobile]="isMobile()"
     [activeNav]="activePage()"
     [mobileOpen]="sidebarOpen()"
-    (mobileOpenChange)="sidebarOpen()"
+    (mobileOpenChange)="sidebarOpen.set($event)"
     (navChange)="onNavChange($event)">
   </app-sidebar>
-
-  <!-- Sidebar overlay for mobile -->
-  <div class="sidebar-overlay" *ngIf="isMobile() && sidebarOpen()" (click)="closeSidebar()"></div>
 
   <!-- Main content -->
   <div class="main-content">
@@ -19,7 +19,7 @@
     <app-topbar
       [dashboard]="ds()"
       [isMobile]="isMobile()"
-      [toggleSidebar]="toggleSidebar">
+      (menuClick)="toggleSidebar()">
     </app-topbar>
 
     <!-- Page content -->

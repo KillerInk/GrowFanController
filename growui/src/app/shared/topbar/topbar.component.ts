@@ -1,5 +1,5 @@
 // src/app/shared/topbar/topbar.component.ts
-import { Component, input, computed } from '@angular/core';
+import { Component, input, output, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DashboardService } from '../../services/dashboard.service';
 
@@ -12,8 +12,12 @@ import { DashboardService } from '../../services/dashboard.service';
 export class TopbarComponent {
   readonly dashboard = input.required<DashboardService>();
   readonly isMobile = input.required<boolean>();
-  readonly toggleSidebar = input.required<() => void>();
+  readonly menuClick = output<void>();
 
   socketdata = computed(() => this.dashboard().socketdata());
   deviceState = computed(() => this.dashboard().deviceState());
+
+  protected onMenuClick(): void {
+    this.menuClick.emit();
+  }
 }

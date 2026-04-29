@@ -1,6 +1,4 @@
 <!-- src/app/shared/sidebar/sidebar.component.html -->
-<div class="sidebar-overlay" *ngIf="mobile() && mobileOpen()" (click)="closeMobile()"></div>
-
 <aside class="sidebar"
        [class.open]="mobile() && mobileOpen()"
        [class.minimized]="isMinimized">

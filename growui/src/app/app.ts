@@ -41,7 +41,9 @@ export class App {
   }
 
   toggleSidebar(): void {
+    const prev = this.sidebarOpen();
     this.sidebarOpen.update(v => !v);
+    console.log('toggleSidebar called, prev:', prev, 'new:', this.sidebarOpen());
   }
 
   closeSidebar(): void {

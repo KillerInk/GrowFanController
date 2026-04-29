@@ -15,10 +15,27 @@
   background: none;
   border: none;
   color: #E0E0E0;
-  font-size: 1.3rem;
+  font-size: 1.5rem;
   cursor: pointer;
-  padding: 4px;
+  padding: 8px 12px;
   line-height: 1;
+  border-radius: 4px;
+  min-width: 44px;
+  min-height: 44px;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: rgba(76, 175, 80, 0.3);
+}
+
+.hamburger:active {
+  background: rgba(76, 175, 80, 0.15);
+}
+
+@media (max-width: 768px) {
+  .hamburger {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
 }
 
 .topbar-status {

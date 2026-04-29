@@ -1,9 +1,15 @@
 /* src/app/shared/sidebar/sidebar.component.scss */
 .sidebar-overlay {
   position: fixed;
-  inset: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100vw;
+  height: 100vh;
   background: rgba(0, 0, 0, 0.5);
-  z-index: 99;
+  z-index: 98;
+  touch-action: manipulation;
 }
 
 .sidebar {
@@ -120,9 +126,10 @@
     top: 0;
     left: 0;
     height: 100vh;
-    transform: translateX(-100%);
     width: 260px;
     min-width: 260px;
+    z-index: 210;
+    transform: translateX(-100%);
   }
 
   .sidebar.open {
