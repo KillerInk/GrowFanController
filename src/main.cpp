@@ -43,6 +43,23 @@ void govee_dataListner(double temp, double hum, int bat)
 }
 #endif
 
+// Helper: convert lifecycle_stage enum to int for JSON
+static int stageEnumToInt(lifecycle_stage s) {
+    return (int)s;
+}
+
+// Helper: get stage name string
+static const char* getStageName(lifecycle_stage s) {
+    switch (s) {
+        case stage_seedling: return "seedling";
+        case stage_vegetative: return "vegetative";
+        case stage_flower_early: return "flower_early";
+        case stage_flower_late: return "flower_late";
+        case stage_maturation: return "maturation";
+        default: return "unknown";
+    }
+}
+
 void sendSocketMsg()
 {
     JSONVar socketmsg;
@@ -71,7 +88,7 @@ void sendSocketMsg()
     socketmsg["bme280"]["pressure"] = buf;
     ret = snprintf(buf, sizeof buf, "%.2f", Bme280_getData()->avg_pressure);
     socketmsg["bme280"]["apressure"] = buf;
-    ret = snprintf(buf, sizeof buf, "%.2f", Bme280_getData()->vpdleaf);
+    ret = snprintf(buf, sizeof buf, "%.2f", Bme280_getVpdLeaf());
     socketmsg["bme280"]["vpd"] = buf;
 
 #endif
@@ -108,6 +125,21 @@ void sendSocketMsg()
     socketmsg["lightvalP"] = LightController_getValues()->currentLightP;
     socketmsg["lightvalmv"] = LightController_getValues()->voltage.voltage;
     socketmsg["lightstate"] = LightController_getValues()->current_state;
+
+    // Lifecycle/PPFD/DLI socket data (added 2026-04-10)
+    auto *lc = &LightController_getValues()->lifecycle;
+    // Compute currentLightTargetP if lifecycle is enabled
+    if (lc->enabled) {
+        calculateLifecycleLightP(lc, 0);
+    }
+    socketmsg["lifecycle"]["enabled"] = lc->enabled;
+    socketmsg["lifecycle"]["stage"] = stageEnumToInt(lc->stage);
+    socketmsg["lifecycle"]["stageName"] = getStageName(lc->stage);
+    socketmsg["lifecycle"]["stageDay"] = lc->stageDay;
+    socketmsg["lifecycle"]["currentLightTargetP"] = lc->currentLightTargetP;
+    socketmsg["lifecycle"]["panelMaxPPFD"] = lc->panelMaxPPFD;
+    socketmsg["lifecycle"]["accumulatedDLI"] = lc->accumulatedDLI;
+
 #ifdef SENSOR_BME280
     ret = snprintf(buf, sizeof buf, "%.2f", Bme280_getVpdLeaf());
     socketmsg["vpdair"] = buf;
@@ -172,6 +204,22 @@ String getSettings()
     myObject["cloud"]["min"] = LightController_getValues()->min_light_cloudP;
     myObject["cloud"]["max"] = LightController_getValues()->max_light_cloudP;
 
+    // Lifecycle settings (added 2026-04-10)
+    auto *lc = &LightController_getValues()->lifecycle;
+    // Compute currentLightTargetP if lifecycle is enabled
+    if (lc->enabled) {
+        calculateLifecycleLightP(lc, 0);
+    }
+    myObject["lifecycle"]["enabled"] = lc->enabled;
+    myObject["lifecycle"]["stage"] = stageEnumToInt(lc->stage);
+    myObject["lifecycle"]["stageName"] = getStageName(lc->stage);
+    myObject["lifecycle"]["stageDay"] = lc->stageDay;
+    myObject["lifecycle"]["stageStartTimestamp"] = lc->stageStartTimestamp;
+    myObject["lifecycle"]["accumulatedDLI"] = lc->accumulatedDLI;
+    myObject["lifecycle"]["panelMaxPPFD"] = lc->panelMaxPPFD;
+    myObject["lifecycle"]["umolPerWatt"] = lc->umolPerWatt;
+    myObject["lifecycle"]["currentLightTargetP"] = lc->currentLightTargetP;
+
     // System info
     unsigned long uptimeMs = millis();
     unsigned long uptimeDays = uptimeMs / 86400000;
@@ -224,7 +272,7 @@ void setup()
     esp_err_t ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND)
     {
-        // NVS-Partition ist beschädigt oder eine neue Version wurde gefunden
+        // NVS-Partition ist beschadigt oder eine neue Version wurde gefunden
         ESP_ERROR_CHECK(nvs_flash_erase());
         ret = nvs_flash_init();
     }
@@ -278,6 +326,32 @@ void setup()
     MyWebServer_getCallbacksStruct()->lightController_setPercentLimits = LightController_setPercentLimits;
     MyWebServer_getCallbacksStruct()->lightController_setCloudActive = LightController_setCloudActive;
     MyWebServer_getCallbacksStruct()->lightController_setCloudValues = LightController_setCloudValues;
+    // Lifecycle callbacks (added 2026-04-10)
+    MyWebServer_getCallbacksStruct()->lightController_setLifecycleEnabled = LightController_setLifecycleEnabled;
+    MyWebServer_getCallbacksStruct()->lightController_setLifecycleStage = [](int stage) { LightController_setLifecycleStage(static_cast<lifecycle_stage>(stage)); };
+    MyWebServer_getCallbacksStruct()->lightController_resetLifecycle = LightController_resetLifecycleStage;
+    MyWebServer_getCallbacksStruct()->lightController_getLifecycleState = []() -> String {
+        auto *lc = &LightController_getValues()->lifecycle;
+        // Compute currentLightTargetP if lifecycle is enabled
+        if (lc->enabled) {
+            calculateLifecycleLightP(lc, 0);
+        }
+        JSONVar obj;
+        obj["enabled"] = lc->enabled;
+        obj["stage"] = stageEnumToInt(lc->stage);
+        obj["stageName"] = getStageName(lc->stage);
+        obj["stageDay"] = lc->stageDay;
+        obj["stageStartTimestamp"] = lc->stageStartTimestamp;
+        obj["accumulatedDLI"] = lc->accumulatedDLI;
+        obj["panelMaxPPFD"] = lc->panelMaxPPFD;
+        obj["umolPerWatt"] = lc->umolPerWatt;
+        obj["currentLightTargetP"] = lc->currentLightTargetP;
+        return JSON.stringify(obj);
+    };
+    MyWebServer_getCallbacksStruct()->lightController_setPanelPPFD = [](float ppfd) {
+        LightController_getValues()->lifecycle.panelMaxPPFD = ppfd;
+        MyPreferences_setBytes("light", LightController_getValues(), sizeof(LightControllerValues));
+    };
     MyWebServer_getCallbacksStruct()->wifiConfigGet = wificonfig;
 
     MyWebServer_getCallbacksStruct()->wifiConfigPost = wifipost;

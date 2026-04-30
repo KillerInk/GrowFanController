@@ -26,6 +26,18 @@ export interface FanValues {
   nightmodemaxspeed: number;
 }
 
+export interface LifecycleConfig {
+  enabled: boolean;
+  stage: number;             // lifecycle_stage enum (0-4)
+  stageName: string;         // human-readable name
+  stageDay: number;          // day within current stage (1-based)
+  stageStartTimestamp: number;  // epoch timestamp
+  accumulatedDLI: number;    // cumulative DLI (μmol/m²/day)
+  panelMaxPPFD: number;      // panel max PPFD (μmol/m²/s)
+  umolPerWatt: number;       // panel efficiency (μmol/J)
+  currentLightTargetP: number;  // computed light target %
+}
+
 export interface LightValues {
   lightonh: number;
   lightonmin: number;
@@ -50,6 +62,9 @@ export interface LightValues {
     min: number;             // min_light_cloudP
     max: number;             // max_light_cloudP
   };
+
+  // Lifecycle fields (added 2026-04-10)
+  lifecycle: LifecycleConfig;
 }
 
 export interface DeviceState extends FanValues, LightValues {
@@ -80,7 +95,7 @@ export interface DeviceState extends FanValues, LightValues {
   timezoneOffset?: number;
 }
 
-//{"bme280":{
+//{\"bme280\":{
 // "temperatur":"21.72",
 // "humidity":"33.12",
 // "atemperatur":"21.72",
@@ -143,6 +158,17 @@ export interface SocketMsg {
   lightvalP: number;     // current light power (in %?)
   lightvalmv: number;    // voltage value
   lightstate: number;    // current state of the light
+
+  /** Lifecycle/PPFD/DLI data (added 2026-04-10) */
+  lifecycle?: {
+    enabled: boolean;
+    stage: number;
+    stageName: string;
+    stageDay: number;
+    currentLightTargetP: number;
+    panelMaxPPFD: number;
+    accumulatedDLI: number;
+  };
 
   vpdair: string;        // VPD (if SENSOR_BME280 defined)
 }

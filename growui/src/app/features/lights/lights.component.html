@@ -4,11 +4,11 @@
   <div class="card">
     <h3 class="card-title">Light Control</h3>
     <div class="control-block">
-      <label>Light Value: {{ deviceState()?.lightvalmv || 0 }} mV</label>
-      <input type="range" class="slider" min="0" max="255" [value]="deviceState()?.lightvalmv || 0"
+      <label>Light Value: {{ getLightPct() }}%</label>
+      <input type="range" class="slider" min="0" max="100" [value]="getLightPct()"
              (input)="onLightChange($any($event).target.value)">
       <div class="row">
-        <span class="slider-value">{{ deviceState()?.lightvalmv || 0 }} mV</span>
+        <span class="slider-value">{{ getLightPct() }}%</span>
         <button class="btn btn-primary" (click)="api.setLight(deviceState()?.lightvalmv || 0).subscribe()">Set</button>
       </div>
     </div>
@@ -17,126 +17,135 @@
   <!-- Light Voltage Limits -->
   <div class="card">
     <h3 class="card-title">Light Voltage Limits</h3>
-    <div class="settings-grid">
-      <div class="input-pair">
-        <label>Min (mV)</label>
-        <input type="number" [(ngModel)]="deviceState()!.lightminvolt" class="input-field">
+    <div class="control-block">
+      <div class="row">
+        <label>Min: <input type="number" [(ngModel)]="lightMinVolt" (ngModelChange)="onLightMinVoltChange($event)" size="4"></label>
+        <label>Max: <input type="number" [(ngModel)]="lightMaxVolt" (ngModelChange)="onLightMaxVoltChange($event)" size="4"></label>
       </div>
-      <div class="input-pair">
-        <label>Max (mV)</label>
-        <input type="number" [(ngModel)]="deviceState()!.lightmaxvolt" class="input-field">
-      </div>
+      <button class="btn btn-primary" (click)="submitLightVoltage()">Submit</button>
     </div>
-    <button class="btn btn-primary" (click)="submitLightVoltage()">Set Voltage Limits</button>
   </div>
 
   <!-- Light Percentage Limits -->
   <div class="card">
     <h3 class="card-title">Light Percentage Limits</h3>
-    <div class="settings-grid">
-      <div class="input-pair">
-        <label>Min (%)</label>
-        <input type="number" [(ngModel)]="deviceState()!.lightlimitspmin" class="input-field">
+    <div class="control-block">
+      <div class="row">
+        <label>Min: <input type="number" [(ngModel)]="lightLimitspMin" (ngModelChange)="onLightLimitspMinChange($event)" size="4"></label>
+        <label>Max: <input type="number" [(ngModel)]="lightLimitspMax" (ngModelChange)="onLightLimitspMaxChange($event)" size="4"></label>
       </div>
-      <div class="input-pair">
-        <label>Max (%)</label>
-        <input type="number" [(ngModel)]="deviceState()!.lightlimitspmax" class="input-field">
-      </div>
+      <button class="btn btn-primary" (click)="submitLightPercentage()">Submit</button>
     </div>
-    <button class="btn btn-primary" (click)="submitLightPercentage()">Set Percentage Limits</button>
   </div>
 
-  <!-- Cloud Simulation -->
-  <div class="card">
-    <h3 class="card-title">Cloud Simulation</h3>
-    <div class="settings-grid">
-      <div class="input-pair">
-        <label>Duration (s)</label>
-        <input type="number" [(ngModel)]="deviceState()!.cloud.cycleduration" class="input-field">
-      </div>
-      <div class="input-pair">
-        <label>Min</label>
-        <input type="number" [(ngModel)]="deviceState()!.cloud.min" class="input-field">
-      </div>
-      <div class="input-pair">
-        <label>Max</label>
-        <input type="number" [(ngModel)]="deviceState()!.cloud.max" class="input-field">
-      </div>
-    </div>
-    <button class="btn btn-primary" (click)="submitCloud()">Set Cloud Sim</button>
-  </div>
-
-  <!-- Cloud Sim Toggle -->
-  <div class="card">
-    <div class="toggle-row">
-      <span class="toggle-label">Cloud Sim Active</span>
-      <label class="toggle-switch">
-        <input type="checkbox" [checked]="cloudSimActive" (change)="onCloudSimActive($any($event).target.checked)">
-        <span class="toggle-slider"></span>
+  <!-- Lifecycle Light Control -->
+  <div class="card" *ngIf="lifecycleState() as lcState">
+    <h3 class="card-title">Lifecycle Light Control</h3>
+    <div class="row" style="align-items: center; margin-bottom: 12px;">
+      <label class="switch-label">
+        <input type="checkbox" [checked]="lcState.enabled ?? false" (change)="onLifecycleEnable($any($event).target.checked)">
+        <span class="slider-toggle"></span>
+        <span>Enable Lifecycle</span>
       </label>
+    </div>
+
+    <!-- Stage selector -->
+    <div class="control-block">
+      <label>Current Stage</label>
+      <div class="row" style="align-items: center;">
+        <select [(ngModel)]="lifecycleStage" (ngModelChange)="onLifecycleStageChange($event)" class="select-input">
+          <option [ngValue]="0">Seedling (days 1-21)</option>
+          <option [ngValue]="1">Vegetative (days 22-49)</option>
+          <option [ngValue]="2">Flower Early (days 50-77)</option>
+          <option [ngValue]="3">Flower Late (days 78-105)</option>
+          <option [ngValue]="4">Maturation (days 106+)</option>
+        </select>
+        <button class="btn btn-secondary" (click)="onResetLifecycle()">Reset</button>
+      </div>
+    </div>
+
+    <!-- Stage day + light target -->
+    <div class="control-block">
+      <div class="row">
+        <span class="info-item">
+          <strong>Stage Day:</strong> {{ lcState.stageDay || 0 }}
+        </span>
+        <span class="info-item">
+          <strong>Light Target:</strong> {{ lcState.currentLightTargetP || 0 }}%
+        </span>
+      </div>
+    </div>
+
+    <!-- PPFD -->
+    <div class="control-block">
+      <label>Panel Max PPFD: {{ lcState.panelMaxPPFD || 0 }} μmol/m²/s</label>
+      <input type="range" class="slider" min="200" max="2000" step="50"
+             [value]="lcState.panelMaxPPFD || 0"
+             (input)="onPanelPPFDChange($any($event).target.value)">
+      <div class="row">
+        <span class="slider-value">{{ lcState.panelMaxPPFD || 0 }} μmol/m²/s</span>
+        <span class="slider-value">~{{ (lcState.currentLightTargetP || 0) * (lcState.panelMaxPPFD || 0) / 100 | number:'1.0-0' }} μmol/m²/s current</span>
+      </div>
+    </div>
+
+    <!-- DLI Progress -->
+    <div class="control-block">
+      <label>Cumulative DLI: {{ lcState.accumulatedDLI || 0 | number:'1.1-1' }} μmol/m²/day</label>
+      <div class="progress-bar">
+        <div class="progress-fill" [style.width.%]="min(100, lcState.accumulatedDLI || 0)">
+        </div>
+      </div>
+      <small>Stage target: {{ getStageDLI(lcState.stage || 0) | number:'1.0-0' }}-{{ getStageMaxDLI(lcState.stage || 0) | number:'1.0-0' }} μmol/m²/day</small>
     </div>
   </div>
 
   <!-- Light Schedule -->
   <div class="card">
     <h3 class="card-title">Light Schedule</h3>
-    <div class="settings-grid">
-      <div class="input-pair">
-        <label>ON Hour</label>
-        <input type="number" [(ngModel)]="deviceState()!.lightonh" class="input-field">
+    <div class="control-block">
+      <div class="row">
+        <label>On: <input type="number" [(ngModel)]="lightOnH" (ngModelChange)="onLightOnHChange($event)" size="3">h <input type="number" [(ngModel)]="lightOnMin" (ngModelChange)="onLightOnMinChange($event)" size="3">m</label>
+        <label>Off: <input type="number" [(ngModel)]="lightOffH" (ngModelChange)="onLightOffHChange($event)" size="3">h <input type="number" [(ngModel)]="lightOffMin" (ngModelChange)="onLightOffMinChange($event)" size="3">m</label>
       </div>
-      <div class="input-pair">
-        <label>ON Min</label>
-        <input type="number" [(ngModel)]="deviceState()!.lightonmin" class="input-field">
+      <div class="row">
+        <label>Sunrise: <input type="number" [(ngModel)]="lightRiseH" (ngModelChange)="onLightRiseHChange($event)" size="3">h <input type="number" [(ngModel)]="lightRiseMin" (ngModelChange)="onLightRiseMinChange($event)" size="3">m</label>
+        <label>Sunset: <input type="number" [(ngModel)]="lightSetH" (ngModelChange)="onLightSetHChange($event)" size="3">h <input type="number" [(ngModel)]="lightSetMin" (ngModelChange)="onLightSetMinChange($event)" size="3">m</label>
       </div>
-      <div class="input-pair">
-        <label>OFF Hour</label>
-        <input type="number" [(ngModel)]="deviceState()!.lightoffh" class="input-field">
+      <div class="row">
+        <label class="switch-label"><input type="checkbox" [checked]="lightRiseEnable()" (change)="onLightScheduleToggle($any($event).target.checked, 'rise')"><span class="slider-toggle"></span>Enable Sunrise</label>
+        <label class="switch-label"><input type="checkbox" [checked]="lightSetEnable()" (change)="onLightScheduleToggle($any($event).target.checked, 'set')"><span class="slider-toggle"></span>Enable Sunset</label>
       </div>
-      <div class="input-pair">
-        <label>OFF Min</label>
-        <input type="number" [(ngModel)]="deviceState()!.lightoffmin" class="input-field">
-      </div>
+      <button class="btn btn-primary" (click)="submitLightSchedule()">Submit Schedule</button>
     </div>
-    <div class="settings-grid" style="margin-top: 12px;">
-      <div class="input-pair">
-        <label>Rise Enable</label>
-        <input type="checkbox" [(ngModel)]="deviceState()!.lightriseenable">
-      </div>
-      <div class="input-pair">
-        <label>Rise Hour</label>
-        <input type="number" [(ngModel)]="deviceState()!.lightriseh" class="input-field">
-      </div>
-      <div class="input-pair">
-        <label>Rise Min</label>
-        <input type="number" [(ngModel)]="deviceState()!.lightrisemin" class="input-field">
-      </div>
-    </div>
-    <div class="settings-grid" style="margin-top: 12px;">
-      <div class="input-pair">
-        <label>Set Enable</label>
-        <input type="checkbox" [(ngModel)]="deviceState()!.lightsetenable">
-      </div>
-      <div class="input-pair">
-        <label>Set Hour</label>
-        <input type="number" [(ngModel)]="deviceState()!.lightseth" class="input-field">
-      </div>
-      <div class="input-pair">
-        <label>Set Min</label>
-        <input type="number" [(ngModel)]="deviceState()!.lightsetmin" class="input-field">
-      </div>
-    </div>
-    <button class="btn btn-primary" style="margin-top: 12px;" (click)="submitLightSchedule()">Set Light Schedule</button>
   </div>
 
-  <!-- Light Auto -->
+  <!-- Light Automode -->
   <div class="card">
-    <div class="toggle-row">
-      <span class="toggle-label">Light Auto Mode</span>
-      <label class="toggle-switch">
-        <input type="checkbox" [checked]="!!deviceState()?.lightautomode" (change)="onLightAuto($any($event).target.checked)">
-        <span class="toggle-slider"></span>
+    <h3 class="card-title">Light Automode</h3>
+    <div class="control-block">
+      <label class="switch-label">
+        <input type="checkbox" [checked]="deviceState()?.lightautomode ?? false" (change)="onLightAuto($any($event).target.checked)">
+        <span class="slider-toggle"></span>
+        <span>Automode</span>
       </label>
+    </div>
+  </div>
+
+  <!-- Cloud Simulation -->
+  <div class="card">
+    <h3 class="card-title">Cloud Simulation</h3>
+    <div class="control-block">
+      <div class="row">
+        <label class="switch-label">
+          <input type="checkbox" [checked]="cloudSimActive()" (change)="onCloudSimActive($any($event).target.checked)">
+          <span class="slider-toggle"></span>
+          <span>Active</span>
+        </label>
+        <label>Cycle: <input type="number" [(ngModel)]="cloudCycle" (ngModelChange)="onCloudCycleChange($event)" size="5">min</label>
+        <label>Min: <input type="number" [(ngModel)]="cloudMin" (ngModelChange)="onCloudMinChange($event)" size="4">%</label>
+        <label>Max: <input type="number" [(ngModel)]="cloudMax" (ngModelChange)="onCloudMaxChange($event)" size="4">%</label>
+      </div>
+      <button class="btn btn-primary" (click)="submitCloud()">Submit</button>
     </div>
   </div>
 </div>

@@ -82,6 +82,10 @@ export class SystemComponent implements OnInit, OnDestroy {
           this.dashboard.spiffsUploadPercent.set(percent);
         }
       },
+      complete: () => {
+        // Reload with cache-busting to load fresh Angular files after SPIFFS update
+        this.reloadWithCacheBust();
+      },
     });
   }
 
@@ -94,6 +98,10 @@ export class SystemComponent implements OnInit, OnDestroy {
           const percent = Math.round((evt.loaded / evt.total) * 100);
           this.dashboard.firmwareUploadPercent.set(percent);
         }
+      },
+      complete: () => {
+        // Reload with cache-busting to load fresh Angular files after firmware update
+        this.reloadWithCacheBust();
       },
     });
   }
@@ -160,5 +168,11 @@ export class SystemComponent implements OnInit, OnDestroy {
 
   onToggleTimezoneEdit(): void {
     this.editingTimezone.set(!this.editingTimezone());
+  }
+
+  /** Reload the page with a cache-busting timestamp to force fresh resources */
+  reloadWithCacheBust(): void {
+    const t = Date.now();
+    window.location.href = window.location.origin + '?t=' + t;
   }
 }

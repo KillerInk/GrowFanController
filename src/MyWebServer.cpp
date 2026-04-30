@@ -19,23 +19,23 @@ void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventTyp
 
 	if (type == WS_EVT_CONNECT)
 	{
-		Serial.printf("ws[%s][%u] connect\n", server->url(), client->id());
+		Serial.printf("ws[%u] connect\n", client->id());
 		ws_clients++;
 	}
 	else if (type == WS_EVT_DISCONNECT)
 	{
-		Serial.printf("ws[%s][%u] disconnect\n", server->url(), client->id());
+		Serial.printf("ws[%u] disconnect\n", client->id());
 		ws_clients--;
 	}
 	else if (type == WS_EVT_ERROR)
 	{
-		Serial.printf("ws[%s][%u] error(%u): %s\n", server->url(), client->id(), *((uint16_t *)arg), (char *)data);
+		Serial.printf("ws[%u] error(%u): %s\n", client->id(), *((uint16_t *)arg), (char *)data);
 		if (ws_clients > 0)
 			ws_clients--;
 	}
 	else if (type == WS_EVT_PONG)
 	{
-		Serial.printf("ws[%s][%u] pong[%u]: %s\n", server->url(), client->id(), len, (len) ? (char *)data : "");
+		Serial.printf("ws[%u] pong[%u]: %s\n", client->id(), len, (len) ? (char *)data : "");
 	}
 	else if (type == WS_EVT_DATA)
 	{
@@ -201,6 +201,50 @@ void onCmd(AsyncWebServerRequest *request)
 			methcallbacks.lightController_setCloudActive(on.toInt());
 		request->send(200);
 	}
+	// Lifecycle commands (added 2026-04-10)
+	else if (variable == "lifecycle")
+	{
+		String action = request->arg("action");
+		if (action == "get")
+		{
+			if (methcallbacks.lightController_getLifecycleState != nullptr)
+			{
+				String state = methcallbacks.lightController_getLifecycleState();
+				request->send(200, "application/json", state);
+			}
+			else
+				request->send(501);
+		}
+		else if (action == "enable")
+		{
+			String val = request->arg("val");
+			if (methcallbacks.lightController_setLifecycleEnabled != nullptr)
+				methcallbacks.lightController_setLifecycleEnabled(val.toInt() != 0);
+			request->send(200, "application/json", "{\"status\":\"ok\"}");
+		}
+		else if (action == "stage")
+		{
+			int stage = request->arg("val").toInt();
+			if (methcallbacks.lightController_setLifecycleStage != nullptr)
+				methcallbacks.lightController_setLifecycleStage(stage);
+			request->send(200, "application/json", "{\"status\":\"ok\"}");
+		}
+		else if (action == "reset")
+		{
+			if (methcallbacks.lightController_resetLifecycle != nullptr)
+				methcallbacks.lightController_resetLifecycle();
+			request->send(200, "application/json", "{\"status\":\"ok\"}");
+		}
+		else if (action == "ppfd")
+		{
+			float ppfd = request->arg("val").toFloat();
+			if (methcallbacks.lightController_setPanelPPFD != nullptr)
+				methcallbacks.lightController_setPanelPPFD(ppfd);
+			request->send(200, "application/json", "{\"status\":\"ok\"}");
+		}
+		else
+			request->send(400);
+	}
 	else if (variable == "timezone")
 	{
 		String action = request->arg("action");
@@ -258,9 +302,9 @@ void getFile(AsyncWebServerRequest *request)
 // Keep track of the current byte offset
 static size_t offset = 0;
 static void handleSpiFlashUpload(AsyncWebServerRequest *request,
-								 const String &filename,
-								 size_t index, uint8_t *data,
-								 size_t len, bool final)
+							 	 const String &filename,
+							 	 size_t index, uint8_t *data,
+							 	 size_t len, bool final)
 {
 	// Find the SPIFFS partition FIRST, then begin update with the partition
 	if (index == 0)
@@ -316,9 +360,6 @@ static void handleSpiFlashUpload(AsyncWebServerRequest *request,
 		{
 			log_e("Update.end failed");
 			request->send(500, "text/plain", "Update end failed");
-			// No manual partition cleanup needed; the partition was only
-			// queried with esp_partition_find_first and will remain valid
-			// for the lifetime of the device.
 		}
 	}
 }
@@ -458,14 +499,14 @@ void MyWebServer_setup()
 			   /* request‑start handler (optional) */
 			   [](AsyncWebServerRequest *request)
 			   {
-               if (!request->hasHeader("Content-Type")) {
-                   request->send(400, "text/plain", "Missing Content-Type");
-                   return;
-               } },
+                if (!request->hasHeader("Content-Type")) {
+                    request->send(400, "text/plain", "Missing Content-Type");
+                    return;
+                } },
 			   /* upload‑handler: (req, filename, index, data, len, final) */
 			   handlefirmwareupload);
 
-	server->serveStatic("/", SPIFFS, "/angular-www/").setDefaultFile("index.html");
+	server->serveStatic("/", SPIFFS, "/angular-www/").setDefaultFile("index.html").setCacheControl("no-cache, no-store, must-revalidate");
 	server->serveStatic("/", SD, "/");
 	// server->serveStatic("/", SPIFFS, "/www/");
 

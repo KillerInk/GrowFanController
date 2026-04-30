@@ -6,6 +6,27 @@ import { DeviceState, SocketMsg } from '../types';
 
 import { BehaviorSubject } from 'rxjs';
 
+// Lifecycle stage enum
+export enum LifecycleStage {
+  seedling = 0,
+  vegetative = 1,
+  flower_early = 2,
+  flower_late = 3,
+  maturation = 4,
+}
+
+export interface LifecycleState {
+  enabled: boolean;
+  stage: number;
+  stageName: string;
+  stageDay: number;
+  stageStartTimestamp: number;
+  accumulatedDLI: number;
+  panelMaxPPFD: number;
+  umolPerWatt: number;
+  currentLightTargetP: number;
+}
+
 @Injectable({ providedIn: 'root' })
 export class DashboardService {
   readonly deviceState = signal<DeviceState | null>(null);
@@ -16,6 +37,9 @@ export class DashboardService {
   readonly spiffsUploadPercent = signal(0);
   readonly firmwareUploadPercent = signal(0);
   readonly settings$ = new BehaviorSubject<DeviceState | null>(null);
+
+  // Lifecycle state signal
+  readonly lifecycleState = signal<LifecycleState | null>(null);
 
   private _wsSubscription?: any;
 
@@ -30,8 +54,43 @@ export class DashboardService {
         this.deviceState.set(data);
         this.settings$.next(data);
         this.cloudSimActive.set(data.cloud?.active ?? false);
+
+        // Update lifecycle state from settings
+        if (data.lifecycle) {
+          this.lifecycleState.set({
+            enabled: data.lifecycle.enabled,
+            stage: data.lifecycle.stage,
+            stageName: data.lifecycle.stageName,
+            stageDay: data.lifecycle.stageDay,
+            stageStartTimestamp: data.lifecycle.stageStartTimestamp,
+            accumulatedDLI: data.lifecycle.accumulatedDLI,
+            panelMaxPPFD: data.lifecycle.panelMaxPPFD,
+            umolPerWatt: data.lifecycle.umolPerWatt,
+            currentLightTargetP: data.lifecycle.currentLightTargetP,
+          });
+        }
       },
       error: (err: unknown) => console.error('Failed to load fan settings', err),
+    });
+
+    // Fetch initial lifecycle state
+    this.api.getLifecycleState().subscribe({
+      next: (data: any) => {
+        if (data?.lifecycle) {
+          this.lifecycleState.set({
+            enabled: data.lifecycle.enabled,
+            stage: data.lifecycle.stage,
+            stageName: data.lifecycle.stageName || '',
+            stageDay: data.lifecycle.stageDay,
+            stageStartTimestamp: 0,
+            accumulatedDLI: data.lifecycle.accumulatedDLI,
+            panelMaxPPFD: data.lifecycle.panelMaxPPFD,
+            umolPerWatt: data.lifecycle.umolPerWatt || 0,
+            currentLightTargetP: data.lifecycle.currentLightTargetP,
+          });
+        }
+      },
+      error: (err: unknown) => console.error('Failed to load lifecycle state', err),
     });
   }
 
@@ -40,7 +99,27 @@ export class DashboardService {
       const cleaned = (typeof message === 'string'
         ? message.trim().replace(/^\ufeff/, '')
         : JSON.stringify(message));
-      this.socketdata.set(JSON.parse(cleaned));
+      const parsed = JSON.parse(cleaned);
+      this.socketdata.set(parsed);
+
+      // Update lifecycle state from socket data
+      if (parsed.lifecycle) {
+        const prev = this.lifecycleState();
+        if (!prev || prev.stage !== parsed.lifecycle.stage || prev.enabled !== parsed.lifecycle.enabled) {
+          this.lifecycleState.set({
+            enabled: parsed.lifecycle.enabled,
+            stage: parsed.lifecycle.stage,
+            stageName: parsed.lifecycle.stageName || '',
+            stageDay: parsed.lifecycle.stageDay,
+            stageStartTimestamp: 0, // not in socket
+            accumulatedDLI: parsed.lifecycle.accumulatedDLI,
+            panelMaxPPFD: parsed.lifecycle.panelMaxPPFD,
+            umolPerWatt: 0, // not in socket
+            currentLightTargetP: parsed.lifecycle.currentLightTargetP,
+          });
+        }
+      }
+
       this.updateFanPercents();
     } catch (e) {
       console.warn('Invalid websocket message', e);

@@ -23,6 +23,12 @@ struct MyWebServerMethodCallbacks
     void (*lightController_setPercentLimits)(int min, int max);
     void (*lightController_setCloudActive)(bool automode);
     void (*lightController_setCloudValues)(int min, int max, int cycleduration);
+    // Lifecycle callbacks (added 2026-04-10)
+    void (*lightController_setLifecycleEnabled)(bool enabled);
+    void (*lightController_setLifecycleStage)(int stage);
+    void (*lightController_resetLifecycle)(void);
+    String (*lightController_getLifecycleState)(void);
+    void (*lightController_setPanelPPFD)(float ppfd);
 #ifdef USE_SDCARD
     String (*fileController_read)(String name);
 #endif

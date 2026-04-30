@@ -4,7 +4,6 @@ import { HttpClient, HttpParams, HttpErrorResponse, HttpEvent } from '@angular/c
 import { Observable, throwError } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 import { environment } from '../environments/environment';
-import { DeviceState } from './types';
 
 @Injectable({
   providedIn: 'root',
@@ -40,9 +39,9 @@ export class ApiService {
   }
 
   /** GET /settings */
-  getFanControllerSettings(): Observable<DeviceState> {
+  getFanControllerSettings(): Observable<any> {
     const url = `/settings`;
-    return this.http.get<DeviceState>(url).pipe(catchError(this.handleError));
+    return this.http.get<any>(url).pipe(catchError(this.handleError));
   }
 
   /** GET /data */
@@ -287,5 +286,33 @@ export class ApiService {
   /** POST /cmd?action=timezone&set&offset=N */
   setTimeZone(offset: number): Observable<{ status: string }> {
     return this.getCmd<{ status: string }>({ var: 'timezone', action: 'set', offset });
+  }
+
+  /* ---------- Lifecycle / PPFD / DLI configuration ---------- */
+  // Lifecycle actions: get, enable, stage, reset, ppfd
+
+  /** GET lifecycle config */
+  getLifecycleState(): Observable<any> {
+    return this.getCmd<any>({ var: 'lifecycle', action: 'get' });
+  }
+
+  /** Enable/disable lifecycle */
+  setLifecycleEnabled(enabled: boolean): Observable<any> {
+    return this.getCmd<any>({ var: 'lifecycle', action: 'enable', val: enabled ? 1 : 0 });
+  }
+
+  /** Set lifecycle stage (0=seedling, 1=vegetative, 2=flower_early, 3=flower_late, 4=maturation) */
+  setLifecycleStage(stage: number): Observable<any> {
+    return this.getCmd<any>({ var: 'lifecycle', action: 'stage', val: stage });
+  }
+
+  /** Reset lifecycle to vegetative */
+  resetLifecycle(): Observable<any> {
+    return this.getCmd<any>({ var: 'lifecycle', action: 'reset' });
+  }
+
+  /** Set panel max PPFD (μmol/m²/s) */
+  setPanelPPFD(ppfd: number): Observable<any> {
+    return this.getCmd<any>({ var: 'lifecycle', action: 'ppfd', val: ppfd });
   }
 }
