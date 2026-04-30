@@ -25,6 +25,7 @@ export interface LifecycleState {
   panelMaxPPFD: number;
   umolPerWatt: number;
   currentLightTargetP: number;
+  plantType: number;  // 0=photoperiodic, 1=automatic
 }
 
 @Injectable({ providedIn: 'root' })
@@ -67,6 +68,7 @@ export class DashboardService {
             panelMaxPPFD: data.lifecycle.panelMaxPPFD,
             umolPerWatt: data.lifecycle.umolPerWatt,
             currentLightTargetP: data.lifecycle.currentLightTargetP,
+            plantType: data.lifecycle.plantType ?? 0,
           });
         }
       },
@@ -87,6 +89,7 @@ export class DashboardService {
             panelMaxPPFD: data.lifecycle.panelMaxPPFD,
             umolPerWatt: data.lifecycle.umolPerWatt || 0,
             currentLightTargetP: data.lifecycle.currentLightTargetP,
+            plantType: data.lifecycle.plantType ?? 0,
           });
         }
       },
@@ -116,6 +119,7 @@ export class DashboardService {
             panelMaxPPFD: parsed.lifecycle.panelMaxPPFD,
             umolPerWatt: 0, // not in socket
             currentLightTargetP: parsed.lifecycle.currentLightTargetP,
+            plantType: parsed.lifecycle.plantType ?? 0,
           });
         }
       }

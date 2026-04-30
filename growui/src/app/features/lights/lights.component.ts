@@ -167,10 +167,16 @@ export class LightsComponent {
   onLightScheduleToggle(checked: boolean, type: 'rise' | 'set'): void {
     if (type === 'rise') {
       this.lightRiseEnable.set(checked);
-      this.api.setLightSchedule({ var: 'lightsettime', onh: 0, onmin: 0, offh: 0, offmin: 0, riseenable: checked ? 1 : 0, riseh: 0, risemin: 0, setenable: 0, seth: 0, setmin: 0 }).subscribe();
+      // Send both riseenable and lightsetenable to preserve sunset state
+      const state = this.dashboard.deviceState();
+      const currentSetEnable = state?.lightsetenable ?? false;
+      this.api.setLightSchedule({ var: 'lightsettime', onh: 0, onmin: 0, offh: 0, offmin: 0, riseenable: checked ? 1 : 0, riseh: 0, risemin: 0, setenable: currentSetEnable ? 1 : 0, seth: 0, setmin: 0 }).subscribe();
     } else {
       this.lightSetEnable.set(checked);
-      this.api.setLightSchedule({ var: 'lightsettime', onh: 0, onmin: 0, offh: 0, offmin: 0, riseenable: 0, riseh: 0, risemin: 0, setenable: checked ? 1 : 0, seth: 0, setmin: 0 }).subscribe();
+      // Send both riseenable and lightsetenable to preserve sunrise state
+      const state = this.dashboard.deviceState();
+      const currentRiseEnable = state?.lightriseenable ?? false;
+      this.api.setLightSchedule({ var: 'lightsettime', onh: 0, onmin: 0, offh: 0, offmin: 0, riseenable: currentRiseEnable ? 1 : 0, riseh: 0, risemin: 0, setenable: checked ? 1 : 0, seth: 0, setmin: 0 }).subscribe();
     }
   }
 
@@ -190,6 +196,15 @@ export class LightsComponent {
 
   onResetLifecycle(): void {
     this.api.resetLifecycle().subscribe();
+  }
+
+  onPlantTypeChange(value: number): void {
+    this.api.setPlantType(value).subscribe();
+    // Update lifecycle state immediately
+    const lc = this.dashboard.lifecycleState();
+    if (lc) {
+      this.dashboard.lifecycleState.set({ ...lc, plantType: value });
+    }
   }
 
   onPanelPPFDChange(value: number): void {
@@ -215,6 +230,12 @@ export class LightsComponent {
     const maxV = state.lightmaxvolt ?? 10000;
     const voltage = state.lightvalmv ?? 0;
     return Math.round(((voltage - minV) / (maxV - minV)) * 100);
+  }
+
+  // Get plant type from lifecycle state (returns 0=photoperiodic by default)
+  getPlantType(): number {
+    const lc = this.dashboard.lifecycleState();
+    return lc?.plantType ?? 0;
   }
 
   getStageDLI(stage: number): number {

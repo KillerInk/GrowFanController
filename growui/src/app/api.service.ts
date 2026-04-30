@@ -315,4 +315,9 @@ export class ApiService {
   setPanelPPFD(ppfd: number): Observable<any> {
     return this.getCmd<any>({ var: 'lifecycle', action: 'ppfd', val: ppfd });
   }
+
+  /** Set plant type (0=photoperiodic, 1=automatic) */
+  setPlantType(type: number): Observable<any> {
+    return this.getCmd<any>({ var: 'lifecycle', action: 'planttype', val: type });
+  }
 }

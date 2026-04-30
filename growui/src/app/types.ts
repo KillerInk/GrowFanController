@@ -36,6 +36,7 @@ export interface LifecycleConfig {
   panelMaxPPFD: number;      // panel max PPFD (μmol/m²/s)
   umolPerWatt: number;       // panel efficiency (μmol/J)
   currentLightTargetP: number;  // computed light target %
+  plantType: number;         // plant type (0=photoperiodic, 1=automatic)
 }
 
 export interface LightValues {
@@ -47,9 +48,9 @@ export interface LightValues {
   lightrisemin: number;
   lightseth: number;
   lightsetmin: number;
-  lightriseenable: boolean;
-  lightsetenable: boolean;
-  lightautomode: boolean;
+  lightriseenable?: boolean;
+  lightsetenable?: boolean;
+  lightautomode?: boolean;
 
   lightminvolt: number;
   lightmaxvolt: number;

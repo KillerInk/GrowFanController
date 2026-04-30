@@ -21,6 +21,13 @@ enum lifecycle_stage
     stage_maturation = 4,
 };
 
+// Cannabis plant type (affects light schedule behavior)
+enum plant_type
+{
+    plant_photoperiodic = 0,  // Responds to day length (traditional)
+    plant_automatic = 1,      // Autoflowering (fixed daily schedule)
+};
+
 // Stage-specific light configuration
 typedef struct {
     int minLightP;          // min light intensity % for this stage
@@ -37,6 +44,7 @@ typedef struct {
 typedef struct {
     bool enabled;
     lifecycle_stage stage;
+    plant_type plantType;       // plant type (photoperiodic or automatic)
     int stageDay;                   // day within current stage (1-based)
     time_t stageStartTimestamp;     // epoch time when stage started
     float accumulatedDLI;           // cumulative DLI across all stages (μmol/m²/day)
@@ -76,6 +84,7 @@ struct LightControllerValues
     int cloud_cycle_duration_min = 15;
     bool cloud_rising = false;
     MyTime next_cloud_cycle_change_time;
+    bool cloudCycleInitialized = false;  // Track cloud cycle init state (fixes fragile zero-check)
 
     // Lifecycle fields (added 2026-04-10)
     LifecycleConfig lifecycle;
@@ -94,6 +103,7 @@ void LightController_setCloudValues(int min, int max, int cycleduration);
 void LightController_setLifecycleEnabled(bool enabled);
 void LightController_setLifecycleStage(lifecycle_stage stage);
 void LightController_resetLifecycleStage();
+void LightController_setPlantType(plant_type type);
 LifecycleConfig *LightController_getLifecycleConfig();
 void LightController_updateLifecycleState();
 

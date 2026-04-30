@@ -139,6 +139,7 @@ void sendSocketMsg()
     socketmsg["lifecycle"]["currentLightTargetP"] = lc->currentLightTargetP;
     socketmsg["lifecycle"]["panelMaxPPFD"] = lc->panelMaxPPFD;
     socketmsg["lifecycle"]["accumulatedDLI"] = lc->accumulatedDLI;
+    socketmsg["lifecycle"]["plantType"] = (int)lc->plantType;
 
 #ifdef SENSOR_BME280
     ret = snprintf(buf, sizeof buf, "%.2f", Bme280_getVpdLeaf());
@@ -219,6 +220,7 @@ String getSettings()
     myObject["lifecycle"]["panelMaxPPFD"] = lc->panelMaxPPFD;
     myObject["lifecycle"]["umolPerWatt"] = lc->umolPerWatt;
     myObject["lifecycle"]["currentLightTargetP"] = lc->currentLightTargetP;
+    myObject["lifecycle"]["plantType"] = (int)lc->plantType;
 
     // System info
     unsigned long uptimeMs = millis();
@@ -346,6 +348,7 @@ void setup()
         obj["panelMaxPPFD"] = lc->panelMaxPPFD;
         obj["umolPerWatt"] = lc->umolPerWatt;
         obj["currentLightTargetP"] = lc->currentLightTargetP;
+        obj["plantType"] = (int)lc->plantType;
         return JSON.stringify(obj);
     };
     MyWebServer_getCallbacksStruct()->lightController_setPanelPPFD = [](float ppfd) {

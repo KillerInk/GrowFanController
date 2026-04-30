@@ -13,15 +13,15 @@ MyTime cyclestartTime;
 // Default lifecycle stage configs (cannabis growth stages)
 const LifecycleStageConfig lifecycleStageConfigs[5] = {
     // seedling: days 1-21, light 20-40%, PPFD 150-250, DLI 4-6, photoperiod 18/6
-    { .minLightP = 20, .maxLightP = 40, .targetPPFD = 200.0f, .dailyDLI = 5.0f, .photoperiodOnH = 6, .photoperiodOnM = 0, .photoperiodOffH = 0, .photoperiodOffM = 0 },
+    { .minLightP = 20, .maxLightP = 40, .targetPPFD = 150.0f, .dailyDLI = 5.0f, .photoperiodOnH = 6, .photoperiodOnM = 0, .photoperiodOffH = 0, .photoperiodOffM = 6 },
     // vegetative: days 22-49, light 60-80%, PPFD 400-600, DLI 12-17, photoperiod 18/6
-    { .minLightP = 60, .maxLightP = 80, .targetPPFD = 500.0f, .dailyDLI = 15.0f, .photoperiodOnH = 6, .photoperiodOnM = 0, .photoperiodOffH = 0, .photoperiodOffM = 0 },
+    { .minLightP = 60, .maxLightP = 80, .targetPPFD = 500.0f, .dailyDLI = 15.0f, .photoperiodOnH = 6, .photoperiodOnM = 0, .photoperiodOffH = 0, .photoperiodOffM = 6 },
     // flower_early: days 50-77, light 80-95%, PPFD 600-800, DLI 17-21, photoperiod 12/12
     { .minLightP = 80, .maxLightP = 95, .targetPPFD = 700.0f, .dailyDLI = 19.0f, .photoperiodOnH = 0, .photoperiodOnM = 0, .photoperiodOffH = 12, .photoperiodOffM = 0 },
     // flower_late: days 78-105, light 95-100%, PPFD 800-1000, DLI 21-25, photoperiod 12/12
     { .minLightP = 95, .maxLightP = 100, .targetPPFD = 900.0f, .dailyDLI = 23.0f, .photoperiodOnH = 0, .photoperiodOnM = 0, .photoperiodOffH = 12, .photoperiodOffM = 0 },
     // maturation: days 106+, light 60-80%, PPFD 200-400, DLI 6-10, photoperiod 18/6
-    { .minLightP = 60, .maxLightP = 80, .targetPPFD = 300.0f, .dailyDLI = 8.0f, .photoperiodOnH = 6, .photoperiodOnM = 0, .photoperiodOffH = 0, .photoperiodOffM = 0 },
+    { .minLightP = 60, .maxLightP = 80, .targetPPFD = 300.0f, .dailyDLI = 8.0f, .photoperiodOnH = 6, .photoperiodOnM = 0, .photoperiodOffH = 0, .photoperiodOffM = 6 },
 };
 
 // Number of days per stage
@@ -67,7 +67,157 @@ int calculateLifecycleLightP(const LifecycleConfig *config, float hoursOn) {
     return lightP;
 }
 
-// Internal lifecycle state update (called from control_light)
+// ===== Forward declarations =====
+static void process_cloud_sim(tm time);
+
+// ===== Helper: is 'now' within the light-on period? =====
+// Handles both same-day (e.g., 06:00-22:00) and cross-midnight (e.g., 22:00-06:00 next day)
+static bool isLightOnPeriod(tm now, MyTime onTime, MyTime offTime) {
+    if (onTime.hour < offTime.hour) {
+        // Same day: on at 06:00, off at 22:00
+        return timeEqualsOrGreater(now, onTime) && timeSmaller(now, offTime);
+    } else if (onTime.hour > offTime.hour) {
+        // Cross-midnight: on at 22:00, off at 06:00
+        return timeEqualsOrGreater(now, onTime) || timeSmaller(now, offTime);
+    }
+    return false; // onTime == offTime means light never turns on
+}
+
+// ===== State transition evaluation =====
+// Returns the next state to transition to, or current state if no transition needed
+static light_state evaluate_next_state(tm now) {
+    switch (lvalues.current_state) {
+    case off:
+        if (isLightOnPeriod(now, lvalues.turnOnTime, lvalues.turnOffTime)) {
+            if (lvalues.enableSunrise) {
+                return sunrise;
+            }
+            return on;
+        }
+        return off;
+
+    case on:
+        if (!isLightOnPeriod(now, lvalues.turnOnTime, lvalues.turnOffTime)) {
+            if (lvalues.enableSunset && timeEqualsOrGreater(now, lvalues.sunsetStart)) {
+                return sunset;
+            }
+            return off;
+        }
+        return on;
+
+    case sunrise:
+        if (!lvalues.enableSunrise || timeEqualsOrGreater(now, lvalues.sunriseEnd)) {
+            return on;
+        }
+        return sunrise;
+
+    case sunset:
+        if (!lvalues.enableSunset || timeEquals(now, lvalues.turnOffTime)) {
+            return off;
+        }
+        return sunset;
+
+    default:
+        return off;
+    }
+}
+
+// ===== Compute light intensity for a given state =====
+static void compute_state_output(tm now) {
+    int outputVoltage;
+    int lightP;
+
+    switch (lvalues.current_state) {
+    case off:
+        lightP = 0;
+        outputVoltage = 0;
+        break;
+
+    case on: {
+        // Determine base light target
+        int baseLightP = lvalues.maxLightP; // default: use maxLightP (backward compatible)
+        bool useLifecycle = lvalues.lifecycle.enabled && lvalues.automode;
+        
+        if (useLifecycle) {
+            baseLightP = lvalues.lifecycle.currentLightTargetP;
+            if (baseLightP <= 0) baseLightP = lvalues.maxLightP;
+        }
+
+        lightP = baseLightP;
+        outputVoltage = getVoltageFromPercent(lvalues.voltage.max, lvalues.voltage.min, baseLightP);
+
+        // Handle cloud simulation
+        if (lvalues.cloudsim) {
+            process_cloud_sim(now);
+            lightP = lvalues.currentLightP;
+            outputVoltage = lvalues.voltage.voltage;
+        }
+        break;
+    }
+
+    case sunrise:
+        if (lvalues.enableSunrise) {
+            int timedif = ((getTimeDiff(now, lvalues.sunriseEnd) * 60) + now.tm_sec) * -1;
+            int timediftotal = (getTimeDiff(lvalues.turnOnTime, lvalues.sunriseEnd) * 60) * -1;
+            double p = 100 - (((double)timedif / (double)timediftotal) * 100);
+            
+            int rampMax = lvalues.maxLightP;
+            if (lvalues.lifecycle.enabled && lvalues.automode) {
+                rampMax = lvalues.lifecycle.currentLightTargetP;
+                if (rampMax <= 0) rampMax = lvalues.maxLightP;
+            }
+            if (p > rampMax) p = rampMax;
+            if (p < 0) p = 0;
+            
+            lightP = (int)p;
+            outputVoltage = getVoltageFromPercent(lvalues.voltage.max, lvalues.voltage.min, (int)p);
+            log_i("sunrise timedif: %i timediftotal: %i p:%f volt:%i", timedif, timediftotal, p, outputVoltage);
+        } else {
+            lightP = 0;
+            outputVoltage = 0;
+        }
+        break;
+
+    case sunset:
+        if (lvalues.enableSunset) {
+            int timedif = ((getTimeDiff(now, lvalues.sunsetStart) * 60) + now.tm_sec);
+            int rampMax = lvalues.maxLightP;
+            if (lvalues.lifecycle.enabled && lvalues.automode) {
+                rampMax = lvalues.lifecycle.currentLightTargetP;
+                if (rampMax <= 0) rampMax = lvalues.maxLightP;
+            }
+            int timediftotal = getTimeDiff(lvalues.turnOffTime, lvalues.sunsetStart) * 60;
+            double p = 100 - (((double)timedif / (double)timediftotal) * 100);
+            if (p > rampMax) p = rampMax;
+            if (p < 0) p = 0;
+            
+            lightP = (int)p;
+            outputVoltage = getVoltageFromPercent(lvalues.voltage.max, lvalues.voltage.min, (int)p);
+            log_i("sunset timedif: %i timediftotal: %i p:%f volt:%i", timedif, timediftotal, p, outputVoltage);
+        } else {
+            lightP = 0;
+            outputVoltage = 0;
+        }
+        break;
+
+    default:
+        lightP = 0;
+        outputVoltage = 0;
+        break;
+    }
+
+    // Apply output with change detection (avoids unnecessary I2C writes)
+    static int lastOutputVoltage = -1;
+    if (outputVoltage != lastOutputVoltage) {
+        ldac.setDACOutVoltage(outputVoltage, 0);
+        lastOutputVoltage = outputVoltage;
+    }
+
+    lvalues.currentLightP = lightP;
+    lvalues.voltage.voltage = outputVoltage;
+}
+
+// ===== Internal lifecycle state update =====
 // Optimized: caches last update day to skip redundant computation
 static void updateLifecycleStateInternal() {
     LifecycleConfig *lc = &lvalues.lifecycle;
@@ -130,16 +280,39 @@ static void updateLifecycleStateInternal() {
     float ppfd = (float)lc->currentLightTargetP * lc->panelMaxPPFD / 100.0f;
 
     // Determine photoperiod hours from current stage config
+    // For photoperiodic plants: use stage config's photoperiod hours
+    // For automatic (autoflowering) plants: use device's configured light-on hours
     int photoperiodHours = 0;
-    if (stageConfig->photoperiodOnH >= 0 && stageConfig->photoperiodOffH > 0) {
-        // 12/12 photoperiod (on at 0:00, off at 12:00 → 12 hours)
-        photoperiodHours = stageConfig->photoperiodOffH - stageConfig->photoperiodOnH;
-        if (photoperiodHours <= 0) photoperiodHours = 12;
-    } else if (stageConfig->photoperiodOnH > 0 && stageConfig->photoperiodOffH == 0) {
-        // 18/6 photoperiod (on at 6:00, off at 0:00 → 18 hours)
-        photoperiodHours = 24 - stageConfig->photoperiodOnH;
+    if (lc->plantType == plant_automatic) {
+        // Automatic: calculate from device's turnOnTime/turnOffTime
+        int onHour = lvalues.turnOnTime.hour;
+        int onMin = lvalues.turnOnTime.min;
+        int offHour = lvalues.turnOffTime.hour;
+        int offMin = lvalues.turnOffTime.min;
+        
+        if (offHour > onHour || (offHour == onHour && offMin > onMin)) {
+            // Same-day: e.g., on 06:00, off 22:00
+            photoperiodHours = offHour - onHour + ((offMin - onMin) / 60);
+        } else if (offHour < onHour || (offHour == onHour && offMin < onMin)) {
+            // Cross-midnight: e.g., on 22:00, off 06:00 (next day)
+            photoperiodHours = (24 - onHour) + offHour + ((offMin - onMin) / 60);
+        } else {
+            // onTime == offTime: full 24 hours
+            photoperiodHours = 24;
+        }
+        if (photoperiodHours <= 0) photoperiodHours = 18;
     } else {
-        photoperiodHours = 18; // default
+        // Photoperiodic: use stage config's photoperiod hours
+        if (stageConfig->photoperiodOnH >= 0 && stageConfig->photoperiodOffH > 0) {
+            // 12/12 photoperiod (on at 0:00, off at 12:00 → 12 hours)
+            photoperiodHours = stageConfig->photoperiodOffH - stageConfig->photoperiodOnH;
+            if (photoperiodHours <= 0) photoperiodHours = 12;
+        } else if (stageConfig->photoperiodOnH > 0 && stageConfig->photoperiodOffH == 0) {
+            // 18/6 photoperiod (on at 6:00, off at 0:00 → 18 hours)
+            photoperiodHours = 24 - stageConfig->photoperiodOnH;
+        } else {
+            photoperiodHours = 18; // default
+        }
     }
 
     // DLI added per day (in μmol/m²/day)
@@ -153,13 +326,15 @@ static void updateLifecycleStateInternal() {
 
 void process_cloud_sim(tm time)
 {
-    // if cycle is new or got reseted its set to 0
-    if (lvalues.next_cloud_cycle_change_time.hour == 0 && lvalues.next_cloud_cycle_change_time.min == 0)
-    {
+    // Use cloudCycleInitialized flag instead of checking for zero values
+    // This fixes the bug where system boot at 00:00 triggers false initialization
+    if (!lvalues.cloudCycleInitialized) {
         log_i("cloud max:%i min:%i cycle:%i", lvalues.max_light_cloudP, lvalues.min_light_cloudP, lvalues.cloud_cycle_duration_min);
-        // init cloud cycle based on currentlightP
+        
+        // Init cloud cycle based on current light state
         lvalues.next_cloud_cycle_change_time.hour = time.tm_hour;
         lvalues.next_cloud_cycle_change_time.min = time.tm_min;
+        
         // 10 = 85 -75
         int rangemaxmin = lvalues.max_light_cloudP - lvalues.min_light_cloudP;
         // 5 = 85 -80
@@ -170,6 +345,8 @@ void process_cloud_sim(tm time)
         cyclestartTime = lvalues.next_cloud_cycle_change_time;
         addMinutes(&cyclestartTime, -(lvalues.cloud_cycle_duration_min - timeleft));
         addMinutes(&lvalues.next_cloud_cycle_change_time, timeleft);
+        
+        lvalues.cloudCycleInitialized = true;
     }
     else
     {
@@ -211,8 +388,13 @@ void process_cloud_sim(tm time)
     }
 }
 
+// ===== Main light control function (refactored) =====
+// Separates transition evaluation from state output computation
 void control_light()
 {
+    // Only get time if automode is enabled (optimization)
+    if (!lvalues.automode) return;
+    
     tm time;
     getLocalTime(&time);
 
@@ -221,129 +403,40 @@ void control_light()
         updateLifecycleStateInternal();
     }
 
-    // Determine the base light target % for this state
-    int baseLightP = lvalues.maxLightP; // default: use maxLightP (backward compatible)
-    bool useLifecycle = false;
+    // Evaluate state transition (separated from output computation)
+    light_state nextState = evaluate_next_state(time);
 
-    // Check if lifecycle should provide the base target
-    if (lvalues.lifecycle.enabled && lvalues.automode && lvalues.current_state == on) {
-        useLifecycle = true;
-    }
+    // Apply transition if state changed
+    if (nextState != lvalues.current_state) {
+        lvalues.current_state = nextState;
+        
+        // Log state transition
+        const char *stateNames[] = {"off", "on", "sunrise", "sunset"};
+        log_i("state -> %s", stateNames[nextState]);
 
-    switch (lvalues.current_state)
-    {
-    case off:
-        if (timeEqualsOrGreater(time, lvalues.turnOnTime))
-        {
-            // Recalculate useLifecycle now that we're transitioning to on state
-            bool lifecycleActive = lvalues.lifecycle.enabled && lvalues.automode;
+        // Handle state entry actions
+        switch (nextState) {
+        case on:
+            // Initialize cloud cycle when entering 'on' state
+            if (lvalues.cloudsim) {
+                lvalues.next_cloud_cycle_change_time.hour = 0;
+                lvalues.next_cloud_cycle_change_time.min = 0;
+                lvalues.cloudCycleInitialized = false;  // Reset for next entry
+            }
+            break;
             
-            if (lvalues.enableSunrise && timeEqualsOrSmaller(time, lvalues.sunriseEnd) && timeEqualsOrGreater(time, lvalues.turnOnTime))
-            {
-                lvalues.current_state = sunrise;
-                log_i("switch to sunrise");
-            }
-            else if (timeEqualsOrGreater(time, lvalues.turnOnTime) && timeGreater(lvalues.turnOnTime, lvalues.turnOffTime) ? timeGreater(time, lvalues.turnOffTime) : timeSmaller(time, lvalues.turnOffTime))
-            {
-                log_i("turn on");
-                lvalues.current_state = on;
-
-                if (lifecycleActive) {
-                    baseLightP = calculateLifecycleLightP(&lvalues.lifecycle, 0);
-                    lvalues.currentLightP = baseLightP;
-                    lvalues.voltage.voltage = getVoltageFromPercent(lvalues.voltage.max, lvalues.voltage.min, baseLightP);
-                    log_i("Lifecycle light: stage=%d day=%d target=%d%%", lvalues.lifecycle.stage, lvalues.lifecycle.stageDay, baseLightP);
-                } else {
-                    lvalues.currentLightP = lvalues.maxLightP;
-                    lvalues.voltage.voltage = getVoltageFromPercent(lvalues.voltage.max, lvalues.voltage.min, lvalues.maxLightP);
-                }
-
-                if (lvalues.cloudsim)
-                {
-                    lvalues.next_cloud_cycle_change_time.hour = 0;
-                    lvalues.next_cloud_cycle_change_time.min = 0;
-                }
-            }
+        case off:
+            // Reset cloud cycle tracking when turning off
+            lvalues.cloudCycleInitialized = false;
+            break;
+            
+        default:
+            break;
         }
-        break;
-    case on:
-        if (timeEqualsOrGreater(time, lvalues.turnOffTime) && timeGreater(lvalues.turnOffTime, lvalues.turnOnTime) ? timeGreater(time, lvalues.turnOnTime) : timeSmaller(time, lvalues.turnOnTime))
-        {
-            lvalues.current_state = off;
-            log_i("turn off");
-            lvalues.voltage.voltage = 0;
-            lvalues.currentLightP = 0;
-        }
-        else if (lvalues.enableSunset && timeEqualsOrGreater(time, lvalues.sunsetStart))
-        {
-            lvalues.current_state = sunset;
-            log_i("switch to sunset");
-        }
-        else if (lvalues.voltage.voltage == 0)
-        {
-            if (useLifecycle) {
-                baseLightP = lvalues.lifecycle.currentLightTargetP;
-                if (baseLightP <= 0) baseLightP = lvalues.maxLightP;
-            }
-            lvalues.voltage.voltage = getVoltageFromPercent(lvalues.voltage.max, lvalues.voltage.min, baseLightP);
-            lvalues.currentLightP = baseLightP;
-            lvalues.current_state = on;
-        }
-        else if (lvalues.cloudsim)
-        {
-            process_cloud_sim(time);
-        }
-        break;
-    case sunrise:
-        if (lvalues.enableSunrise)
-        {
-            int timedif = ((getTimeDiff(time, lvalues.sunriseEnd) * 60) + time.tm_sec) * -1;
-            int timediftotal = (getTimeDiff(lvalues.turnOnTime, lvalues.sunriseEnd) * 60) * -1;
-            double p = 100 - (((double)timedif / (double)timediftotal) * 100);
-            int rampMax = useLifecycle ? lvalues.lifecycle.currentLightTargetP : lvalues.maxLightP;
-            if (rampMax <= 0) rampMax = lvalues.maxLightP;
-            if (p > rampMax) p = rampMax;
-            lvalues.currentLightP = (int)p;
-            lvalues.voltage.voltage = getVoltageFromPercent(lvalues.voltage.max, lvalues.voltage.min, (int)p);
-            log_i("sunrise timedif: %i timediftotal: %i p:%f volt:%i", timedif, timediftotal, p, lvalues.voltage.voltage);
-
-            if (timeEquals(time, lvalues.sunriseEnd) || timedif < 0)
-            {
-                lvalues.current_state = on;
-                log_i("switch to on");
-                if (lvalues.cloudsim)
-                {
-                    lvalues.next_cloud_cycle_change_time.hour = 0;
-                    lvalues.next_cloud_cycle_change_time.min = 0;
-                }
-            }
-        }
-        break;
-    case sunset:
-        if (lvalues.enableSunset)
-        {
-            int timedif = ((getTimeDiff(time, lvalues.sunsetStart) * 60) + time.tm_sec);
-            int rampMax = useLifecycle ? lvalues.lifecycle.currentLightTargetP : lvalues.maxLightP;
-            if (rampMax <= 0) rampMax = lvalues.maxLightP;
-            int timediftotal = getTimeDiff(lvalues.turnOffTime, lvalues.sunsetStart) * 60;
-            double p = 100 - (((double)timedif / (double)timediftotal) * 100);
-            if (p > rampMax) p = rampMax;
-            lvalues.currentLightP = (int)p;
-            lvalues.voltage.voltage = getVoltageFromPercent(lvalues.voltage.max, lvalues.voltage.min, (int)p);
-            log_i("sunset timedif: %i timediftotal: %i p:%f volt:%i", timedif, timediftotal, p, lvalues.voltage.voltage);
-            if (timeEquals(time, lvalues.turnOffTime))
-            {
-                lvalues.current_state = off;
-                lvalues.voltage.voltage = 0;
-                lvalues.currentLightP = 0;
-            }
-        }
-        break;
-
-    default:
-        break;
     }
-    ldac.setDACOutVoltage(lvalues.voltage.voltage, 0);
+
+    // Compute and apply state output
+    compute_state_output(time);
 }
 
 void LightController_setup()
@@ -371,12 +464,18 @@ void LightController_setup()
             lvalues.lifecycle.lastDLIDay = (int)(now / 86400);
         }
     }
+    
+    // Initialize plant type to photoperiodic if not set (default)
+    if (lvalues.lifecycle.plantType != plant_automatic) {
+        lvalues.lifecycle.plantType = plant_photoperiodic;
+    }
 
     lvalues.current_state = off;
     lvalues.voltage.voltage = 0;
     lvalues.currentLightP = 0;
     lvalues.next_cloud_cycle_change_time.hour = 0;
     lvalues.next_cloud_cycle_change_time.min = 0;
+    lvalues.cloudCycleInitialized = false;  // Ensure fresh start
     log_i("cloud min:%i max:%i", lvalues.min_light_cloudP, lvalues.max_light_cloudP);
 }
 
@@ -429,6 +528,7 @@ void LightController_setCloudActive(bool active)
     lvalues.cloudsim = active;
     lvalues.next_cloud_cycle_change_time.hour = 0;
     lvalues.next_cloud_cycle_change_time.min = 0;
+    lvalues.cloudCycleInitialized = false;  // Reset cycle on re-enable
     MyPreferences_setBytes("light", &lvalues, sizeof(LightControllerValues));
 }
 
@@ -441,6 +541,7 @@ void LightController_setCloudValues(int min, int max, int cycleduration)
     MyPreferences_setBytes("light", &lvalues, sizeof(LightControllerValues));
     lvalues.next_cloud_cycle_change_time.hour = 0;
     lvalues.next_cloud_cycle_change_time.min = 0;
+    lvalues.cloudCycleInitialized = false;  // Reset on config change
 }
 
 LightControllerValues *LightController_getValues()
@@ -499,6 +600,14 @@ void LightController_resetLifecycleStage()
     MyPreferences_setBytes("light", &lvalues, sizeof(LightControllerValues));
 }
 
+void LightController_setPlantType(plant_type type)
+{
+    if (type == plant_photoperiodic || type == plant_automatic) {
+        lvalues.lifecycle.plantType = type;
+        log_i("Plant type set to %s", type == plant_photoperiodic ? "photoperiodic" : "automatic");
+        MyPreferences_setBytes("light", &lvalues, sizeof(LightControllerValues));
+    }
+}
 
 LifecycleConfig *LightController_getLifecycleConfig()
 {

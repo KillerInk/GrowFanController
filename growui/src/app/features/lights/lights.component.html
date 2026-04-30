@@ -49,6 +49,18 @@
       </label>
     </div>
 
+    <!-- Plant type selector -->
+    <div class="control-block">
+      <label>Plant Type</label>
+      <div class="row" style="align-items: center;">
+        <select [ngModel]="getPlantType()" (ngModelChange)="onPlantTypeChange($event)" class="select-input">
+          <option [ngValue]="0">Photoperiodic (traditional)</option>
+          <option [ngValue]="1">Automatic (autoflowering)</option>
+        </select>
+        <small class="hint">Photoperiodic: responds to day length. Automatic: fixed daily schedule.</small>
+      </div>
+    </div>
+
     <!-- Stage selector -->
     <div class="control-block">
       <label>Current Stage</label>
@@ -112,8 +124,8 @@
         <label>Sunset: <input type="number" [(ngModel)]="lightSetH" (ngModelChange)="onLightSetHChange($event)" size="3">h <input type="number" [(ngModel)]="lightSetMin" (ngModelChange)="onLightSetMinChange($event)" size="3">m</label>
       </div>
       <div class="row">
-        <label class="switch-label"><input type="checkbox" [checked]="lightRiseEnable()" (change)="onLightScheduleToggle($any($event).target.checked, 'rise')"><span class="slider-toggle"></span>Enable Sunrise</label>
-        <label class="switch-label"><input type="checkbox" [checked]="lightSetEnable()" (change)="onLightScheduleToggle($any($event).target.checked, 'set')"><span class="slider-toggle"></span>Enable Sunset</label>
+        <label class="switch-label"><input type="checkbox" [checked]="deviceState()?.lightriseenable ?? false" (change)="onLightScheduleToggle($any($event).target.checked, 'rise')"><span class="slider-toggle"></span>Enable Sunrise</label>
+        <label class="switch-label"><input type="checkbox" [checked]="deviceState()?.lightsetenable ?? false" (change)="onLightScheduleToggle($any($event).target.checked, 'set')"><span class="slider-toggle"></span>Enable Sunset</label>
       </div>
       <button class="btn btn-primary" (click)="submitLightSchedule()">Submit Schedule</button>
     </div>
