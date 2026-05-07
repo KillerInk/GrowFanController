@@ -443,6 +443,8 @@ void LightController_setup()
 {
     Mypreferences_getBytes("light", &lvalues, sizeof(LightControllerValues));
 
+    ldac.setDACOutRange(ldac.eOutputRange10V);
+
     // Initialize lifecycle defaults if not set
     if (lvalues.lifecycle.panelMaxPPFD == 0) {
         lvalues.lifecycle.panelMaxPPFD = 1200.0f;

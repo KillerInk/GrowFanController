@@ -9,7 +9,7 @@
              (input)="onLightChange($any($event).target.value)">
       <div class="row">
         <span class="slider-value">{{ getLightPct() }}%</span>
-        <button class="btn btn-primary" (click)="api.setLight(deviceState()?.lightvalmv || 0).subscribe()">Set</button>
+        <button class="btn btn-primary" (click)="api.setLight(currentLightPct()).subscribe()">Set</button>
       </div>
     </div>
   </div>

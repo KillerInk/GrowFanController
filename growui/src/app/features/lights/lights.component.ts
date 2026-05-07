@@ -71,6 +71,14 @@ export class LightsComponent {
       }
     });
 
+    // Sync currentLightPct from socket data (lightvalP is the live percentage)
+    effect(() => {
+      const sd = this.dashboard.socketdata();
+      if (sd && sd.lightvalP !== undefined) {
+        this.currentLightPct.set(sd.lightvalP);
+      }
+    });
+
     // Sync lifecycleState to local signal
     effect(() => {
       const lc = this.dashboard.lifecycleState();
