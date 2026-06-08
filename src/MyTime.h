@@ -105,5 +105,8 @@ static void addMinutes(MyTime * t, int min)
     }
     else
         t->min +=min;
+    // Wrap hour to valid range [0, 23]
+    if (t->hour > 23) t->hour -= 24;
+    if (t->hour < 0) t->hour += 24;
     //log_i("%i:%i after", t->hour,t->min);
 }

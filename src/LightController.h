@@ -59,7 +59,7 @@ typedef struct {
 extern const LifecycleStageConfig lifecycleStageConfigs[5];
 
 // Lifecycle-aware light calculation
-int calculateLifecycleLightP(const LifecycleConfig *config, float hoursOn);
+int calculateLifecycleLightP(LifecycleConfig *config, float hoursOn);
 
 struct LightControllerValues
 {
@@ -82,7 +82,7 @@ struct LightControllerValues
     int min_light_cloudP = 75;
     int max_light_cloudP = 85;
     int cloud_cycle_duration_min = 15;
-    bool cloud_rising = false;
+    bool cloud_falling = false;
     MyTime next_cloud_cycle_change_time;
     bool cloudCycleInitialized = false;  // Track cloud cycle init state (fixes fragile zero-check)
 
@@ -95,7 +95,7 @@ void LightController_loop();
 void LightController_setVoltageLimits(int min, int max);
 void LightController_setPercentLimits(int min, int max);
 void LightController_setTimes(int onhour, int onmin, int offhour, int offmin, int risehour, int risemin, int sethour, int setmin,bool riseenable, bool setenable);
-void LightController_setLight(int mv);
+void LightController_setLight(int lightPct);
 void LightController_setAutoMode(bool active);
 void LightController_setCloudActive(bool active);
 void LightController_setCloudValues(int min, int max, int cycleduration);

@@ -118,8 +118,6 @@ void sendSocketMsg()
     socketmsg["nightmode"] = FanController_getValues()->nightmodeActive;
     tm time;
     getLocalTime(&time);
-    if (time.tm_isdst)
-        time.tm_hour++;
     ret = snprintf(buf, sizeof buf, "%02i:%02i:%02i", time.tm_hour, time.tm_min, time.tm_sec);
     socketmsg["time"] = buf;
     socketmsg["lightvalP"] = LightController_getValues()->currentLightP;
@@ -128,10 +126,7 @@ void sendSocketMsg()
 
     // Lifecycle/PPFD/DLI socket data (added 2026-04-10)
     auto *lc = &LightController_getValues()->lifecycle;
-    // Compute currentLightTargetP if lifecycle is enabled
-    if (lc->enabled) {
-        calculateLifecycleLightP(lc, 0);
-    }
+    // currentLightTargetP is already computed in control_light() — no need to recompute here
     socketmsg["lifecycle"]["enabled"] = lc->enabled;
     socketmsg["lifecycle"]["stage"] = stageEnumToInt(lc->stage);
     socketmsg["lifecycle"]["stageName"] = getStageName(lc->stage);

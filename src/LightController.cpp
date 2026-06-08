@@ -46,9 +46,9 @@ static int interpolateLightP(int minP, int maxP, int currentDay, int totalDays) 
 }
 
 // Calculate lifecycle-aware light target percentage
-// config: lifecycle configuration
-// hoursOn: hours since stage start (used for DLI accumulation)
-int calculateLifecycleLightP(const LifecycleConfig *config, float hoursOn) {
+// config: lifecycle configuration (non-const to allow writing currentLightTargetP)
+// Returns light intensity % (0-100)
+int calculateLifecycleLightP(LifecycleConfig *config, float hoursOn) {
     if (!config->enabled) {
         return 0; // lifecycle disabled, no target
     }
@@ -61,8 +61,7 @@ int calculateLifecycleLightP(const LifecycleConfig *config, float hoursOn) {
     if (lightP < 0) lightP = 0;
     if (lightP > 100) lightP = 100;
 
-    // Store the computed target
-    ((LifecycleConfig *)config)->currentLightTargetP = lightP;
+    // Store the computed target (no const-cast needed)    config->currentLightTargetP = lightP;
 
     return lightP;
 }
@@ -98,7 +97,7 @@ static light_state evaluate_next_state(tm now) {
 
     case on:
         if (!isLightOnPeriod(now, lvalues.turnOnTime, lvalues.turnOffTime)) {
-            if (lvalues.enableSunset && timeEqualsOrGreater(now, lvalues.sunsetStart)) {
+            if (lvalues.enableSunset && timeEqualsOrGreater(now, lvalues.sunsetStart) && timeSmaller(now, lvalues.turnOffTime)) {
                 return sunset;
             }
             return off;
@@ -159,19 +158,24 @@ static void compute_state_output(tm now) {
         if (lvalues.enableSunrise) {
             int timedif = ((getTimeDiff(now, lvalues.sunriseEnd) * 60) + now.tm_sec) * -1;
             int timediftotal = (getTimeDiff(lvalues.turnOnTime, lvalues.sunriseEnd) * 60) * -1;
-            double p = 100 - (((double)timedif / (double)timediftotal) * 100);
-            
-            int rampMax = lvalues.maxLightP;
-            if (lvalues.lifecycle.enabled && lvalues.automode) {
-                rampMax = lvalues.lifecycle.currentLightTargetP;
-                if (rampMax <= 0) rampMax = lvalues.maxLightP;
+            if (timediftotal <= 0) {
+                lightP = lvalues.maxLightP;
+                outputVoltage = getVoltageFromPercent(lvalues.voltage.max, lvalues.voltage.min, lvalues.maxLightP);
+            } else {
+                double p = 100 - (((double)timedif / (double)timediftotal) * 100);
+                
+                int rampMax = lvalues.maxLightP;
+                if (lvalues.lifecycle.enabled && lvalues.automode) {
+                    rampMax = lvalues.lifecycle.currentLightTargetP;
+                    if (rampMax <= 0) rampMax = lvalues.maxLightP;
+                }
+                if (p > rampMax) p = rampMax;
+                if (p < 0) p = 0;
+                
+                lightP = (int)p;
+                outputVoltage = getVoltageFromPercent(lvalues.voltage.max, lvalues.voltage.min, (int)p);
+                log_i("sunrise timedif: %i timediftotal: %i p:%f volt:%i", timedif, timediftotal, p, outputVoltage);
             }
-            if (p > rampMax) p = rampMax;
-            if (p < 0) p = 0;
-            
-            lightP = (int)p;
-            outputVoltage = getVoltageFromPercent(lvalues.voltage.max, lvalues.voltage.min, (int)p);
-            log_i("sunrise timedif: %i timediftotal: %i p:%f volt:%i", timedif, timediftotal, p, outputVoltage);
         } else {
             lightP = 0;
             outputVoltage = 0;
@@ -187,13 +191,18 @@ static void compute_state_output(tm now) {
                 if (rampMax <= 0) rampMax = lvalues.maxLightP;
             }
             int timediftotal = getTimeDiff(lvalues.turnOffTime, lvalues.sunsetStart) * 60;
-            double p = 100 - (((double)timedif / (double)timediftotal) * 100);
-            if (p > rampMax) p = rampMax;
-            if (p < 0) p = 0;
-            
-            lightP = (int)p;
-            outputVoltage = getVoltageFromPercent(lvalues.voltage.max, lvalues.voltage.min, (int)p);
-            log_i("sunset timedif: %i timediftotal: %i p:%f volt:%i", timedif, timediftotal, p, outputVoltage);
+            if (timediftotal <= 0) {
+                lightP = 0;
+                outputVoltage = 0;
+            } else {
+                double p = 100 - (((double)timedif / (double)timediftotal) * 100);
+                if (p > rampMax) p = rampMax;
+                if (p < 0) p = 0;
+                
+                lightP = (int)p;
+                outputVoltage = getVoltageFromPercent(lvalues.voltage.max, lvalues.voltage.min, (int)p);
+                log_i("sunset timedif: %i timediftotal: %i p:%f volt:%i", timedif, timediftotal, p, outputVoltage);
+            }
         } else {
             lightP = 0;
             outputVoltage = 0;
@@ -208,9 +217,11 @@ static void compute_state_output(tm now) {
 
     // Apply output with change detection (avoids unnecessary I2C writes)
     static int lastOutputVoltage = -1;
-    if (outputVoltage != lastOutputVoltage) {
+    static light_state lastOutputState = off;
+    if (outputVoltage != lastOutputVoltage || lvalues.current_state != lastOutputState) {
         ldac.setDACOutVoltage(outputVoltage, 0);
         lastOutputVoltage = outputVoltage;
+        lastOutputState = lvalues.current_state;
     }
 
     lvalues.currentLightP = lightP;
@@ -238,8 +249,9 @@ static void updateLifecycleStateInternal() {
     // Only recompute when a new day starts
     if (currentDayNum == lc->lastDLIDay && lc->lastDLIDay != 0) {
         // Still update stageDay for light target calculation, but skip DLI
-        time_t elapsed = now - lc->stageStartTimestamp;
-        int daysElapsed = (int)(elapsed / 86400);
+        int currentStageDayNum = (int)(lc->stageStartTimestamp / 86400);
+        int daysElapsed = currentDayNum - currentStageDayNum;
+        if (daysElapsed < 0) daysElapsed = 0;
         int dayInStage = daysElapsed + 1; // 1-based
 
         // Check stage progression (still needed - may have changed)
@@ -255,9 +267,10 @@ static void updateLifecycleStateInternal() {
         return; // No DLI work needed this tick
     }
 
-    // Calculate days elapsed in current stage
-    time_t elapsed = now - lc->stageStartTimestamp;
-    int daysElapsed = (int)(elapsed / 86400);
+    // Calculate days elapsed in current stage using calendar day numbers
+    int currentStageDayNum = (int)(lc->stageStartTimestamp / 86400);
+    int daysElapsed = currentDayNum - currentStageDayNum;
+    if (daysElapsed < 0) daysElapsed = 0;
     int dayInStage = daysElapsed + 1; // 1-based
 
     // Check if we need to advance to next stage
@@ -326,6 +339,8 @@ static void updateLifecycleStateInternal() {
 
 void process_cloud_sim(tm time)
 {
+    double timeleft;
+
     // Use cloudCycleInitialized flag instead of checking for zero values
     // This fixes the bug where system boot at 00:00 triggers false initialization
     if (!lvalues.cloudCycleInitialized) {
@@ -339,8 +354,12 @@ void process_cloud_sim(tm time)
         int rangemaxmin = lvalues.max_light_cloudP - lvalues.min_light_cloudP;
         // 5 = 85 -80
         int rangeleft = lvalues.max_light_cloudP - lvalues.currentLightP;
-        // 7,5 = 15 / (10/5)
-        double timeleft = (double)lvalues.cloud_cycle_duration_min / (double)((double)rangemaxmin / (double)rangeleft);
+        // Guard against division by zero when currentLightP == max_light_cloudP
+        if (rangeleft == 0) {
+            timeleft = (double)lvalues.cloud_cycle_duration_min;
+        } else {
+            timeleft = (double)lvalues.cloud_cycle_duration_min / (double)((double)rangemaxmin / (double)rangeleft);
+        }
         log_i("timeleft:%f, range:%i rangeleft:%i", timeleft, rangemaxmin, rangeleft);
         cyclestartTime = lvalues.next_cloud_cycle_change_time;
         addMinutes(&cyclestartTime, -(lvalues.cloud_cycle_duration_min - timeleft));
@@ -353,10 +372,10 @@ void process_cloud_sim(tm time)
         int timedif = ((getTimeDiff(time, lvalues.next_cloud_cycle_change_time) * 60) + time.tm_sec); // sec
         if (timedif >= 0)
         {
-            lvalues.cloud_rising = !lvalues.cloud_rising;
+            lvalues.cloud_falling = !lvalues.cloud_falling;
             cyclestartTime = lvalues.next_cloud_cycle_change_time;
             addMinutes(&lvalues.next_cloud_cycle_change_time, lvalues.cloud_cycle_duration_min);
-            log_i("changecycle rising:%i time cycle end:%i:%i", lvalues.cloud_rising, lvalues.next_cloud_cycle_change_time.hour, lvalues.next_cloud_cycle_change_time.min);
+            log_i("changecycle falling:%i time cycle end:%i:%i", lvalues.cloud_falling, lvalues.next_cloud_cycle_change_time.hour, lvalues.next_cloud_cycle_change_time.min);
         }
         else
         {
@@ -364,25 +383,37 @@ void process_cloud_sim(tm time)
             double p = 100 - (((double)timedif / (double)timediftotal) * 100);
             int rangemaxmin = lvalues.max_light_cloudP - lvalues.min_light_cloudP;
             double finalP = (double)rangemaxmin * (p / 100.);
-            if (!lvalues.cloud_rising)
+            
+            // Clamp cloud bounds to lifecycle target when lifecycle is enabled
+            int cloudMin = lvalues.min_light_cloudP;
+            int cloudMax = lvalues.max_light_cloudP;
+            if (lvalues.lifecycle.enabled && lvalues.automode && lvalues.lifecycle.currentLightTargetP > 0) {
+                int target = lvalues.lifecycle.currentLightTargetP;
+                cloudMin = (target < cloudMin) ? target : cloudMin;
+                cloudMax = (target > cloudMax) ? target : cloudMax;
+            }
+            rangemaxmin = cloudMax - cloudMin;
+            
+            // cloud_falling: false = rising (min→max), true = falling (max→min)
+            if (!lvalues.cloud_falling)
             {
-                lvalues.currentLightP = lvalues.max_light_cloudP - finalP;
-                lvalues.voltage.voltage = getVoltageFromPercent(lvalues.voltage.max, lvalues.voltage.min, lvalues.max_light_cloudP - finalP);
+                lvalues.currentLightP = cloudMax - finalP;
+                lvalues.voltage.voltage = getVoltageFromPercent(lvalues.voltage.max, lvalues.voltage.min, cloudMax - finalP);
             }
             else
             {
-                lvalues.currentLightP = lvalues.min_light_cloudP + finalP;
-                lvalues.voltage.voltage = getVoltageFromPercent(lvalues.voltage.max, lvalues.voltage.min, lvalues.min_light_cloudP + finalP);
+                lvalues.currentLightP = cloudMin + finalP;
+                lvalues.voltage.voltage = getVoltageFromPercent(lvalues.voltage.max, lvalues.voltage.min, cloudMin + finalP);
             }
-            if (lvalues.currentLightP < lvalues.min_light_cloudP)
+            if (lvalues.currentLightP < cloudMin)
             {
-                lvalues.currentLightP = lvalues.min_light_cloudP;
-                lvalues.voltage.voltage = getVoltageFromPercent(lvalues.voltage.max, lvalues.voltage.min, lvalues.min_light_cloudP);
+                lvalues.currentLightP = cloudMin;
+                lvalues.voltage.voltage = getVoltageFromPercent(lvalues.voltage.max, lvalues.voltage.min, cloudMin);
             }
-            if (lvalues.currentLightP > lvalues.max_light_cloudP)
+            if (lvalues.currentLightP > cloudMax)
             {
-                lvalues.currentLightP = lvalues.max_light_cloudP;
-                lvalues.voltage.voltage = getVoltageFromPercent(lvalues.voltage.max, lvalues.voltage.min, lvalues.max_light_cloudP);
+                lvalues.currentLightP = cloudMax;
+                lvalues.voltage.voltage = getVoltageFromPercent(lvalues.voltage.max, lvalues.voltage.min, cloudMax);
             }
         }
     }
@@ -401,6 +432,11 @@ void control_light()
     // Update lifecycle state if enabled
     if (lvalues.lifecycle.enabled) {
         updateLifecycleStateInternal();
+    }
+
+    // Compute currentLightTargetP here so it reflects the actual state
+    if (lvalues.lifecycle.enabled && lvalues.automode) {
+        calculateLifecycleLightP(&lvalues.lifecycle, 0);
     }
 
     // Evaluate state transition (separated from output computation)
@@ -441,6 +477,32 @@ void control_light()
 
 void LightController_setup()
 {
+    // Initialize struct to defaults BEFORE NVS read to prevent legacy data corruption
+    memset(&lvalues, 0, sizeof(LightControllerValues));
+    lvalues.voltage.min = 0;
+    lvalues.voltage.max = 1000;
+    lvalues.minLightP = 20;
+    lvalues.maxLightP = 80;
+    lvalues.turnOnTime.hour = 6;
+    lvalues.turnOnTime.min = 0;
+    lvalues.turnOffTime.hour = 22;
+    lvalues.turnOffTime.min = 0;
+    lvalues.sunriseEnd.hour = 6;
+    lvalues.sunriseEnd.min = 30;
+    lvalues.sunsetStart.hour = 21;
+    lvalues.sunsetStart.min = 0;
+    lvalues.enableSunrise = false;
+    lvalues.enableSunset = false;
+    lvalues.cloudsim = false;
+    lvalues.min_light_cloudP = 75;
+    lvalues.max_light_cloudP = 85;
+    lvalues.cloud_cycle_duration_min = 15;
+    lvalues.automode = false;
+    lvalues.current_state = off;
+    lvalues.lifecycle.enabled = false;
+    lvalues.lifecycle.plantType = plant_photoperiodic;
+    
+    // Now read NVS — only overwrites fields that were actually stored
     Mypreferences_getBytes("light", &lvalues, sizeof(LightControllerValues));
 
     ldac.setDACOutRange(ldac.eOutputRange10V);
@@ -459,11 +521,21 @@ void LightController_setup()
         }
     }
     
-    // Initialize lastDLIDay to current day if not yet set (avoids backlog on first boot)
+    // Initialize lastDLIDay to current day if not yet set
     if (lvalues.lifecycle.lastDLIDay == 0) {
         time_t now = time(nullptr);
         if (now > 0) {
             lvalues.lifecycle.lastDLIDay = (int)(now / 86400);
+            // Estimate partial-day DLI based on current light state
+            if (lvalues.currentLightP > 0 && lvalues.automode) {
+                const LifecycleStageConfig *stageConfig = &lifecycleStageConfigs[lvalues.lifecycle.stage];
+                float ppfd = (float)lvalues.currentLightP * lvalues.lifecycle.panelMaxPPFD / 100.0f;
+                // Estimate hours already on today (simplified: assume half-day if lights are on)
+                float partialHours = 12.0f; // conservative estimate
+                float partialDLI = ppfd * partialHours * 3600.0f / 1000000.0f;
+                lvalues.lifecycle.accumulatedDLI += partialDLI;
+                log_i("Lifecycle: boot partial DLI added %.1f", partialDLI);
+            }
         }
     }
     
@@ -502,7 +574,7 @@ void LightController_setPercentLimits(int min, int max)
     MyPreferences_setBytes("light", &lvalues, sizeof(LightControllerValues));
 }
 
-void LightController_setLight(int mv)
+void LightController_setLight(int lightPct)
 {
     // Disable automode when manual light control is requested
     if (lvalues.automode) {
@@ -510,9 +582,12 @@ void LightController_setLight(int mv)
         lvalues.current_state = off;
         log_i("Automode disabled by manual light control");
     }
-    lvalues.currentLightP = mv;
-    lvalues.voltage.voltage = getVoltageFromPercent(lvalues.voltage.max, lvalues.voltage.min, mv);
-    log_i("set voltage %i volt %i", mv, lvalues.voltage.voltage);
+    // Clamp to valid range
+    if (lightPct < 0) lightPct = 0;
+    if (lightPct > 100) lightPct = 100;
+    lvalues.currentLightP = lightPct;
+    lvalues.voltage.voltage = getVoltageFromPercent(lvalues.voltage.max, lvalues.voltage.min, lightPct);
+    log_i("set light %d%% volt %i", lightPct, lvalues.voltage.voltage);
     ldac.setDACOutVoltage(lvalues.voltage.voltage, 0);
 }
 
