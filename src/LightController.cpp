@@ -112,7 +112,7 @@ static light_state evaluate_next_state(tm now) {
         return sunrise;
 
     case sunset:
-        if (!lvalues.enableSunset || timeEquals(now, lvalues.turnOffTime)) {
+        if (!lvalues.enableSunset || timeEqualsOrGreater(now, lvalues.turnOffTime)) {
             return off;
         }
         return sunset;
