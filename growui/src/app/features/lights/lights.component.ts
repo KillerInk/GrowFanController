@@ -45,6 +45,10 @@ export class LightsComponent {
   cloudMin = signal(0);
   cloudMax = signal(0);
   lifecycleStage = signal(0);
+  
+  // Light state indicators (from WebSocket)
+  lightStateName = signal('off');  // 'off', 'on', 'sunrise', 'sunset'
+  lightAutoMode = signal(false);   // current automode state from WebSocket
 
   constructor() {
     // Sync deviceState values to local signals
@@ -84,6 +88,19 @@ export class LightsComponent {
       const lc = this.dashboard.lifecycleState();
       if (lc) {
         this.lifecycleStage.set(lc.stage);
+      }
+    });
+
+    // Sync light state indicators from WebSocket (real-time)
+    effect(() => {
+      const sd = this.dashboard.socketdata();
+      if (sd) {
+        if (sd.lightStateName) {
+          this.lightStateName.set(sd.lightStateName);
+        }
+        if (sd.lightautomode !== undefined) {
+          this.lightAutoMode.set(sd.lightautomode);
+        }
       }
     });
   }
@@ -266,5 +283,39 @@ export class LightsComponent {
       4: [32, 40],
     };
     return dliRange[stage]?.[1] ?? 0;
+  }
+
+  // Get human-readable light state (from WebSocket)
+  getLightStateLabel(): string {
+    const state = this.lightStateName();
+    const labels: Record<string, string> = {
+      'off': 'Scheduled Off',
+      'on': 'Lights ON',
+      'sunrise': 'Sunrise Ramp',
+      'sunset': 'Sunset Ramp',
+    };
+    return labels[state] ?? 'Unknown';
+  }
+
+  // Check if lights are off due to schedule (automode ON but state is off)
+  isScheduledOff(): boolean {
+    const automode = this.lightAutoMode() || (this.deviceState()?.lightautomode ?? false);
+    const state = this.lightStateName();
+    return automode && state === 'off';
+  }
+
+  // Get state badge color for UI
+  getStateBadgeColor(): string {
+    const state = this.lightStateName();
+    switch (state) {
+      case 'on':
+        return 'badge-on';
+      case 'sunrise':
+        return 'badge-sunrise';
+      case 'sunset':
+        return 'badge-sunset';
+      default:
+        return 'badge-off';
+    }
   }
 }

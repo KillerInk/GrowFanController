@@ -105,6 +105,17 @@ export class DashboardService {
       const parsed = JSON.parse(cleaned);
       this.socketdata.set(parsed);
 
+      // Update deviceState lightautomode from WebSocket (real-time sync)
+      // This ensures the UI always reflects the actual automode state
+      if (parsed.lightautomode !== undefined) {
+        const currentState = this.deviceState();
+        if (currentState) {
+          const updatedState = { ...currentState, lightautomode: parsed.lightautomode };
+          this.deviceState.set(updatedState);
+          this.settings$.next(updatedState);
+        }
+      }
+
       // Update lifecycle state from socket data
       if (parsed.lifecycle) {
         const prev = this.lifecycleState();

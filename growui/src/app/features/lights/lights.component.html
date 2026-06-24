@@ -43,7 +43,7 @@
     <h3 class="card-title">Lifecycle Light Control</h3>
     <div class="row" style="align-items: center; margin-bottom: 12px;">
       <label class="switch-label">
-        <input type="checkbox" [checked]="lcState.enabled ?? false" (change)="onLifecycleEnable($any($event).target.checked)">
+        <input type="checkbox" [checked]="lcState.enabled" (change)="onLifecycleEnable($any($event).target.checked)">
         <span class="slider-toggle"></span>
         <span>Enable Lifecycle</span>
       </label>
@@ -140,6 +140,17 @@
         <span class="slider-toggle"></span>
         <span>Automode</span>
       </label>
+      
+      <!-- Light state indicator -->
+      <div class="light-state-indicator" [ngClass]="getStateBadgeColor()">
+        <span class="state-dot"></span>
+        <span class="state-text">{{ getLightStateLabel() }}</span>
+      </div>
+      
+      <!-- Scheduled off message -->
+      <div *ngIf="isScheduledOff()" class="scheduled-off-message">
+        <small>Lights are currently OFF according to schedule. They will turn on at the next scheduled time.</small>
+      </div>
     </div>
   </div>
 

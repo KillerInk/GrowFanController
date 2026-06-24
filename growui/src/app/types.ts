@@ -158,7 +158,9 @@ export interface SocketMsg {
   /** Light controller values */
   lightvalP: number;     // current light power (in %?)
   lightvalmv: number;    // voltage value
-  lightstate: number;    // current state of the light
+  lightstate: number;    // current state of the light (0=off, 1=on, 2=sunrise, 3=sunset)
+  lightautomode?: boolean;  // whether automode is enabled (from WebSocket)
+  lightStateName?: string;    // human-readable state name ("off", "on", "sunrise", "sunset")
 
   /** Lifecycle/PPFD/DLI data (added 2026-04-10) */
   lifecycle?: {

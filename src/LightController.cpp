@@ -111,7 +111,9 @@ static light_state evaluate_next_state(tm now) {
         return sunrise;
 
     case sunset:
-        if (!lvalues.enableSunset || timeEqualsOrGreater(now, lvalues.turnOffTime)) {
+        // Only transition to sunset if we're within the valid window:
+        // sunsetStart <= now < turnOffTime
+        if (!lvalues.enableSunset || timeEqualsOrGreater(now, lvalues.turnOffTime) || timeSmaller(now, lvalues.sunsetStart)) {
             return off;
         }
         return sunset;
@@ -156,13 +158,25 @@ static void compute_state_output(tm now) {
 
     case sunrise:
         if (lvalues.enableSunrise) {
-            int timedif = ((getTimeDiff(now, lvalues.sunriseEnd) * 60) + now.tm_sec) * -1;
-            int timediftotal = (getTimeDiff(lvalues.turnOnTime, lvalues.sunriseEnd) * 60) * -1;
-            if (timediftotal <= 0) {
+            // Calculate elapsed time since sunrise start
+            // getTimeDiff(now, sunriseEnd) = now - sunriseEnd (negative while now < sunriseEnd)
+            int timedifSec = (getTimeDiff(now, lvalues.sunriseEnd) * 60) + now.tm_sec;
+            int timediftotalSec = (getTimeDiff(lvalues.turnOnTime, lvalues.sunriseEnd) * 60);
+            
+            // timediftotalSec is negative (turnOnTime < sunriseEnd)
+            if (timediftotalSec >= 0) {
                 lightP = lvalues.maxLightP;
                 outputVoltage = getVoltageFromPercent(lvalues.voltage.max, lvalues.voltage.min, lvalues.maxLightP);
             } else {
-                double p = 100 - (((double)timedif / (double)timediftotal) * 100);
+                // elapsed = (now - sunriseEnd) - (turnOnTime - sunriseEnd) = now - turnOnTime
+                // This gives 0 at start, totalDuration at end
+                int elapsedSec = timedifSec - timediftotalSec;
+                int totalSec = -timediftotalSec;
+                double p = ((double)elapsedSec / (double)totalSec) * 100.0;
+                
+                // Clamp percentage to 0-100 range
+                if (p < 0.0) p = 0.0;
+                if (p > 100.0) p = 100.0;
                 
                 int rampMax = lvalues.maxLightP;
                 if (lvalues.lifecycle.enabled && lvalues.automode) {
@@ -174,7 +188,7 @@ static void compute_state_output(tm now) {
                 
                 lightP = (int)p;
                 outputVoltage = getVoltageFromPercent(lvalues.voltage.max, lvalues.voltage.min, (int)p);
-                log_i("sunrise timedif: %i timediftotal: %i p:%f volt:%i", timedif, timediftotal, p, outputVoltage);
+                log_i("sunrise elapsed:%i total:%i p:%f volt:%i", elapsedSec, totalSec, p, outputVoltage);
             }
         } else {
             lightP = 0;
@@ -184,25 +198,43 @@ static void compute_state_output(tm now) {
 
     case sunset:
         if (lvalues.enableSunset) {
-            int timedif = ((getTimeDiff(now, lvalues.sunsetStart) * 60) + now.tm_sec);
+            // Calculate time elapsed since sunset started
+            int timedifSec = (getTimeDiff(now, lvalues.sunsetStart) * 60) + now.tm_sec;
+            
+            // Clamp timedif to non-negative
+            if (timedifSec < 0) timedifSec = 0;
+            
+            int timediftotalSec = getTimeDiff(lvalues.turnOffTime, lvalues.sunsetStart) * 60;
+            
+            // Guard: if sunset hasn't started yet or turnOffTime <= sunsetStart, skip
+            if (timediftotalSec <= 0 || timedifSec == 0) {
+                // Check if we're still within the valid sunset window
+                if (timeEqualsOrGreater(now, lvalues.sunsetStart) && timediftotalSec > 0) {
+                    timedifSec = 1; // Minimum non-zero to start ramping
+                } else {
+                    lightP = lvalues.maxLightP;
+                    outputVoltage = getVoltageFromPercent(lvalues.voltage.max, lvalues.voltage.min, lvalues.maxLightP);
+                    break;
+                }
+            }
+            
             int rampMax = lvalues.maxLightP;
             if (lvalues.lifecycle.enabled && lvalues.automode) {
                 rampMax = lvalues.lifecycle.currentLightTargetP;
                 if (rampMax <= 0) rampMax = lvalues.maxLightP;
             }
-            int timediftotal = getTimeDiff(lvalues.turnOffTime, lvalues.sunsetStart) * 60;
-            if (timediftotal <= 0) {
-                lightP = 0;
-                outputVoltage = 0;
-            } else {
-                double p = 100 - (((double)timedif / (double)timediftotal) * 100);
-                if (p > rampMax) p = rampMax;
-                if (p < 0) p = 0;
-                
-                lightP = (int)p;
-                outputVoltage = getVoltageFromPercent(lvalues.voltage.max, lvalues.voltage.min, (int)p);
-                log_i("sunset timedif: %i timediftotal: %i p:%f volt:%i", timedif, timediftotal, p, outputVoltage);
-            }
+            
+            double p = 100.0 - (((double)timedifSec / (double)timediftotalSec) * 100.0);
+            
+            // Clamp percentage to valid range
+            if (p < 0.0) p = 0.0;
+            if (p > 100.0) p = 100.0;
+            if (p > rampMax) p = rampMax;
+            if (p < 0) p = 0;
+            
+            lightP = (int)p;
+            outputVoltage = getVoltageFromPercent(lvalues.voltage.max, lvalues.voltage.min, (int)p);
+            log_i("sunset elapsed:%i total:%i p:%f volt:%i", timedifSec, timediftotalSec, p, outputVoltage);
         } else {
             lightP = 0;
             outputVoltage = 0;

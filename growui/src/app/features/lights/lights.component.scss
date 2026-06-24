@@ -1,2 +1,98 @@
 /* src/app/features/lights/lights.component.scss */
 /* inherits from app.scss via styles.scss */
+
+.light-state-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  margin-top: 12px;
+  border-radius: 6px;
+  background: var(--bg-tertiary, #f5f5f5);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.state-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.state-text {
+  white-space: nowrap;
+}
+
+/* State badge colors */
+.badge-off .state-dot {
+  background: #dc3545;
+  box-shadow: 0 0 6px rgba(220, 53, 69, 0.5);
+}
+.badge-off {
+  color: #dc3545;
+  border-left: 3px solid #dc3545;
+}
+
+.badge-on .state-dot {
+  background: #28a745;
+  box-shadow: 0 0 6px rgba(40, 167, 69, 0.5);
+  animation: pulse-on 2s infinite;
+}
+.badge-on {
+  color: #28a745;
+  border-left: 3px solid #28a745;
+}
+
+.badge-sunrise .state-dot {
+  background: #fd7e14;
+  box-shadow: 0 0 6px rgba(253, 126, 20, 0.5);
+  animation: pulse-sunrise 1.5s infinite;
+}
+.badge-sunrise {
+  color: #fd7e14;
+  border-left: 3px solid #fd7e14;
+}
+
+.badge-sunset .state-dot {
+  background: #ffc107;
+  box-shadow: 0 0 6px rgba(255, 193, 7, 0.5);
+  animation: pulse-sunset 1.5s infinite;
+}
+.badge-sunset {
+  color: #ffc107;
+  border-left: 3px solid #ffc107;
+}
+
+/* Animations */
+@keyframes pulse-on {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+@keyframes pulse-sunrise {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(1.2); }
+}
+
+@keyframes pulse-sunset {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(0.9); }
+}
+
+/* Scheduled off message */
+.scheduled-off-message {
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: rgba(220, 53, 69, 0.08);
+  border-radius: 6px;
+  border: 1px solid rgba(220, 53, 69, 0.2);
+  color: #6c757d;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.scheduled-off-message small {
+  display: block;
+  margin: 0;
+}

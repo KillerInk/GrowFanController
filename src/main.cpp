@@ -123,6 +123,11 @@ void sendSocketMsg()
     socketmsg["lightvalP"] = LightController_getValues()->currentLightP;
     socketmsg["lightvalmv"] = LightController_getValues()->voltage.voltage;
     socketmsg["lightstate"] = LightController_getValues()->current_state;
+    socketmsg["lightautomode"] = LightController_getValues()->automode;
+    
+    // Human-readable light state name for UI display
+    const char* stateNames[] = {"off", "on", "sunrise", "sunset"};
+    socketmsg["lightStateName"] = stateNames[LightController_getValues()->current_state];
 
     // Lifecycle/PPFD/DLI socket data (added 2026-04-10)
     auto *lc = &LightController_getValues()->lifecycle;
